@@ -3,13 +3,13 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class GrassTarget : TargetRules
+public class GrassFieldEditorTarget : TargetRules
 {
-	public GrassTarget(TargetInfo Target) : base(Target)
+	public GrassFieldEditorTarget(TargetInfo Target) : base(Target)
 	{
-		Type = TargetType.Game;
+		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_5;
-		ExtraModuleNames.Add("Grass");
+		ExtraModuleNames.Add("GrassField");
 	}
 }

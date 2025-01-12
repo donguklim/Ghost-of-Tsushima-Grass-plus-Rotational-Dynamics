@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
-#include "GrassCharacter.generated.h"
+#include "GrassFieldCharacter.generated.h"
 
 class USpringArmComponent;
 class UCameraComponent;
@@ -16,7 +16,7 @@ struct FInputActionValue;
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 UCLASS(config=Game)
-class AGrassCharacter : public ACharacter
+class AGrassFieldCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
@@ -45,7 +45,7 @@ class AGrassCharacter : public ACharacter
 	UInputAction* LookAction;
 
 public:
-	AGrassCharacter();
+	AGrassFieldCharacter();
 	
 
 protected:

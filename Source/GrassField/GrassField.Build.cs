@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class Grass : ModuleRules
+public class GrassField : ModuleRules
 {
-	public Grass(ReadOnlyTargetRules Target) : base(Target)
+	public GrassField(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 

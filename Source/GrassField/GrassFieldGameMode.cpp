@@ -1,10 +1,10 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "GrassGameMode.h"
-#include "GrassCharacter.h"
+#include "GrassFieldGameMode.h"
+#include "GrassFieldCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 
-AGrassGameMode::AGrassGameMode()
+AGrassFieldGameMode::AGrassFieldGameMode()
 {
 	// set default pawn class to our Blueprinted character
 	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));

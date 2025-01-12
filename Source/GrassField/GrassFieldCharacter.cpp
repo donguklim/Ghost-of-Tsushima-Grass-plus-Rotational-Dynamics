@@ -1,6 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "GrassCharacter.h"
+#include "GrassFieldCharacter.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -14,9 +14,9 @@
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 //////////////////////////////////////////////////////////////////////////
-// AGrassCharacter
+// AGrassFieldCharacter
 
-AGrassCharacter::AGrassCharacter()
+AGrassFieldCharacter::AGrassFieldCharacter()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -57,7 +57,7 @@ AGrassCharacter::AGrassCharacter()
 //////////////////////////////////////////////////////////////////////////
 // Input
 
-void AGrassCharacter::NotifyControllerChanged()
+void AGrassFieldCharacter::NotifyControllerChanged()
 {
 	Super::NotifyControllerChanged();
 
@@ -71,7 +71,7 @@ void AGrassCharacter::NotifyControllerChanged()
 	}
 }
 
-void AGrassCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void AGrassFieldCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
@@ -81,10 +81,10 @@ void AGrassCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		// Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AGrassCharacter::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AGrassFieldCharacter::Move);
 
 		// Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGrassCharacter::Look);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGrassFieldCharacter::Look);
 	}
 	else
 	{
@@ -92,7 +92,7 @@ void AGrassCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 	}
 }
 
-void AGrassCharacter::Move(const FInputActionValue& Value)
+void AGrassFieldCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
@@ -115,7 +115,7 @@ void AGrassCharacter::Move(const FInputActionValue& Value)
 	}
 }
 
-void AGrassCharacter::Look(const FInputActionValue& Value)
+void AGrassFieldCharacter::Look(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();

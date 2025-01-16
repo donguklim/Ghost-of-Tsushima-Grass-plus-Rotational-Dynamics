@@ -1,0 +1,56 @@
+
+struct GrassShaderFunctions
+{
+    float3 GrassPosOffsetAndNormal(
+    in float2 uv, in float3 p1, in float3 p2, in float3 p3, float scale, float width, float base,
+    float mid_smooth, float rim_pos, float rim_smooth, float y_strength, out float3 normal
+)
+    {
+        float t = uv.x;
+        float g = uv.y;
+
+        float s = 1 - t;
+        float s2 = s * s;
+        float t2 = t * t;
+
+        float g_axis_val = g - 0.5;
+    
+// Get normal of the curve projected to xy plane.    
+        float2 xy_plane_curve_tangent = 3 * (s2 * p1.xy + t2 * (p3.xy - p2.xy)) + 6 * s * t * (p2.xy - p1.xy);
+        float3 xy_plane_norm = float3(-xy_plane_curve_tangent.y, xy_plane_curve_tangent.x, 0);
+        float length_before = length(xy_plane_norm);
+        xy_plane_norm = (length_before > 0.0) ? (xy_plane_norm / length_before) : xy_plane_norm;
+
+    
+/* get position offset */
+    
+        float3 curve = 3 * (s2 * t * p1 + s * t2 * p2) + t2 * t * p3;
+// scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
+        float3 pos_offset = scale * (curve - float3(t, g_axis_val, 0));
+        pos_offset += g_axis_val * (s * (t + base) * width) * xy_plane_norm;
+ 
+    
+/* get normal */
+        float3 curve_tangent = 3 * (s2 * p1 + t2 * (p3 - p2)) + 6 * s * t * (p2 - p1);
+        float3 curve_norm = cross(curve_tangent, xy_plane_norm);
+
+        float smoothing_value = saturate((g_axis_val + mid_smooth) / (mid_smooth * 2));
+        float middle_value = smoothing_value * smoothing_value * (3.0 - 2.0 * smoothing_value);
+
+        float rim_smoothing_value = saturate((abs(g_axis_val) - rim_pos + rim_smooth) / (rim_smooth * 2));
+        float rim_value = rim_smoothing_value * rim_smoothing_value * (3.0 - 2.0 * rim_smoothing_value);
+
+        float linear_value = (1.0 - middle_value) * rim_value + middle_value * (1.0 - rim_value);
+
+        float y = (1 - 2 * linear_value) * y_strength;
+        float3 normal_vector = curve_norm + y * xy_plane_norm;
+        length_before = length(normal_vector);
+
+        normal = (length_before > 0.0) ? (normal_vector / length_before) : normal_vector;
+    
+        return pos_offset;
+    }
+};
+
+
+    

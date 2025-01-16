@@ -2,9 +2,10 @@
 struct GrassShaderFunctions
 {
     float3 GrassPosOffsetAndNormal(
-    in float2 uv, in float3 p1, in float3 p2, in float3 p3, float scale, float width, float base,
-    float mid_smooth, float rim_pos, float rim_smooth, float y_strength, out float3 normal
-)
+        in float2 uv, float4 p1, float4 p2, in float p3_stiff_decay, float scale, float width, float base,
+        float tilt,
+        float mid_smooth, float rim_pos, float rim_smooth, float y_strength, out float3 normal
+    )
     {
         float t = uv.x;
         float g = uv.y;
@@ -14,24 +15,41 @@ struct GrassShaderFunctions
         float t2 = t * t;
 
         float g_axis_val = g - 0.5;
-    
-// Get normal of the curve projected to xy plane.    
+        
+        p2.w = p1.w * p2.w;
+        float4 p3 = float4(1, 0, 0, p2.w * p3_stiff_decay);
+        float4 p0 = float4(0, 0, 0, 1);
+        
+        float4 curve = s * s2 * p0 + 3 * (s2 * t * p1 + s * t2 * p2) + t2 * t * p3;
+        float3 curve_tangent = 3 * (s2 * p1.xyz + t2 * (p3.xyz - p2.xyz)) + 6 * s * t * (p2.xyz - p1.xyz);
+        
+        // Get normal of the curve projected to xy plane.    
         float2 xy_plane_curve_tangent = 3 * (s2 * p1.xy + t2 * (p3.xy - p2.xy)) + 6 * s * t * (p2.xy - p1.xy);
         float3 xy_plane_norm = float3(-xy_plane_curve_tangent.y, xy_plane_curve_tangent.x, 0);
         float length_before = length(xy_plane_norm);
         xy_plane_norm = (length_before > 0.0) ? (xy_plane_norm / length_before) : xy_plane_norm;
+        
+        
+        /* tilt xy_plane norm abount the curve tangent */
+        length_before = length(curve_tangent);
+        float3 unit_tangent = (length_before > 0.0) ? (curve_tangent / length_before) : curve_tangent;
+
+        float tilt_amount = p3.w / curve.w * tilt;
+        
+        // float tilt_amount = tilt;
+
+        float tilt_cos = cos(tilt_amount);
+        float tilt_sin = sin(tilt_amount);
+        xy_plane_norm = xy_plane_norm * tilt_cos + cross(unit_tangent, xy_plane_norm) * tilt_sin;
 
     
-/* get position offset */
-    
-        float3 curve = 3 * (s2 * t * p1 + s * t2 * p2) + t2 * t * p3;
-// scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
-        float3 pos_offset = scale * (curve - float3(t, g_axis_val, 0));
+        /* get position offset */
+        // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
+        float3 pos_offset = scale * (curve.xyz - float3(t, g_axis_val, 0));
         pos_offset += g_axis_val * (s * (t + base) * width) * xy_plane_norm;
  
     
-/* get normal */
-        float3 curve_tangent = 3 * (s2 * p1 + t2 * (p3 - p2)) + 6 * s * t * (p2 - p1);
+        /* get normal */
         float3 curve_norm = cross(curve_tangent, xy_plane_norm);
 
         float smoothing_value = saturate((g_axis_val + mid_smooth) / (mid_smooth * 2));

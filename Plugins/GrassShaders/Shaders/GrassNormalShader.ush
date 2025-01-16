@@ -1,6 +1,6 @@
 
  // p0 is assumed to be (0,0)
-float3 GrassNormal(in float2 uv, in float2 p1, in float2 p2, in float2 p3)
+float3 GrassNormal(in float2 uv, in float2 p1, in float2 p2, in float2 p3, float mid_smooth, float rim_pos, float rim_smooth, float y_strength)
 {
     float t = uv.x;
     float g = uv.y;

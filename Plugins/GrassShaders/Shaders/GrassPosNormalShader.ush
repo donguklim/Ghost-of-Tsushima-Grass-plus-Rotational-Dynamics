@@ -2,7 +2,7 @@
 struct GrassShaderFunctions
 {
     float3 GrassPosOffsetAndNormal(
-        in float2 uv, float4 p1, float4 p2, in float p3_stiff_decay, float scale, float width, float base,
+        in float2 uv, float4 p1, float4 p2, in float4 p3, float scale, float width, float base,
         float tilt,
         float mid_smooth, float rim_pos, float rim_smooth, float y_strength, out float3 normal
     )
@@ -16,8 +16,9 @@ struct GrassShaderFunctions
 
         float g_axis_val = g - 0.5;
         
+        // initialize points at static positions
         p2.w = p1.w * p2.w;
-        float4 p3 = float4(1, 0, 0, p2.w * p3_stiff_decay);
+        p3.w = p2.w * p3.w;
         float4 p0 = float4(0, 0, 0, 1);
         
         float4 curve = s * s2 * p0 + 3 * (s2 * t * p1 + s * t2 * p2) + t2 * t * p3;

@@ -7,54 +7,149 @@
 
 struct GrassMotionShaderFunctions
 {
-    float3 GrassUpdate(
-        float width,
+    float3 RotateY(float3 vec, float angle)
+    {
+        float s = sin(angle);
+        float c = cos(angle);
+    
+        float3x3 rotationMatrix = float3x3(
+            c, 0, -s,
+            0, 1, 0,
+            s, 0, c
+        );
+    
+        return mul(rotationMatrix, vec);
+    }
+    
+    float3 RotateZ(float3 vec, float angle)
+    {
+        float s = sin(angle);
+        float c = cos(angle);
+    
+        float3x3 rotationMatrix = float3x3(
+             c, s, 0,
+            -s, c, 0,
+             0, 0, 1
+        );
+    
+        return mul(rotationMatrix, vec);
+    }
+    
+    void GetBezierPoints(float2 p1_xz, float4 angular_disp, out float3 p1, out float3 p2, out float3 p1p2)
+    {
+        p1 = RotateY(float3(p1_xz.x, 0, p1_xz.y), angular_disp.y);
+        p2 = RotateY(float3(1, 0, 0), angular_disp.y);
+        p1p2 = RotateY(p2 - p1, angular_disp.w);
+        p2 = p1 + p1p2;
+        
+        p1 = RotateZ(p1, angular_disp.z);
+        p2 = RotateZ(p1, angular_disp.z);
+        
+    }
+    
+    float GetAngularAcc(
+        float wind_coff, 
+        float damping_coff, 
+        float stiffness,
+        float mass,
+        float edge_length,
+        float3 wind, 
+        float3 normal_dir, 
+        float angular_velocity, 
+        float angular_disp
+    )
+    {
+        float wind_force = wind_coff * dot(wind, normal_dir);
+        float damping_force = -damping_coff * angular_velocity;
+        float restore_force = -stiffness * abs(angular_disp * cos(angular_disp / 2.0));
+        
+        return (wind_force + damping_force + restore_force) / (edge_length * mass);
+    }
+
+    
+    void GrassUpdate(
         float damping_coff,
         float wind_coff,
         float stiffness,
-        float density,
-        float delta_time,
-        float scale,
+        float mass,
+        float time_delta,
         float3 wind,
+        float2 p1_xz,
         out float4 angular_velocity,
         out float4 angular_disp
     )
     {
 
-        //float static_bending = 
-
-
-        float swing_angle = angular_disp.x;
-        float bending_angle = angular_disp.y;
-        float bending_cos = cos(bending_angle);
-        float swing_cos = cos(swing_angle);
-        float swing_sin = sin(swing_angle);
-
-        float3 edge_w = float3(swing_sin, swing_cos, 0);
-
-        float3 p3 = float3(
-            bending_cos * swing_cos,
-            bending_cos * swing_sin,
-            sin(bending_angle)
+        float3 p1;
+        float3 p2;
+        float3 p1p2;
+        GetBezierPoints(p1_xz, angular_disp, p1, p2, p1p2);
+        
+        float3 w_dir = RotateZ(float3(0, 1, 0), angular_disp.z);
+       
+        float swing_acc = GetAngularAcc(
+            wind_coff,
+            damping_coff,
+            stiffness,
+            mass,
+            length(p2.xy),
+            wind,
+            w_dir,
+            angular_disp.z,
+            angular_velocity.z 
         );
+        
+        
+        float3 n_dir = cross(w_dir, p1);
+        float vec_length = length(n_dir);
+        n_dir = vec_length > 0 ? n_dir / vec_length : 0;
+        
+        float p1_length = length(p1);
+        float p1p2_length = length(p1p2);
+        
+        float legnth_sum = p1_length + p1p2_length;
+        float p1_mass = mass * p1_length / legnth_sum;
+        float p1p2_mass = mass * p1p2_length / legnth_sum;
+        
+        float p1_bending_acc = GetAngularAcc(
+            wind_coff,
+            damping_coff,
+            stiffness,
+            p1_mass,
+            p1_length,
+            wind,
+            n_dir,
+            angular_disp.y,
+            angular_velocity.y
+        );
+        
+        float p1_bend_delta = p1_bending_acc * time_delta;
+        
 
-        float wind_swing_force = wind_coff * dot(wind, edge_w);
-        float damping_swing_force = -damping_coff * angular_velocity.x;
-        float restore_swing_force = -stiffness * abs(swing_angle * cos(swing_angle / 2));
-
-        float swing_acc = (wind_swing_force + damping_swing_force + restore_swing_force) / (scale.x * density * width);
-        float swing_vel_deta = swing_acc * delta_time;
-
-
-        float new_x_val = angular_velocity.x + swing_vel_deta;
-        new_x_val = new_x_val < 0 ? -fmod(-new_x_val, PI_VALUE) : fmod(new_x_val, PI_VALUE);
- 
-        angular_velocity.x = new_x_val;
-
-        new_x_val = angular_disp.x + angular_velocity.x * delta_time;
-        new_x_val = new_x_val < 0 ? -fmod(-new_x_val, PI_VALUE) : fmod(new_x_val, PI_VALUE);
-
-
-        angular_disp.x = new_x_val;
+        n_dir = cross(w_dir, p1p2);
+        vec_length = length(n_dir);
+        n_dir = vec_length > 0 ? n_dir / vec_length : 0;
+        
+        
+        float p1p2_bending_acc = GetAngularAcc(
+            wind_coff,
+            damping_coff,
+            stiffness,
+            p1p2_mass,
+            p1p2_length,
+            wind,
+            n_dir,
+            angular_disp.w,
+            angular_velocity.w
+        );
+        
+        float4 velocity_delta = float4(swing_acc, p1_bending_acc, 0, p1p2_bending_acc) * time_delta;
+        
+        angular_velocity += velocity_delta;
+        angular_velocity = fmod(angular_velocity, PI_VALUE);
+        
+        angular_disp += angular_velocity * time_delta;
+        angular_velocity = fmod(angular_velocity, PI_VALUE);
+        
     }
 };

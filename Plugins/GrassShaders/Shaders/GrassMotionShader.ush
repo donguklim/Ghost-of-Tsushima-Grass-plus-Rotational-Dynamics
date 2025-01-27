@@ -1,0 +1,60 @@
+// Insert the body of the function here and add any inputs
+// and outputs by name using the add pins above.
+// Currently, complicated branches, for loops, switches, etc are not advised.
+
+#define PI_VALUE 3.14159265359
+
+
+struct GrassMotionShaderFunctions
+{
+    float3 GrassUpdate(
+        float width,
+        float damping_coff,
+        float wind_coff,
+        float stiffness,
+        float density,
+        float delta_time,
+        float scale,
+        float3 wind,
+        out float4 angular_velocity,
+        out float4 angular_disp
+    )
+    {
+
+        //float static_bending = 
+
+
+        float swing_angle = angular_disp.x;
+        float bending_angle = angular_disp.y;
+        float bending_cos = cos(bending_angle);
+        float swing_cos = cos(swing_angle);
+        float swing_sin = sin(swing_angle);
+
+        float3 edge_w = float3(swing_sin, swing_cos, 0);
+
+        float3 p3 = float3(
+            bending_cos * swing_cos,
+            bending_cos * swing_sin,
+            sin(bending_angle)
+        );
+
+        float wind_swing_force = wind_coff * dot(wind, edge_w);
+        float damping_swing_force = -damping_coff * angular_velocity.x;
+        float restore_swing_force = -stiffness * abs(swing_angle * cos(swing_angle / 2));
+
+        float swing_acc = (wind_swing_force + damping_swing_force + restore_swing_force) / (scale.x * density * width);
+        float swing_vel_deta = swing_acc * delta_time;
+
+
+        float new_x_val = angular_velocity.x + swing_vel_deta;
+        new_x_val = new_x_val < 0 ? -fmod(-new_x_val, PI_VALUE) : fmod(new_x_val, PI_VALUE);
+ 
+        angular_velocity.x = new_x_val;
+
+        new_x_val = angular_disp.x + angular_velocity.x * delta_time;
+        new_x_val = new_x_val < 0 ? -fmod(-new_x_val, PI_VALUE) : fmod(new_x_val, PI_VALUE);
+
+
+        angular_disp.x = new_x_val;
+    }
+};

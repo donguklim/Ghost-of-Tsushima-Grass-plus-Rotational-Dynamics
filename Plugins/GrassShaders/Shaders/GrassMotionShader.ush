@@ -1,3 +1,5 @@
+#define PI_VALUE 3.14159265358979323846
+
 
 struct GrassMotionShaderFunctions
 {
@@ -189,7 +191,7 @@ struct GrassMotionShaderFunctions
         
         if (abs(total_p1p2_bend) < p1p2_threshold)
         {
-            wind_force = float3(0, 0, 0);
+            //wind_force = float3(0, 0, 0);
         }
         
 
@@ -221,3 +223,4 @@ struct GrassMotionShaderFunctions
         
     }
 };
+  

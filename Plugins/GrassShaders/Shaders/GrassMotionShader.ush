@@ -100,7 +100,7 @@ struct GrassMotionShaderFunctions
                
         // actually bellow variables with torque in the names are actually torque divided by edge length
         float damping_torque = -damping_coff * angular_velocity;
-        float restore_torque = (angular_disp > 0 ? -1 : 1) * abs(stiffness * angular_disp * cos(ShiftToPositiveAngle(angular_disp) / 2.0));
+        float restore_torque = (angular_disp > 0 ? -1 : 1) * abs(stiffness * angular_disp);
         //float wind_torque = wind_coff * dot(wind, rotating_dir) * abs(cross(axis_dir, edge_dir));
         
         float wind_torque = wind_coff * dot(wind, rotating_dir) * dot(cross(edge_dir, rotating_dir), axis_dir);
@@ -209,9 +209,9 @@ struct GrassMotionShaderFunctions
             wind_coff,
             damping_coff,
             stiffness,
-            mass,
+            p1_mass,
             wind_force,
-            p2,
+            p1,
             rotating_dir,
             swing_rotating_dir,
             angular_velocity.y,
@@ -230,7 +230,7 @@ struct GrassMotionShaderFunctions
 
         rotating_dir = cross(swing_rotating_dir, p1p2);
         
-        /*
+        
         float p1p2_bending_acc = GetAngularAcc(
             wind_coff,
             damping_coff,
@@ -244,9 +244,9 @@ struct GrassMotionShaderFunctions
             angular_disp.w,
             temp_val
         );
-        */
         
-        float4 velocity_delta = float4(0, p1_bending_acc, swing_acc, 0) * time_delta;
+        
+        float4 velocity_delta = float4(0, p1_bending_acc, swing_acc, p1p2_bending_acc) * time_delta;
         
         //float4 velocity_delta = float4(0, 0.5, 0.5, 0) * time_delta;
         

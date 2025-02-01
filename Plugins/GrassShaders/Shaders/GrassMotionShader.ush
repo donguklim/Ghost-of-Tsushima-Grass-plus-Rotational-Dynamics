@@ -98,10 +98,27 @@ struct GrassMotionShaderFunctions
     }
     */
     
-    float GetSecondRodTorque(float mass, float3 r1_end, float r2_end, float3 force, float3 rotational_axis)
-    {
+    float GetSecondRodTorque(
+        float mass,
+        float r2_stiffness,
+        float damping_coefficient,
+        float angular_velocity,
+        float angular_displacement,
+        float3 r1_end, 
+        float3 r2_end, 
+        float3 wind_force,
+        float3 rotational_axis,
+        float3 r2_rotational_axis,
+    )
+    {   
         float3 r2_dir = r2_end - r1_end;
         float r2_length = length(r2_dir);
+        
+        
+        float3 r2_torque_force_dir = cross(r2_rotational_axis, r2_dir);
+        
+        r2_torque_force_dir = r2_torque_force_dir / length(r2_torque_force_dir);
+        float3 force = wind_force - (r2_stiffness * angular_velocity + damping_coefficient * angular_velocity)/(r2_length) * r2_torque_force_dir;
         
         rotational_axis = rotational_axis / length(rotational_axis);
         
@@ -112,10 +129,13 @@ struct GrassMotionShaderFunctions
         float l1_torque_dir_term = dot(cross(r1_end, axis_c_r2_dir) + cross(r2_dir, axis_c_r1), rotational_axis);
         float l2_torque_dir_term = dot(cross(r2_dir, axis_c_r2_dir), rotational_axis);
         
-        float l0_term = axis_c_r1 * l0_torque_dir_term;
-        float l1_term = axis_c_r1 * l1_torque_dir_term + axis_c_r2_dir * l0_torque_dir_term;
-        float l2_term = axis_c_r1 * l2_torque_dir_term + axis_c_r2_dir * l1_torque_dir_term;
-        float l3_term = axis_c_r2_dir * l2_torque_dir_term;
+        float axis_c_r1_force = dot(force, axis_c_r1);
+        float axis_c_r2_dir_force = dot(force, axis_c_r2_dir);
+        
+        float l0_term = axis_c_r1_force * l0_torque_dir_term;
+        float l1_term = axis_c_r1_force * l1_torque_dir_term + axis_c_r2_dir_force * l0_torque_dir_term;
+        float l2_term = axis_c_r1_force * l2_torque_dir_term + axis_c_r2_dir_force * l1_torque_dir_term;
+        float l3_term = axis_c_r2_dir_force * l2_torque_dir_term;
         
         float quad_b = 2 * dot(r2_dir, r1_end);
         float quad_c = length(r1_end);
@@ -130,7 +150,37 @@ struct GrassMotionShaderFunctions
         return l0_term * l0_intergral + l1_term * l1_integral + l2_term * l2_integral + l3_term * l3_integral;
 
     }
-    float GetMomentOfInertia(float mass, float3 r1_end, float r2_end)
+    
+    float GetSingleRodTorque(
+        float damping_coff,
+        float stiffness,
+        float mass,
+        float3 wind_force,
+        float3 rod,
+        float3 rotational_axis,
+        float angular_velocity,
+        float angular_disp,
+    )
+    {
+        float rod_length = length(rod);
+        float3 rod_dir = rod / rod_length;
+        
+        float3 rotating_dir = cross(rotational_axis, rod);
+        float vec_length = length(rotating_dir);
+        rotating_dir = vec_length > 0 ? rotating_dir / vec_length : rotating_dir;
+        
+        rotational_axis = rotational_axis / length(rotational_axis);
+               
+        float damping_force = -damping_coff * angular_velocity;
+        float restore_force = -stiffness * angular_disp;     
+        float projected_wind_force = dot(wind_force, rotating_dir) * dot(cross(rod_dir, rotating_dir), rotational_axis);
+   
+       
+        return (projected_wind_force + damping_force + restore_force) * rod_length / 2.0;
+        
+    }
+    
+    float GetMomentOfInertia(float mass, float3 r1_end, float3 r2_end)
     {
         float3 r2 = r2_end - r1_end;
         float r2_length = length(r2);
@@ -196,11 +246,49 @@ struct GrassMotionShaderFunctions
         return (wind_torque + damping_torque + restore_torque) / (edge_length * mass);
     }
     
-    float simpleFunc(float value)
+    float GetFirstPivotAngularAcc(
+        float wind_coff,
+        float damping_coff,
+        float stiffness,
+        float r2_stiffness,
+        float mass,
+        float3 wind,
+        float3 r1_end,
+        float3 r2_end,
+        float3 rotational_axis,
+        float3 r2_rotational_axis,
+        float angular_velocity,
+        float angular_disp,
+        float r2_angular_velocity,
+        float r2_angular_disp,
+    )
     {
-        return value * 2;
+        float inertia = GetMomentOfInertia(mass, r1_end, r2_end);
+        
+        float torque = GetSecondRodTorque(
+            mass,
+            r2_stiffness,
+            damping_coff,
+            r2_angular_velocity,
+            r2_angular_disp,
+            r1_end,
+            r2_end,
+            wind_coff * wind,
+            rotational_axis,
+            r2_rotational_axis
+        ) + GetSingleRodTorque(
+            damping_coff,
+            stiffness,
+            mass,
+            wind_coff * wind,
+            r1_end,
+            rotational_axis,
+            angular_velocity,
+            angular_disp
+        );
+        
+        return torque / inertia;
     }
-
     
     void GrassUpdate(
         float damping_coff,

@@ -75,11 +75,33 @@ struct GrassMotionShaderFunctions
         
     }
     
-    float GetSecondRodTorque(float3 r1_end, float r2_end, float3 force, float3 rotational_axis)
+    float IntegrateOneOverQuad(float b, float c, float x)
     {
-        float3 r2_dir = r1_end - r2_end;
-        float vec_length = length(r2_dir);
-        r2_dir = r2_dir / vec_length;
+        float denom = sqrt(4 * c - b * b);
+        return 2 / denom * (atan((2 * x + b) / denom) - atan(b / denom));
+
+    }
+    
+    /*
+    float IntegrateXOverQuad(float b, float c, float x)
+    {
+        return 0.5 * (log(x * x + b * x + c) - log(c)) - b / 2.0 * IntegrateOneOverQuad(b, c, x);
+    }
+    float IntegrateX2OverQuad(float b, float c, float x)
+    {
+        return x - b * IntegrateXOverQuad(b, c, x) - c * IntegrateOneOverQuad(b, c, x);
+    }
+    
+    float IntegrateX3OverQuad(float b, float c, float x)
+    {
+        return x * x / 2.0 - b * IntegrateX2OverQuad(b, c, x) - c * IntegrateXOverQuad(b, c, x);
+    }
+    */
+    
+    float GetSecondRodTorque(float mass, float3 r1_end, float r2_end, float3 force, float3 rotational_axis)
+    {
+        float3 r2_dir = r2_end - r1_end;
+        float r2_length = length(r2_dir);
         
         rotational_axis = rotational_axis / length(rotational_axis);
         
@@ -94,7 +116,39 @@ struct GrassMotionShaderFunctions
         float l1_term = axis_c_r1 * l1_torque_dir_term + axis_c_r2_dir * l0_torque_dir_term;
         float l2_term = axis_c_r1 * l2_torque_dir_term + axis_c_r2_dir * l1_torque_dir_term;
         float l3_term = axis_c_r2_dir * l2_torque_dir_term;
+        
+        float quad_b = 2 * dot(r2_dir, r1_end);
+        float quad_c = length(r1_end);
+        quad_c = quad_c * quad_c;
+        float r2_length_square = r2_length * r2_length;
+        
+        float l0_intergral = IntegrateOneOverQuad(quad_b, quad_c, r2_length);
+        float l1_integral = 0.5 * (log(r2_length_square + quad_b * r2_length + quad_c) - log(quad_c)) - quad_b / 2.0 * l0_intergral;
+        float l2_integral = r2_length - quad_b * l1_integral - quad_c * l0_intergral;
+        float l3_integral = r2_length_square / 2.0 - quad_b * l2_integral - quad_c * l1_integral;
+        
+        return l0_term * l0_intergral + l1_term * l1_integral + l2_term * l2_integral + l3_term * l3_integral;
 
+    }
+    float GetMomentOfInertia(float mass, float3 r1_end, float r2_end)
+    {
+        float3 r2 = r2_end - r1_end;
+        float r2_length = length(r2);
+        float r1_length = length(r1_end);
+        float3 r2_center_distance = length(r2 / 2 + r1_end);
+        
+        float r2_mass = mass * r2_length / (r1_length + r2_length);
+        
+        // Moment of Inertia caused by R2 rod
+        // = Moment of Inertia of R2 at its center of mass + (R2 center of mass distance from the pivot)^2
+        //
+        // Moment of Inertia of R2 at its center of mass = r2_mass * r2_length * r2_length / 12.0
+        float r2_MI = r2_mass * (r2_length * r2_length / 12.0 + r2_center_distance * r2_center_distance);
+        
+        float r1_MI = (mass - r2_mass) / 3.0 * r1_length * r1_length;
+        
+        return r1_MI + r2_MI;
+    
     }
     
     float GetAngularAcc(

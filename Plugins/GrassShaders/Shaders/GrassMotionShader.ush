@@ -75,6 +75,28 @@ struct GrassMotionShaderFunctions
         
     }
     
+    float GetSecondRodTorque(float3 r1_end, float r2_end, float3 force, float3 rotational_axis)
+    {
+        float3 r2_dir = r1_end - r2_end;
+        float vec_length = length(r2_dir);
+        r2_dir = r2_dir / vec_length;
+        
+        rotational_axis = rotational_axis / length(rotational_axis);
+        
+        float3 axis_c_r1 = cross(rotational_axis, r1_end);
+        float3 axis_c_r2_dir = cross(rotational_axis, r2_dir);
+        
+        float l0_torque_dir_term = dot(cross(r1_end, axis_c_r1), rotational_axis);
+        float l1_torque_dir_term = dot(cross(r1_end, axis_c_r2_dir) + cross(r2_dir, axis_c_r1), rotational_axis);
+        float l2_torque_dir_term = dot(cross(r2_dir, axis_c_r2_dir), rotational_axis);
+        
+        float l0_term = axis_c_r1 * l0_torque_dir_term;
+        float l1_term = axis_c_r1 * l1_torque_dir_term + axis_c_r2_dir * l0_torque_dir_term;
+        float l2_term = axis_c_r1 * l2_torque_dir_term + axis_c_r2_dir * l1_torque_dir_term;
+        float l3_term = axis_c_r2_dir * l2_torque_dir_term;
+
+    }
+    
     float GetAngularAcc(
         float wind_coff,
         float damping_coff,

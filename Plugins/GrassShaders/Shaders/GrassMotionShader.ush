@@ -252,10 +252,9 @@ struct GrassMotionShaderFunctions
         float3 rotating_dir = cross(rotational_axis, rod_dir);
         
         float3 wind_torque_vec = cross(rod, wind_force) * rod_length / 2.0;
-        float damping_torque = -damping_coff * angular_velocity * rod_length * rod_length * rod_length;
+        float damping_torque = -damping_coff * angular_velocity * rod_length * rod_length * rod_length / 3.0;
         float restore_torque = -stiffness * angular_disp;
        
-        
         return damping_torque + restore_torque * dot(wind_torque_vec, rotational_axis);
        
     }
@@ -434,14 +433,15 @@ struct GrassMotionShaderFunctions
         float swing_acc = GetSingleRodTorque(
             swing_damping_coff,
             swing_stiffness,
-            wind_coff * wind, r1_end,
+            wind_coff * wind, 
+            p1,
             rotational_axis,
             angular_velocity.z,
             angular_disp.z
         ) + GetSecondRodTorque(
             swing_damping_coff,
             swing_stiffness,
-            swing_stiffness * 0.8,
+            swing_stiffness * 0.1,
             angular_disp.z,
             angular_disp.w,
             angular_velocity.z,
@@ -452,7 +452,6 @@ struct GrassMotionShaderFunctions
             rotational_axis,
             swing_rotating_dir
         ) / GetMomentOfInertia(mass, p1, p2);
-        
         
         wind_force = wind;
         float total_p1_bend = ShiftToPIAtMaxAngle(PI_VALUE / 2.0 + angular_disp.y);
@@ -491,14 +490,15 @@ struct GrassMotionShaderFunctions
         float p1_bending_acc = GetSingleRodTorque(
             swing_damping_coff,
             swing_stiffness,
-            wind_coff * wind, r1_end,
+            wind_coff * wind, 
+            p1,
             swing_rotating_dir,
             angular_velocity.y,
             angular_disp.y
         ) + GetSecondRodTorque(
             swing_damping_coff,
             swing_stiffness,
-            swing_stiffness * 0.8,
+            swing_stiffness * 0.1,
             angular_disp.y,
             angular_disp.w,
             angular_velocity.y,
@@ -539,7 +539,7 @@ struct GrassMotionShaderFunctions
         
         float p1p2_bending_acc = GetSingleRodTorque(
             damping_coff,
-            stiffness * 0.8,
+            stiffness * 0.1,
             wind_coff * wind_force,
             p1p2,
             swing_rotating_dir,

@@ -77,126 +77,6 @@ struct GrassMotionShaderFunctions
         
     }
     
-    // Integrationg 1 / (x^2 + bx + c)
-    // This integration only works in the case (b^2 - 4 * c) < 0
-    // c is square of length of the first rod,
-    // b is length of the first rod projected to the second rod's direction multiplied by 2
-    // Hence, b^2 <= 4c is assumed.
-    // If the two rods are aligned b^2 == 4c,
-    // The case two rods are aligned or nearlly aligned is handled with other calculation method
-    float IntegrateOneOverQuad(float b, float c, float x)
-    {
-        float denom = sqrt(4 * c - b * b);
-        return 2 / denom * (atan((2 * x + b) / denom) - atan(b / denom));
-
-    }
-    
-    /*
-    float IntegrateXOverQuad(float b, float c, float x)
-    {
-        return 0.5 * (log(x * x + b * x + c) - log(c)) - b / 2.0 * IntegrateOneOverQuad(b, c, x);
-    }
-    float IntegrateX2OverQuad(float b, float c, float x)
-    {
-        return x - b * IntegrateXOverQuad(b, c, x) - c * IntegrateOneOverQuad(b, c, x);
-    }
-    
-    float IntegrateX3OverQuad(float b, float c, float x)
-    {
-        return x * x / 2.0 - b * IntegrateX2OverQuad(b, c, x) - c * IntegrateXOverQuad(b, c, x);
-    }
-    */
-    
-    float GetSecondRodTorqueWrong(
-        float damping_coefficient,
-        float r1_stiffness,
-        float r2_stiffness,
-        float r1_angular_displacement,
-        float r2_angular_displacement,
-        float r1_angular_velocity,
-        float r2_angular_velocity,
-        float3 r1_end, 
-        float3 r2_end, 
-        float3 wind_force,
-        float3 rotational_axis,
-        float3 r2_rotational_axis
-    )
-    {   
-        float3 r2_dir = r2_end - r1_end;
-        float r2_length = length(r2_dir);
-        
-        
-        float3 r2_torque_force_dir = cross(r2_rotational_axis, r2_dir);
-        
-        r2_torque_force_dir = r2_torque_force_dir / length(r2_torque_force_dir);
-
-        float3 constant_force = wind_force - r2_torque_force_dir * 2 * r2_stiffness * r2_angular_displacement / (r2_length * r2_length);
-       
-        
-        rotational_axis = rotational_axis / length(rotational_axis);
-        
-        float3 axis_c_r1 = cross(rotational_axis, r1_end);
-        float3 r1_torque_force_dir = axis_c_r1 / length(axis_c_r1);
-        float3 axis_c_r2_dir = cross(rotational_axis, r2_dir);
-        
-         // damping force 
-        float r2_damping = -r2_torque_force_dir * damping_coefficient * r2_angular_velocity;
-        float r1_damping = -damping_coefficient * r1_angular_velocity * r1_torque_force_dir;
-        
-        float l0_torque_dir_term = dot(cross(r1_end, axis_c_r1), rotational_axis);
-        float l1_torque_dir_term = dot(cross(r1_end, axis_c_r2_dir) + cross(r2_dir, axis_c_r1), rotational_axis);
-        float l2_torque_dir_term = dot(cross(r2_dir, axis_c_r2_dir), rotational_axis);
-        
-        float l0_force_term = dot(constant_force, axis_c_r1);
-        float l1_force_term = dot(constant_force, axis_c_r2_dir) + dot(r2_damping, axis_c_r1);
-        float l2_force_term = dot(r2_damping, axis_c_r2_dir);
-        
-        float l0_quad_force_term = dot(r1_damping, axis_c_r1); // = -damping_coefficient * r1_angular_velocity * length(axis_c_r1);
-        float l1_quad_force_term = dot(r1_damping, axis_c_r2_dir);
-        
-
-        // Let l be the integrating variable. 
-        // The integrating equation is 
-        // (l0_force_term + l1_force_term * l)(l0_torque_dir_term + l1_torque_dir_term * l + l2_torque_dir_term * l^2) / (l^2 + b * l + c)
-        float l0_over_quad_term = l0_force_term * l0_torque_dir_term;
-        float l1_over_quad_term = l0_force_term * l1_torque_dir_term + l1_force_term * l0_torque_dir_term;
-        float l2_over_quad_term = l0_force_term * l2_torque_dir_term + l1_force_term * l1_torque_dir_term + l2_force_term * l0_torque_dir_term;
-        float l3_over_quad_term = l1_force_term * l2_torque_dir_term + l2_force_term * l1_torque_dir_term;
-        float l4_over_quad_term = l2_force_term * l2_torque_dir_term;
-        
-        float quad_b = 2 * dot(r2_dir, r1_end);
-        float quad_c = length(r1_end);
-        quad_c = quad_c * quad_c;
-        float r2_length_square = r2_length * r2_length;
-        
-        float l0_intergral = IntegrateOneOverQuad(quad_b, quad_c, r2_length);
-        float l1_integral = 0.5 * (log(r2_length_square + quad_b * r2_length + quad_c) - log(quad_c)) - quad_b / 2.0 * l0_intergral;
-        float l2_integral = r2_length - quad_b * l1_integral - quad_c * l0_intergral;
-        float l3_integral = r2_length_square / 2.0 - quad_b * l2_integral - quad_c * l1_integral;
-        float l4_integral = r2_length_square * r2_length / 3.0 - quad_b * l3_integral - quad_c * l2_integral;
-        
-        float quadratic_divisor_term_intergration = 
-        l0_over_quad_term * l0_intergral 
-        + l1_over_quad_term * l1_integral 
-        + l2_over_quad_term * l2_integral 
-        + l3_over_quad_term * l3_integral + l4_over_quad_term * l4_integral;
-        
-        
-        float l0_term = l0_quad_force_term * l0_torque_dir_term;
-        float l1_term = l0_quad_force_term * l1_torque_dir_term + l1_quad_force_term * l0_torque_dir_term;
-        float l2_term = l0_quad_force_term * l2_torque_dir_term + l1_quad_force_term * l1_torque_dir_term;
-        float l3_term = l1_quad_force_term * l2_torque_dir_term;
-        
-        float power_term_intergration = 
-        l0_term * r2_length 
-        + l1_term * r2_length_square / 2.0 
-        + l2_term * r2_length_square * r2_length / 3.0 
-        + l3_term * r2_length_square * r2_length_square / 4.0;
-
-        return quadratic_divisor_term_intergration + power_term_intergration;
-
-    }
-    
     float GetSecondRodTorque(
         float damping_coefficient,
         float r1_stiffness,
@@ -248,14 +128,12 @@ struct GrassMotionShaderFunctions
     )
     {
         float rod_length = length(rod);
-        float3 rod_dir = rod / rod_length;
-        float3 rotating_dir = cross(rotational_axis, rod_dir);
         
         float3 wind_torque_vec = cross(rod, wind_force) * rod_length / 2.0;
         float damping_torque = -damping_coff * angular_velocity * rod_length * rod_length * rod_length / 3.0;
         float restore_torque = -stiffness * angular_disp;
        
-        return damping_torque + restore_torque * dot(wind_torque_vec, rotational_axis);
+        return damping_torque + restore_torque + dot(wind_torque_vec, rotational_axis);
        
     }
     
@@ -430,6 +308,7 @@ struct GrassMotionShaderFunctions
         
         float3 rotational_axis = float3(0, 0, 1);
         
+        
         float swing_acc = GetSingleRodTorque(
             swing_damping_coff,
             swing_stiffness,
@@ -453,6 +332,17 @@ struct GrassMotionShaderFunctions
             swing_rotating_dir
         ) / GetMomentOfInertia(mass, p1, p2);
         
+        /*
+        float swing_acc = GetSingleRodTorque(
+            swing_damping_coff,
+            swing_stiffness,
+            wind_coff * wind,
+            p1,
+            rotational_axis,
+            angular_velocity.z,
+            angular_disp.z
+        ) / GetMomentOfInertia(mass, p1, p2);
+        */
         wind_force = wind;
         float total_p1_bend = ShiftToPIAtMaxAngle(PI_VALUE / 2.0 + angular_disp.y);
 
@@ -546,6 +436,8 @@ struct GrassMotionShaderFunctions
             angular_velocity.w,
             angular_disp.w
         ) / (p1p2_mass * p1p2_length * p1p2_length / 3.0);
+        
+        wind_z_force = swing_rotating_dir * 20 * p1p2_bending_acc;
         
         
         float4 velocity_delta = float4(0, p1_bending_acc, swing_acc, p1p2_bending_acc) * time_delta;

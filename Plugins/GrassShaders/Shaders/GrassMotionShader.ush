@@ -1,5 +1,7 @@
 #define PI_VALUE 3.14159265358979323846
 
+#define ROD_ALIGMENT_THRESHOLD 0.0001
+
 // Rotation uses left hand rule. When the rotating axis is facing toward you, positive angle is clockwise
 
 struct GrassMotionShaderFunctions
@@ -99,7 +101,6 @@ struct GrassMotionShaderFunctions
     */
     
     float GetSecondRodTorque(
-        float mass,
         float r2_stiffness,
         float damping_coefficient,
         float angular_velocity,
@@ -118,7 +119,10 @@ struct GrassMotionShaderFunctions
         float3 r2_torque_force_dir = cross(r2_rotational_axis, r2_dir);
         
         r2_torque_force_dir = r2_torque_force_dir / length(r2_torque_force_dir);
-        float3 force = wind_force - (r2_stiffness * angular_velocity + damping_coefficient * angular_velocity)/(r2_length) * r2_torque_force_dir;
+        // to make total damping force and restore force acting on the rod equal to 
+        // r2_stiffness * angular_velocity and  damping_coefficient * angular_velocity respectivley
+        // the force acting on the per length of 1 must be set to the total force * 2 / rod length
+        float3 force = wind_force - 2 * (r2_stiffness * angular_velocity + damping_coefficient * angular_velocity)/(r2_length) * r2_torque_force_dir;
         
         rotational_axis = rotational_axis / length(rotational_axis);
         
@@ -154,30 +158,37 @@ struct GrassMotionShaderFunctions
     float GetSingleRodTorque(
         float damping_coff,
         float stiffness,
-        float mass,
         float3 wind_force,
-        float3 rod,
+        float3 rod_start,
+        float3 rod_end,
         float3 rotational_axis,
         float angular_velocity,
         float angular_disp,
     )
     {
+        // dot(rod_start, rod_end) must be equal to 1 in this function
+        
+        float3 rod = rod_end - rod_start;
         float rod_length = length(rod);
         float3 rod_dir = rod / rod_length;
         
-        float3 rotating_dir = cross(rotational_axis, rod);
+        float3 rotating_dir = cross(rotational_axis, rod_start);
         float vec_length = length(rotating_dir);
         rotating_dir = vec_length > 0 ? rotating_dir / vec_length : rotating_dir;
         
-        rotational_axis = rotational_axis / length(rotational_axis);
-               
-        float damping_force = -damping_coff * angular_velocity;
-        float restore_force = -stiffness * angular_disp;     
-        float projected_wind_force = dot(wind_force, rotating_dir) * dot(cross(rod_dir, rotating_dir), rotational_axis);
-   
-       
-        return (projected_wind_force + damping_force + restore_force) * rod_length / 2.0;
+        rotational_axis = rotational_axis / length(rotational_axis);       
         
+        
+        
+        // forces acting on per length of 1
+        float projected_wind_force = dot(wind_force, rotating_dir) * dot(cross(rod_dir, rotating_dir), rotational_axis);
+        float damping_force = -2 * damping_coff * angular_velocity / rod_length;
+        float restore_force = -2 * stiffness * angular_disp / rod_length;
+   
+        float start_length = length(rod_start);
+        float end_length = length(rod_end);
+        return (projected_wind_force + damping_force + restore_force) * (rod_end * rod_end - rod_start - rod_start) / 2.0;
+       
     }
     
     float GetMomentOfInertia(float mass, float3 r1_end, float3 r2_end)
@@ -265,29 +276,45 @@ struct GrassMotionShaderFunctions
     {
         float inertia = GetMomentOfInertia(mass, r1_end, r2_end);
         
-        float torque = GetSecondRodTorque(
-            mass,
-            r2_stiffness,
-            damping_coff,
-            r2_angular_velocity,
-            r2_angular_disp,
-            r1_end,
-            r2_end,
-            wind_coff * wind,
-            rotational_axis,
-            r2_rotational_axis
-        ) + GetSingleRodTorque(
+        float r1_length = length(r1_end);
+        float r2 = r2_end - r1_end;
+        float r2_length = length(r2_end);
+        
+        float r1_r2_dot = dot(r1_end / r1_length, r2 / r1_length);
+        
+        float r2_torque = (abs(r1_r2_dot) + ROD_ALIGMENT_THRESHOLD >= 1.0) ? GetSingleRodTorque(
+                damping_coff,
+                stiffness,
+                wind_coff * wind,
+                r1_end,
+                r2_end,
+                rotational_axis,
+                angular_velocity,
+                angular_disp
+            ) : GetSecondRodTorque(
+                r2_stiffness,
+                damping_coff,
+                r2_angular_velocity,
+                r2_angular_disp,
+                r1_end,
+                r2_end,
+                wind_coff * wind,
+                rotational_axis,
+                r2_rotational_axis
+            );
+        
+        float r1_torque = GetSingleRodTorque(
             damping_coff,
             stiffness,
-            mass,
             wind_coff * wind,
+            float3(0,0,0),
             r1_end,
             rotational_axis,
             angular_velocity,
             angular_disp
         );
         
-        return torque / inertia;
+        return (r1_torque + r2_torque) / inertia;
     }
     
     void GrassUpdate(

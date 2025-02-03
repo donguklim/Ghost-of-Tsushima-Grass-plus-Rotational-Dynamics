@@ -1,11 +1,33 @@
+
 #define PI_VALUE 3.14159265358979323846
 
-#define ROD_ALIGMENT_THRESHOLD 0.0001
-
-// Rotation uses left hand rule. When the rotating axis is facing toward you, positive angle is clockwise
 
 struct GrassMotionShaderFunctions
 {
+    float4 QuaternionFromAxisAngle(float3 axis, float angle)
+    {
+        float halfAngle = angle * 0.5;
+        float s = sin(halfAngle);
+        return float4(axis * s, cos(halfAngle));
+    }
+
+
+    float4 QuaternionMultiply(float4 q1, float4 q2)
+    {
+        return float4(
+            q1.w * q2.xyz + q2.w * q1.xyz + cross(q1.xyz, q2.xyz),
+            q1.w * q2.w - dot(q1.xyz, q2.xyz)
+        );
+    }
+
+    float3 RotateVectorByQuaternion(float3 v, float4 q)
+    {
+        float3 qVec = q.xyz;
+        float3 uv = cross(qVec, v);
+        float3 uuv = cross(qVec, uv);
+        return v + ((uv * q.w) + uuv) * 2.0;
+    }
+    
     float ShiftToPIAtMaxAngle(float angle)
     {
         angle = fmod(angle, 2.0 * PI_VALUE);
@@ -62,7 +84,7 @@ struct GrassMotionShaderFunctions
         return mul(rotationMatrix, vec);
     }
     
-    void GetBezierPoints(float2 p1_xz, float2 p2_xz, float4 angular_disp, out float3 p1, out float3 p2)
+    void GetBezierPointsOld(float2 p1_xz, float2 p2_xz, float4 angular_disp, out float3 p1, out float3 p2)
     {
         //angular_disp.y = angular_disp.y > 0 ? 0 : angular_disp.y;
         p1 = RotateY(float3(p1_xz.x, 0, p1_xz.y), angular_disp.y);
@@ -106,7 +128,7 @@ struct GrassMotionShaderFunctions
         float3 l2_term_vec = cross(r2_dir, l1_force_term);
         
         float r1_damping = -damping_coefficient * r1_angular_velocity;
-        float l0_damping_term = r1_damping * r2_length * r2_length_square;
+        float l0_damping_term = r1_damping * r2_length_square;
         float l1_damping_term = r1_damping * 2 * dot(r1_angular_displacement, r2_dir);
         
         float l0_term = dot(l0_term_vec, rotational_axis) + l0_damping_term;
@@ -115,6 +137,71 @@ struct GrassMotionShaderFunctions
         
         return l0_term * r2_length + l1_term * r2_length_square / 2.0 + l2_term * r2_length * r2_length_square / 3.0;
 
+    }
+    
+    void GetBezierPoints(float2 p1_xz, float2 p2_xz, float4 angular_disp, out float3 p1, out float3 p2)
+    {
+        p1 = float3(p1_xz.x, 0, p1_xz.y);
+        p2 = float3(p2_xz.x, 0, p2_xz.y);
+        
+        float r1_disp_angle = length(angular_disp.xyz);
+        float4 p1_quat = QuaternionFromAxisAngle(r1_disp_angle > 0 ? angular_disp.xyz / r1_disp_angle: angular_disp.xyz, r1_disp_angle);
+        float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
+        
+        float3 p1p2 = RotateVectorByQuaternion(p2 - p1, p1p2_quat);
+        p2 = p1 + p1p2;
+        
+        p1 = RotateVectorByQuaternion(p1, p1_quat);
+        p2 = RotateVectorByQuaternion(p2, p1_quat);
+        
+    }
+    
+    float3 GetDistantRodTorque(
+        float damping_coefficient,
+        float3 wind_force,
+        float r2_stiffness,
+        float r2_angular_velocity,
+        float r2_angular_displacement,
+        float3 r2_rotational_axis,
+        float r1_stiffness,
+        float3 r1_angular_velocity,
+        float3 r1_angular_displacement,
+        float3 r1_end,
+        float3 r2_end
+    )
+    {
+        float3 r2 = (r2_end - r1_end);
+        float r2_length = length(r2);
+        float r2_length_square = r2_length * r2_length;
+        float3 r2_dir = r2;
+        
+        float3 r2_torque_dir = cross(r2_rotational_axis, r2_dir);
+        
+        float3 l0_force_term = wind_force - 2.0 * r2_stiffness * r2_angular_displacement / r2_length_square * r2_torque_dir - damping_coefficient * cross(r1_angular_velocity, r1_end);
+        float3 l1_force_term = -damping_coefficient * r2_angular_velocity * r2_torque_dir - damping_coefficient * cross(r1_angular_velocity, r2_dir);
+        float3 l0_term = cross(r1_end, l0_force_term);
+        float3 l1_term = cross(r2_dir, l0_force_term) + cross(r1_end, l1_force_term);
+        float3 l2_term = cross(r2_dir, l1_force_term);
+        
+        
+        return l0_term * r2_length + l1_term * r2_length_square / 2.0 + l2_term * r2_length * r2_length_square / 3.0;
+
+    }
+    float3 GetPivotRodTorque(
+        float damping_coff,
+        float stiffness,
+        float3 wind_force,
+        float3 rod,
+        float3 angular_velocity,
+        float3 angular_disp
+    )
+    {
+        float rod_length = length(rod);
+        float3 wind_torque = cross(rod, wind_force) * rod_length / 2.0;
+        float3 damping_torque = -damping_coff * cross(rod, cross(angular_velocity, rod)) * rod_length / 3.0;
+       
+        return wind_torque + damping_torque - -stiffness * angular_disp;
+       
     }
     
     float GetSingleRodTorque(
@@ -308,7 +395,7 @@ struct GrassMotionShaderFunctions
         
         float3 rotational_axis = float3(0, 0, 1);
         
-        
+
         float swing_acc = GetSingleRodTorque(
             swing_damping_coff,
             swing_stiffness,
@@ -320,7 +407,7 @@ struct GrassMotionShaderFunctions
         ) + GetSecondRodTorque(
             swing_damping_coff,
             swing_stiffness,
-            swing_stiffness * 0.1,
+            swing_stiffness * 0.8,
             angular_disp.z,
             angular_disp.w,
             angular_velocity.z,
@@ -343,6 +430,7 @@ struct GrassMotionShaderFunctions
             angular_disp.z
         ) / GetMomentOfInertia(mass, p1, p2);
         */
+        
         wind_force = wind;
         float total_p1_bend = ShiftToPIAtMaxAngle(PI_VALUE / 2.0 + angular_disp.y);
 
@@ -360,22 +448,6 @@ struct GrassMotionShaderFunctions
         float p1_mass = mass * p1_length / legnth_sum;
         float p1p2_mass = mass * p1p2_length / legnth_sum;
         
-        /*
-        float3 temp_val;
-        float p1_bending_acc = GetAngularAcc(
-            wind_coff,
-            damping_coff,
-            stiffness,
-            p1_mass,
-            wind_force,
-            p1,
-            rotating_dir,
-            swing_rotating_dir,
-            angular_velocity.y,
-            angular_disp.y,
-            temp_val
-        );
-        */
         
         float p1_bending_acc = GetSingleRodTorque(
             swing_damping_coff,
@@ -388,7 +460,7 @@ struct GrassMotionShaderFunctions
         ) + GetSecondRodTorque(
             swing_damping_coff,
             swing_stiffness,
-            swing_stiffness * 0.1,
+            swing_stiffness * 0.8,
             angular_disp.y,
             angular_disp.w,
             angular_velocity.y,
@@ -399,6 +471,19 @@ struct GrassMotionShaderFunctions
             swing_rotating_dir,
             swing_rotating_dir
         ) / GetMomentOfInertia(mass, p1, p2);
+       
+        
+        /*
+        float p1_bending_acc = GetSingleRodTorque(
+            swing_damping_coff,
+            swing_stiffness,
+            wind_coff * wind,
+            p1,
+            swing_rotating_dir,
+            angular_velocity.y,
+            angular_disp.y
+        ) / GetMomentOfInertia(mass, p1, p2);
+        */
         
         wind_force = wind;
         float total_p1p2_bend = ShiftToPIAtMaxAngle(p1p2_static_bending + angular_disp.w);
@@ -411,25 +496,9 @@ struct GrassMotionShaderFunctions
 
         rotating_dir = cross(swing_rotating_dir, p1p2);
         
-        /*
-        float p1p2_bending_acc = GetAngularAcc(
-            wind_coff,
-            damping_coff,
-            stiffness * 0.8,
-            p1p2_mass,
-            wind_force,
-            p1p2,
-            rotating_dir,
-            swing_rotating_dir,
-            angular_velocity.w,
-            angular_disp.w,
-            temp_val
-        );
-        */
-        
         float p1p2_bending_acc = GetSingleRodTorque(
             damping_coff,
-            stiffness * 0.1,
+            stiffness * 0.2,
             wind_coff * wind_force,
             p1p2,
             swing_rotating_dir,
@@ -448,6 +517,98 @@ struct GrassMotionShaderFunctions
 
         angular_disp += angular_velocity * time_delta;
         //angular_disp = fmod(angular_disp, 8 * PI_VALUE);
+        
+    }
+    
+    void GrassUpdateOld(
+        float damping_coff,
+        float swing_damping_coff,
+        float wind_coff,
+        float stiffness,
+        float swing_stiffness,
+        float mass,
+        float time_delta,
+        float3 wind,
+        float2 p1_xz,
+        float2 p2_xz,
+        inout float4 angular_velocity,
+        inout float4 angular_disp,
+        out float3 wind_z_force
+    )
+    {
+        float swing_threshold = PI_VALUE * 0.98;
+        float p1_threshold_low = PI_VALUE * 0.02;
+        float p1_threshold_high = PI_VALUE * 1.98;
+        float p1p2_threshold = PI_VALUE * 0.02;
+        
+        
+        if (p1_xz.x < 0)
+        {
+            p1_xz.x = 0.01;
+        }
+        float p1_static_bending = atan(p1_xz.y / p1_xz.x);
+        
+        float2 p1p2_xz = p2_xz - p1_xz;
+        float p1p2_static_bending = acos(dot(-p1_xz, p1p2_xz) / (length(p1_xz) * length(p1p2_xz)));
+
+        float3 p1 = float3(0, 0, 0);
+        float3 p2 = float3(0, 0, 0);
+        GetBezierPoints(p1_xz, p2_xz, angular_disp, p1, p2);
+        float3 p1p2 = p2 - p1;
+        
+        float r1_disp_angle = length(angular_disp.xyz);
+        float3 r2_rotational_axis = RotateVectorByQuaternion(
+            float3(0, 1, 0), QuaternionFromAxisAngle(
+            angular_disp.xyz / r1_disp_angle, r1_disp_angle)
+        );
+        
+        
+        float3 wind_force = wind;
+        
+
+        float3 p1_acc = GetPivotRodTorque(
+            damping_coff,
+            stiffness,
+            wind_coff * wind,
+            p1,
+            angular_velocity.xyz,
+            angular_disp.xyz
+        ) + GetDistantRodTorque(
+            damping_coff,
+            wind_coff * wind,
+            stiffness * 0.8,
+            angular_velocity.w,
+            angular_disp.w,
+            r2_rotational_axis,
+            stiffness,
+            angular_velocity.xyz,
+            angular_disp.xyz,
+            p1,
+            p2
+        ) / GetMomentOfInertia(mass, p1, p2);
+        
+        float p1_length = length(p1);
+        float p1p2_length = length(p1p2);
+        
+        float legnth_sum = p1_length + p1p2_length;
+        float p1_mass = mass * p1_length / legnth_sum;
+        float p1p2_mass = mass * p1p2_length / legnth_sum;
+        
+        
+        float3 p1p2_bending_acc = GetPivotRodTorque(
+            damping_coff,
+            stiffness * 0.8,
+            wind_coff * wind_force,
+            p1p2,
+            angular_velocity.w * r2_rotational_axis,
+            angular_disp.w * r2_rotational_axis
+        ) / (p1p2_mass * p1p2_length * p1p2_length / 3.0);
+        
+        
+        float4 velocity_delta = float4(p1_acc, dot(r2_rotational_axis, p1p2_bending_acc)) * time_delta;
+        angular_velocity += velocity_delta;
+
+        angular_disp += angular_velocity * time_delta;
         
     }
 };

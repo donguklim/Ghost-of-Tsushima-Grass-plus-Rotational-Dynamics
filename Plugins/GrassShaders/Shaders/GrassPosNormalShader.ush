@@ -33,6 +33,7 @@ struct GrassShaderFunctions
     
     float3 GrassPosOffsetAndNormal(
         in float2 uv, float4 p1, float4 p2, float scale, float width, float base,
+        float swing_angle,
         float tilt,
         float mid_smooth, float rim_pos, float rim_smooth, float y_strength, out float3 normal
     )
@@ -55,23 +56,10 @@ struct GrassShaderFunctions
         float4 curve = s2 * p0 + 2 * s * t * p1 + t2 * p2;
         float3 curve_tangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
         
-        float2 p0_xy_norm = float2(0, 1);
-        float2 p1_xy_norm = float2(-p1.y, p1.x);
-        float vec_length = length(p1_xy_norm);
-        p1_xy_norm = vec_length < vec_length_threshold ? p0_xy_norm : p1_xy_norm / vec_length;
-        
-        float2 p1p2 = p2.xy - p1.xy;
-        float2 p2_xy_norm = float2(-p1p2.y, p1p2.x);
-        vec_length = length(p2_xy_norm);
-        p2_xy_norm = vec_length < vec_length_threshold ? p1_xy_norm : p2_xy_norm / vec_length;
-        
-        float xy_norm_angle = s2 * GetAngle(p0_xy_norm) + 2 * s * t * GetAngle(p1_xy_norm) + t2 * GetAngle(p2_xy_norm);
-        
-        float3 xy_norm = float3(cos(xy_norm_angle), sin(xy_norm_angle), 0);
-        
+        float3 xy_norm = RotateZ(float3(0, 1, 0), swing_angle * p2.w / curve.w);
         
         /* tilt xy_plane norm abount the curve tangent */
-        vec_length = length(curve_tangent);
+        float vec_length = length(curve_tangent);
         float3 unit_tangent = (vec_length > vec_length_threshold) ? (curve_tangent / vec_length) : curve_tangent;
 
         float tilt_amount = p2.w / curve.w * tilt;

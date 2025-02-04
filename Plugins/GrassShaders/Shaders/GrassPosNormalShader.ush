@@ -33,7 +33,7 @@ struct GrassShaderFunctions
     
     float3 GrassPosOffsetAndNormal(
         in float2 uv, float4 p1, float4 p2, float scale, float width, float base,
-        float swing_angle,
+        float3 xy_norm,
         float tilt,
         float mid_smooth, float rim_pos, float rim_smooth, float y_strength, out float3 normal
     )
@@ -55,8 +55,6 @@ struct GrassShaderFunctions
         
         float4 curve = s2 * p0 + 2 * s * t * p1 + t2 * p2;
         float3 curve_tangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
-        
-        float3 xy_norm = RotateZ(float3(0, 1, 0), swing_angle * p2.w / curve.w);
         
         /* tilt xy_plane norm abount the curve tangent */
         float vec_length = length(curve_tangent);

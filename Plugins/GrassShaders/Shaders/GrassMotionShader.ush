@@ -150,12 +150,10 @@ struct GrassMotionShaderFunctions
         return mul(rotationMatrix, vec);
     }
     
-    void GetBezierPoints(float2 p1_xz, float2 p2_xz, float4 angular_disp, out float3 p1, out float3 p2)
+    void GetBezierPoints(float2 p1_xz, float2 p2_xz, float4 angular_disp, out float3 p1, out float3 p2, out float3 side_dir)
     {
         p1 = float3(p1_xz.x, 0, p1_xz.y);
         p2 = float3(p2_xz.x, 0, p2_xz.y);
-        
-        float r1_disp_angle = length(angular_disp.xyz);
         
         float4 p1_quat = QuaternionFromRotationalVector(angular_disp.xyz);
         float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
@@ -165,6 +163,8 @@ struct GrassMotionShaderFunctions
         
         p1 = RotateVectorByQuaternion(p1, p1_quat);
         p2 = RotateVectorByQuaternion(p2, p1_quat);
+        
+        side_dir = RotateVectorByQuaternion(float3(0, 1, 0), p1_quat);
         
     }
     
@@ -268,13 +268,13 @@ struct GrassMotionShaderFunctions
 
         float3 p1 = float3(0, 0, 0);
         float3 p2 = float3(0, 0, 0);
-        GetBezierPoints(p1_xz, p2_xz, angular_disp, p1, p2);
+        float3 r2_rotational_axis = float3(0, 0, 0);
+        GetBezierPoints(p1_xz, p2_xz, angular_disp, p1, p2, r2_rotational_axis);
         float3 p1p2 = p2 - p1;
         
         float3 p1_dir = p1 / length(p1);
-    
         
-        float3 r2_rotational_axis = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp.xyz));
+        wind_z_force = r2_rotational_axis * 20;
         
         float3 p1_acc = GetPivotRodTorque(
             damping_coff,

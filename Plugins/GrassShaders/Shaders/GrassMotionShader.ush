@@ -4,13 +4,21 @@
 
 struct GrassMotionShaderFunctions
 {
+    
     float4 QuaternionFromAxisAngle(float3 axis, float angle)
     {
         float halfAngle = angle * 0.5;
         float s = sin(halfAngle);
         return float4(axis * s, cos(halfAngle));
     }
+    
+    float4 QuaternionFromRotationalVector(float3 vec)
+    {
+        float angle = length(vec);
+        vec = angle > 0 ? vec / angle : vec;
+        return QuaternionFromAxisAngle(vec, angle);
 
+    }
 
     float4 QuaternionMultiply(float4 q1, float4 q2)
     {
@@ -145,7 +153,7 @@ struct GrassMotionShaderFunctions
         p2 = float3(p2_xz.x, 0, p2_xz.y);
         
         float r1_disp_angle = length(angular_disp.xyz);
-        float4 p1_quat = QuaternionFromAxisAngle(r1_disp_angle > 0 ? angular_disp.xyz / r1_disp_angle: angular_disp.xyz, r1_disp_angle);
+        float4 p1_quat = QuaternionFromRotationalVector(angular_disp.xyz);
         float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
         
         float3 p1p2 = RotateVectorByQuaternion(p2 - p1, p1p2_quat);
@@ -200,7 +208,7 @@ struct GrassMotionShaderFunctions
         float3 wind_torque = cross(rod, wind_force) * rod_length / 2.0;
         float3 damping_torque = -damping_coff * cross(rod, cross(angular_velocity, rod)) * rod_length / 3.0;
        
-        return wind_torque + damping_torque - -stiffness * angular_disp;
+        return rod_length * (cross(rod, wind_force) / 2.0 - damping_coff * cross(rod, cross(angular_velocity, rod)) / 3.0) - stiffness * angular_disp;
        
     }
     
@@ -330,7 +338,7 @@ struct GrassMotionShaderFunctions
         ) / GetMomentOfInertia(mass, r1_end, r2_end);
     }
     
-    void GrassUpdate(
+    void GrassUpdateOld(
         float damping_coff,
         float swing_damping_coff,
         float wind_coff,
@@ -520,12 +528,10 @@ struct GrassMotionShaderFunctions
         
     }
     
-    void GrassUpdateOld(
+    void GrassUpdate(
         float damping_coff,
-        float swing_damping_coff,
-        float wind_coff,
         float stiffness,
-        float swing_stiffness,
+        float p2_stiffness,
         float mass,
         float time_delta,
         float3 wind,
@@ -540,6 +546,7 @@ struct GrassMotionShaderFunctions
         float p1_threshold_low = PI_VALUE * 0.02;
         float p1_threshold_high = PI_VALUE * 1.98;
         float p1p2_threshold = PI_VALUE * 0.02;
+  
         
         
         if (p1_xz.x < 0)
@@ -557,26 +564,21 @@ struct GrassMotionShaderFunctions
         float3 p1p2 = p2 - p1;
         
         float r1_disp_angle = length(angular_disp.xyz);
-        float3 r2_rotational_axis = RotateVectorByQuaternion(
-            float3(0, 1, 0), QuaternionFromAxisAngle(
-            angular_disp.xyz / r1_disp_angle, r1_disp_angle)
-        );
+        float3 r2_rotational_axis = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp.xyz));
+  
+    
         
-        
-        float3 wind_force = wind;
-        
-
         float3 p1_acc = GetPivotRodTorque(
             damping_coff,
             stiffness,
-            wind_coff * wind,
+            wind,
             p1,
             angular_velocity.xyz,
             angular_disp.xyz
         ) + GetDistantRodTorque(
             damping_coff,
-            wind_coff * wind,
-            stiffness * 0.8,
+            wind,
+            p2_stiffness,
             angular_velocity.w,
             angular_disp.w,
             r2_rotational_axis,
@@ -586,7 +588,17 @@ struct GrassMotionShaderFunctions
             p1,
             p2
         ) / GetMomentOfInertia(mass, p1, p2);
-        
+    
+        /*
+        float3 p1_acc = GetPivotRodTorque(
+            damping_coff,
+            stiffness,
+            wind_coff * wind,
+            p1,
+            angular_velocity.xyz,
+            angular_disp.xyz
+        ) / GetMomentOfInertia(mass, p1, p2);
+        */
         float p1_length = length(p1);
         float p1p2_length = length(p1p2);
         
@@ -597,8 +609,8 @@ struct GrassMotionShaderFunctions
         
         float3 p1p2_bending_acc = GetPivotRodTorque(
             damping_coff,
-            stiffness * 0.8,
-            wind_coff * wind_force,
+            p2_stiffness,
+            wind,
             p1p2,
             angular_velocity.w * r2_rotational_axis,
             angular_disp.w * r2_rotational_axis

@@ -1,5 +1,6 @@
 
 #define PI_VALUE 3.14159265358979323846
+# define ROD_DOT_GROUND_THRESHOLD 0.2
 
 
 struct GrassMotionShaderFunctions
@@ -34,6 +35,45 @@ struct GrassMotionShaderFunctions
         float3 uv = cross(qVec, v);
         float3 uuv = cross(qVec, uv);
         return v + ((uv * q.w) + uuv) * 2.0;
+    }
+    
+    float3 GetCollidingAngleDelta(float3 rod, float3 angular_disp_delta)
+    {
+        float3 rod_length = length(rod);
+        
+        float angle = length(angular_disp_delta);
+        if (angle < 0.00001 || rod_length < 0.00001)
+            return 0;
+        
+        float3 rod_dir = rod / rod_length;
+        float3 rot_axis = angular_disp_delta / angle;
+        
+        //float3 ground_norm = float3(0, 1, 0);
+        
+        
+        float3 rot_axis_c_rod = cross(rot_axis, rod_dir);
+        
+        float a_val = rot_axis_c_rod.y; // dot product with ground norm
+        
+        float b_val = -cross(rot_axis, rot_axis_c_rod).y; // dot product with ground norm
+        
+        // dot(ground_norm, rod_direction after angular_velocity is applied)
+        // = a_val * sin(angle * delta_time) + b_val * cos(angle * delta_time) + 1 + dot(current rod_direction, ground_norm)
+        
+        // we don't want anbove value to have value less than ROD_GROUND_DOT_THRESHOLD
+        
+        // we  want
+        // dot(ground_norm, rod_direction after angular_velocity is applied) > ROD_DOT_GROUND_THRESHOLD
+        
+        // Given a * sin(x) + b * cos(x) = c
+        // using trigonometric identity sin(i + j) = sin(i)cos(j) = cos(i)sin(j)
+        // R * sin(x + z) = c,  where tan(z) = b/a and R = sqrt(a^2 + b^2)
+        // x = asin(c/R) + z
+        
+        float c_val = ROD_DOT_GROUND_THRESHOLD - rod_dir.y - 1;
+        
+        return rot_axis * asin(c_val / sqrt(a_val * a_val + b_val * b_val)) - atan(b_val / a_val);
+
     }
     
     float ShiftToPIAtMaxAngle(float angle)
@@ -528,6 +568,11 @@ struct GrassMotionShaderFunctions
         
     }
     
+    void CollisionWithGround(float3 rod, float3 angular_velocity)
+    {
+        
+    }
+    
     void GrassUpdate(
         float damping_coff,
         float stiffness,
@@ -562,6 +607,16 @@ struct GrassMotionShaderFunctions
         float3 p2 = float3(0, 0, 0);
         GetBezierPoints(p1_xz, p2_xz, angular_disp, p1, p2);
         float3 p1p2 = p2 - p1;
+        
+        float3 p1_dir = p1 / length(p1);
+        
+        // Grass is at underground.
+        if (p1_dir.y < ROD_DOT_GROUND_THRESHOLD)
+        {
+            angular_velocity = float4(0, 0, 0, 0);
+            angular_disp = float4(0, 0, 0, 0);
+            return;
+        }
         
         float r1_disp_angle = length(angular_disp.xyz);
         float3 r2_rotational_axis = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp.xyz));
@@ -619,8 +674,19 @@ struct GrassMotionShaderFunctions
         
         float4 velocity_delta = float4(p1_acc, dot(r2_rotational_axis, p1p2_bending_acc)) * time_delta;
         angular_velocity += velocity_delta;
+        
+        float4 angle_disp_delta = angular_velocity * time_delta;
+        
+        float3 new_p1_dir = RotateVectorByQuaternion(p1_dir, QuaternionFromRotationalVector(angle_disp_delta.xyz));
+        
+        // P0P1 will colllide with ground
+        if (new_p1_dir.y < ROD_DOT_GROUND_THRESHOLD)
+        {
+            angle_disp_delta.xyz = GetCollidingAngleDelta(new_p1_dir, angle_disp_delta.xyz);
+            angular_velocity.xyz = float3(0, 0, 0);
+        }
 
-        angular_disp += angular_velocity * time_delta;
+        angular_disp += angle_disp_delta;
         
     }
 };

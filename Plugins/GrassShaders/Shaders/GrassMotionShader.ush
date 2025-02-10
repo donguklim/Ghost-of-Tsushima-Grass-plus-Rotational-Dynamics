@@ -1,10 +1,24 @@
 
 #define PI_VALUE 3.14159265358979323846
 #define ROD_DOT_GROUND_THRESHOLD 0.3
+#define P1_ANGLE_THRESHOLD 0.2
 
 
 struct GrassMotionShaderFunctions
 {
+    float GetAngle(float2 vec)
+    {
+        float2 normalizedVector = normalize(vec);
+    
+        float angle = acos(normalizedVector.x);
+ 
+        if (normalizedVector.y < 0)
+        {
+            angle = -angle;
+        }
+    
+        return angle;
+    }
     
     float4 QuaternionFromAxisAngle(float3 axis, float angle)
     {
@@ -40,8 +54,8 @@ struct GrassMotionShaderFunctions
     float3 GetCollidingAngleDelta(float3 rod_dir, float3 angular_disp_delta)
     {
         float angle = length(angular_disp_delta);
-        if (angle < 0.001)
-            return 0;
+        if (angle < 0.1)
+            return float3(0, 0, 0);
         
         float3 rot_axis = angular_disp_delta / angle;
         
@@ -72,15 +86,15 @@ struct GrassMotionShaderFunctions
         // changing magnitude of angular velocity won't significantly lift the rod from the ground
         if (abs_a_val < 0.001 && abs_b_val < 0.001)
         {
-            return angular_disp_delta;
+            return float3(0, 0, 0);
         }
         // Solve b * cos(x) = c
-        else if (abs_a_val < 0.001)
+        else if (abs_a_val < 0.01)
         {
             return rot_axis * acos(c_val / b_val);
         }
         // Solve a * sin(x) = c
-        else if (abs_b_val < 0.001)
+        else if (abs_b_val < 0.01)
         {
             return rot_axis * asin(c_val / a_val);
         }
@@ -249,14 +263,8 @@ struct GrassMotionShaderFunctions
     )
     {
         
-        if (p1_xz.x < 0)
-        {
-            p1_xz.x = 0.01;
-        }
-        float p1_static_bending = atan(p1_xz.y / p1_xz.x);
-        
         float2 p1p2_xz = p2_xz - p1_xz;
-        float p1p2_static_bending = acos(dot(-p1_xz, p1p2_xz) / (length(p1_xz) * length(p1p2_xz)));
+        float p1_static_disp = GetAngle(p1p2_xz) - GetAngle(p1_xz);
 
         float3 p1 = float3(0, 0, 0);
         float3 p2 = float3(0, 0, 0);
@@ -341,18 +349,58 @@ struct GrassMotionShaderFunctions
         // but current direction is not within the threhsold range
         // adjust the new angular displacement so that it reaches to the threshold 
         // and make velcity zero.
-        if (new_p1_dir.z < ROD_DOT_GROUND_THRESHOLD && abs(p1_dir.z - ROD_DOT_GROUND_THRESHOLD) < 0.1)
+        
+        if (new_p1_dir.z < ROD_DOT_GROUND_THRESHOLD)
         {
-            angular_velocity.xy = float2(0, 0);
-            angle_disp_delta.xy = float2(0, 0);
+            angular_velocity.xyz = float3(0, 0, 0);
+            
+            if (abs(p1_dir.z - ROD_DOT_GROUND_THRESHOLD) < 0.1)
+            {
+                angle_disp_delta.xyz = float3(0, 0, 0);
+            }
+            else
+            {
+                angle_disp_delta.xyz = GetCollidingAngleDelta(p1_dir, angle_disp_delta.xyz);
+                //angle_disp_delta.xy = float2(0, 0);
+            }
 
         }
-        else if (new_p1_dir.z < ROD_DOT_GROUND_THRESHOLD)
+        
+        float cur_p1_angle = p1_static_disp + angular_disp.w;
+        float new_p1_angle = cur_p1_angle + angle_disp_delta.w;
+        
+        
+        //        
+        // The new p1 angle will exceed the range of [- pi , pi]. Don't make p1 angle exceed the range.
+        if (abs(new_p1_angle) > PI_VALUE)
         {
-            angle_disp_delta.xyz = GetCollidingAngleDelta(p1_dir, angle_disp_delta.xyz);
-            angular_velocity.xy = float2(0, 0);
-        }
+            angular_velocity.w = 0;
+            angle_disp_delta.w = 0;
+            
+            // case current angle is already greater than pi but negative angle will be added
+            if (cur_p1_angle > PI_VALUE - P1_ANGLE_THRESHOLD && angle_disp_delta.w < 0)
+            {
+                angle_disp_delta.w = PI_VALUE - P1_ANGLE_THRESHOLD - cur_p1_angle;
 
+            }
+            // case current angle is already less than pi but positive angle wil be added
+            else if (cur_p1_angle < -PI_VALUE + P1_ANGLE_THRESHOLD && angle_disp_delta.w > 0)
+            {
+                angle_disp_delta.w = -PI_VALUE + P1_ANGLE_THRESHOLD - cur_p1_angle;
+            }
+            // case positive angle is added to make p1 angle greater than pi
+            else if (cur_p1_angle < PI_VALUE - P1_ANGLE_THRESHOLD && angle_disp_delta.w > 0)
+            {
+                angle_disp_delta.w = PI_VALUE - P1_ANGLE_THRESHOLD - cur_p1_angle;
+            }
+            // case negative angle is added to make p1 angle less than pi
+            else if (cur_p1_angle > -PI_VALUE + P1_ANGLE_THRESHOLD && angle_disp_delta.w < 0)
+            {
+                angle_disp_delta.w = -PI_VALUE + P1_ANGLE_THRESHOLD - cur_p1_angle;
+            }
+            
+        }
+        
         angular_disp += angle_disp_delta;
         
     }

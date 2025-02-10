@@ -1,6 +1,6 @@
 
 #define PI_VALUE 3.14159265358979323846
-# define ROD_DOT_GROUND_THRESHOLD 0.3
+#define ROD_DOT_GROUND_THRESHOLD 0.3
 
 
 struct GrassMotionShaderFunctions
@@ -171,13 +171,9 @@ struct GrassMotionShaderFunctions
     float3 GetDistantRodTorque(
         float damping_coefficient,
         float3 wind_force,
-        float r2_stiffness,
         float r2_angular_velocity,
-        float r2_angular_displacement,
         float3 r2_rotational_axis,
-        float r1_stiffness,
         float3 r1_angular_velocity,
-        float3 r1_angular_displacement,
         float3 r1_end,
         float3 r2_end
     )
@@ -189,7 +185,7 @@ struct GrassMotionShaderFunctions
         
         float3 r2_torque_dir = cross(r2_rotational_axis, r2_dir);
         
-        float3 l0_force_term = wind_force - 2.0 * r2_stiffness * r2_angular_displacement / r2_length_square * r2_torque_dir - damping_coefficient * cross(r1_angular_velocity, r1_end);
+        float3 l0_force_term = wind_force - damping_coefficient * cross(r1_angular_velocity, r1_end);
         float3 l1_force_term = -damping_coefficient * r2_angular_velocity * r2_torque_dir - damping_coefficient * cross(r1_angular_velocity, r2_dir);
         float3 l0_term = cross(r1_end, l0_force_term);
         float3 l1_term = cross(r2_dir, l0_force_term) + cross(r1_end, l1_force_term);
@@ -252,10 +248,6 @@ struct GrassMotionShaderFunctions
         out float3 wind_z_force
     )
     {
-        float swing_threshold = PI_VALUE * 0.98;
-        float p1_threshold_low = PI_VALUE * 0.02;
-        float p1_threshold_high = PI_VALUE * 1.98;
-        float p1p2_threshold = PI_VALUE * 0.02;
         
         if (p1_xz.x < 0)
         {
@@ -276,37 +268,24 @@ struct GrassMotionShaderFunctions
         
         wind_z_force = r2_rotational_axis * 20;
         
-        float3 p1_acc = GetPivotRodTorque(
+        // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
+        float3 p0_angular_acc_with_sezied_p1 = GetPivotRodTorque(
             damping_coff,
             stiffness,
-            wind, 
+            wind,
             p1,
             angular_velocity.xyz,
             angular_disp.xyz
         ) + GetDistantRodTorque(
             damping_coff,
             wind,
-            p2_stiffness,
             angular_velocity.w,
-            angular_disp.w,
             r2_rotational_axis,
-            stiffness,
             angular_velocity.xyz,
-            angular_disp.xyz,
             p1,
             p2
         ) / GetMomentOfInertia(mass, p1, p2);
-        
-        /*
-        float3 p1_acc = GetPivotRodTorque(
-            damping_coff,
-            stiffness,
-            wind_coff * wind,
-            p1,
-            angular_velocity.xyz,
-            angular_disp.xyz
-        ) / GetMomentOfInertia(mass, p1, p2);
-        */
+
         float p1_length = length(p1);
         float p1p2_length = length(p1p2);
         
@@ -314,25 +293,54 @@ struct GrassMotionShaderFunctions
         float p1_mass = mass * p1_length / legnth_sum;
         float p1p2_mass = mass * p1p2_length / legnth_sum;
         
+        // plain p1 acceleration (not anuglar), when p1 is seized.
+        // (angular acceleration) x p1 is the tangential acceleration
+        // (angular velocity) x (angular velocity x p1) is the centirpetal acceleration
+        float3 seized_p1_plain_acc = cross(p0_angular_acc_with_sezied_p1, p1) + cross(angular_velocity.xyz, cross(angular_velocity.xyz, p1));
         
-        float3 p1p2_bending_acc = GetPivotRodTorque(
+        // Inertia force acting on center of mass point(the mid point) of P1P2 due to movement of P1
+        // = -(p1 acceleration) * mass of P1P2
+
+        float3 p1_inertia_force_torque = cross(p1p2 / 2.0, -seized_p1_plain_acc * p1p2_mass);  
+        
+        float3 torque_sum = p1_inertia_force_torque + GetPivotRodTorque(
             damping_coff,
             p2_stiffness,
             wind,
             p1p2,
             angular_velocity.w * r2_rotational_axis,
             angular_disp.w * r2_rotational_axis
-        ) / (p1p2_mass * p1p2_length * p1p2_length / 3.0);
+        );
+        
+        float p1_bending_torque = dot(r2_rotational_axis, torque_sum);
+        
+        // The total torque  to P1 to make P1 seized is -p1_bending_torque.
+        // So p0_angular_acc_with_sezied_p1 is the acceleration at p0 that would occur if p1_bending_torque is subtracted from p1.
+        // Now add back the acceleration from p1_bending_torque
+        
+        float p1_acc = p1_bending_torque / (p1p2_mass * p1p2_length * p1p2_length / 3.0);
+        
+        // the p1_bending_torque acceleration is subtracted for p0, because 
+        // that is how you calculate the acceleration acting on p0 due to torque from p1
+        float3 p0_acc = p0_angular_acc_with_sezied_p1 - p1_bending_torque * r2_rotational_axis / (p1_mass * p1_length * p1_length / 3.0);
         
         
-        float4 velocity_delta = float4(p1_acc, dot(r2_rotational_axis, p1p2_bending_acc)) * time_delta;
+        float4 velocity_delta = float4(p0_angular_acc_with_sezied_p1, p1_acc) * time_delta;
+        //float4 velocity_delta = float4(p0_angular_acc_with_sezied_p1, 0) * time_delta;
         angular_velocity += velocity_delta;
         
         float4 angle_disp_delta = angular_velocity * time_delta;
         
         float3 new_p1_dir = RotateVectorByQuaternion(p1_dir, QuaternionFromRotationalVector(angle_disp_delta.xyz));
         
-        
+         // If the new p1 angle from normal direction is beynond threshold, 
+        // and current direction is also within some threshold range
+        // Don't move p1, and make velocity zero
+        //
+        // Else if the new p1 angle will go beyond the threshold
+        // but current direction is not within the threhsold range
+        // adjust the new angular displacement so that it reaches to the threshold 
+        // and make velcity zero.
         if (new_p1_dir.z < ROD_DOT_GROUND_THRESHOLD && abs(p1_dir.z - ROD_DOT_GROUND_THRESHOLD) < 0.1)
         {
             angular_velocity.xy = float2(0, 0);

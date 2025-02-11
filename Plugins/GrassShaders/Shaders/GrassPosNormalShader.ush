@@ -31,6 +31,95 @@ struct GrassShaderFunctions
         return mul(rotationMatrix, vec);
     }
     
+    float4 QuaternionFromAxisAngle(float3 axis, float angle)
+    {
+        float halfAngle = angle * 0.5;
+        float s = sin(halfAngle);
+        return float4(axis * s, cos(halfAngle));
+    }
+    
+    float4 QuaternionFromRotationalVector(float3 vec)
+    {
+        float angle = length(vec);
+        vec = angle > 0 ? vec / angle : vec;
+        return QuaternionFromAxisAngle(vec, angle);
+
+    }
+
+    float4 QuaternionMultiply(float4 q1, float4 q2)
+    {
+        return float4(
+            q1.w * q2.xyz + q2.w * q1.xyz + cross(q1.xyz, q2.xyz),
+            q1.w * q2.w - dot(q1.xyz, q2.xyz)
+        );
+    }
+
+    float3 RotateVectorByQuaternion(float3 v, float4 q)
+    {
+        float3 qVec = q.xyz;
+        float3 uv = cross(qVec, v);
+        float3 uuv = cross(qVec, uv);
+        return v + ((uv * q.w) + uuv) * 2.0;
+    }
+    
+    float3 GrassPosOffsetAndNormal(
+        in float2 uv, float4 p1, float4 p2, float scale, float width, float base,
+        float3 angular_disp,
+        float mid_smooth, float rim_pos, float rim_smooth, float y_strength, out float3 normal
+    )
+    {
+        float vec_length_threshold = 0.00001;
+        float t = uv.x;
+        float g = uv.y;
+
+        float s = 1 - t;
+        float s2 = s * s;
+        float t2 = t * t;
+
+        float g_axis_val = g - 0.5;
+        
+        // initialize points at static positions
+        p1.w = p1.w > 1 ? 1 : p1.w;
+        p2.w = p1.w < p2.w ? p1.w : p2.w;
+        float4 p0 = float4(0, 0, 0, 1);
+        
+        float4 curve = s2 * p0 + 2 * s * t * p1 + t2 * p2;
+        float3 curve_tangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
+        
+        /* tilt xy_plane norm abount the curve tangent */
+        float vec_length = length(curve_tangent);
+        float3 unit_tangent = (vec_length > vec_length_threshold) ? (curve_tangent / vec_length) : curve_tangent;
+        
+        
+        // make twist
+        float3 side_dir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp * (1.0 - curve.w + p2.w * t)));
+
+        /* get position offset */
+        // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
+        
+        float3 pos_offset = scale * (curve.xyz + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
+       
+    
+        /* get normal */
+        float3 curve_norm = cross(curve_tangent, side_dir);
+
+        float smoothing_value = saturate((g_axis_val + mid_smooth) / (mid_smooth * 2));
+        float middle_value = smoothing_value * smoothing_value * (3.0 - 2.0 * smoothing_value);
+
+        float rim_smoothing_value = saturate((abs(g_axis_val) - rim_pos + rim_smooth) / (rim_smooth * 2));
+        float rim_value = rim_smoothing_value * rim_smoothing_value * (3.0 - 2.0 * rim_smoothing_value);
+
+        float linear_value = (1.0 - middle_value) * rim_value + middle_value * (1.0 - rim_value);
+
+        float y = (1 - 2 * linear_value) * y_strength;
+        float3 normal_vector = curve_norm + y * side_dir;
+        vec_length = length(normal_vector);
+
+        normal = (vec_length > vec_length_threshold) ? (normal_vector / vec_length) : normal_vector;
+    
+        return pos_offset;
+    }
+    
     float3 GrassPosOffsetAndNormal(
         in float2 uv, float4 p1, float4 p2, float scale, float width, float base,
         float3 xy_norm,

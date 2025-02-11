@@ -65,6 +65,7 @@ struct GrassShaderFunctions
     float3 GrassPosOffsetAndNormal(
         in float2 uv, float4 p1, float4 p2, float scale, float width, float base,
         float3 angular_disp,
+        float3 viewing_dir,
         float mid_smooth, float rim_pos, float rim_smooth, float y_strength, out float3 normal
     )
     {
@@ -91,9 +92,13 @@ struct GrassShaderFunctions
         float3 unit_tangent = (vec_length > vec_length_threshold) ? (curve_tangent / vec_length) : curve_tangent;
         
         
-        // make twist
+        // make twist from p0 rotation
         float3 side_dir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp * (1.0 - curve.w + p2.w * t)));
+        
+        float tilt_amount = dot(side_dir, viewing_dir) * 0.8;
+        side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
 
+        
         /* get position offset */
         // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
         

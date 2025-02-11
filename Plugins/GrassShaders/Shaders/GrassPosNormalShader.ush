@@ -62,6 +62,44 @@ struct GrassShaderFunctions
         return v + ((uv * q.w) + uuv) * 2.0;
     }
     
+    float GetBezierCurveLength(float3 bar1, float3 p2)
+    {
+        float3 bar2 = p2 - bar1;
+        
+        float sqrt_c_val = length(bar1);
+        float c_val = sqrt_c_val * sqrt_c_val;
+        float b_val = (dot(bar1, bar2) - c_val) * 2;
+        
+        float sqrt_a_val = length(bar1 - bar2);
+        float a_val = sqrt_a_val * sqrt_a_val;
+        
+        float quad_term = 4 * a_val * c_val - b_val * b_val;
+        float b_over_2a = b_val / (2 * a_val);
+        
+        if (quad_term < 0.01)
+        {
+            if (b_over_2a <= -1)
+            {
+                return -2.0 * sqrt_a_val * (0.5 + b_over_2a);
+
+            }
+            else if (b_over_2a >= 0)
+            {
+                return 2.0 * sqrt_a_val * (0.5 + b_over_2a);
+            }
+            
+            return 2.0 * sqrt_a_val * (0.5 + b_over_2a - b_over_2a * b_over_2a * 3);
+            
+        }
+        
+        float sum_sqrt = sqrt(a_val + b_val + c_val);
+        
+        return (
+            ((2 * a_val + b_val) * sum_sqrt - b_val * sqrt_c_val) / (4 * a_val)
+            + sqrt_a_val * quad_term / (8 * a_val) * (log(abs(1 + b_over_2a + sum_sqrt / sqrt_a_val)) - log(abs(b_over_2a + sqrt_c_val / sqrt_a_val)))
+        ) * 2.0;
+    }
+    
     float3 GrassPosOffsetAndNormal(
         in float2 uv, float4 p1, float4 p2, float scale, float width, float base,
         float3 angular_disp,
@@ -87,6 +125,8 @@ struct GrassShaderFunctions
         float4 curve = s2 * p0 + 2 * s * t * p1 + t2 * p2;
         float3 curve_tangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
         
+        float3 curve_length = GetBezierCurveLength(p1.xyz, p2.xyz);
+        
         /* tilt xy_plane norm abount the curve tangent */
         float vec_length = length(curve_tangent);
         float3 unit_tangent = (vec_length > vec_length_threshold) ? (curve_tangent / vec_length) : curve_tangent;
@@ -102,7 +142,7 @@ struct GrassShaderFunctions
         /* get position offset */
         // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
         
-        float3 pos_offset = scale * (curve.xyz + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
+        float3 pos_offset = scale * (curve.xyz / curve_length * 2 + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
        
     
         /* get normal */
@@ -124,6 +164,7 @@ struct GrassShaderFunctions
     
         return pos_offset;
     }
+    
     
     float3 GrassPosOffsetAndNormal(
         in float2 uv, float4 p1, float4 p2, float scale, float width, float base,
@@ -147,6 +188,8 @@ struct GrassShaderFunctions
         p2.w = p1.w < p2.w ? p1.w : p2.w;
         float4 p0 = float4(0, 0, 0, 1);
         
+        float3 curve_length = GetBezierCurveLength(p1.xyz, (p2 - p1).xyz);
+        
         float4 curve = s2 * p0 + 2 * s * t * p1 + t2 * p2;
         float3 curve_tangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
         
@@ -166,7 +209,7 @@ struct GrassShaderFunctions
         /* get position offset */
         // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
         
-        float3 pos_offset = scale * (curve.xyz + g_axis_val * s * (t + base) * width * xy_norm - float3(t, g_axis_val, 0));
+        float3 pos_offset = scale * (curve.xyz / curve_length + g_axis_val * s * (t + base) * width * xy_norm - float3(t, g_axis_val, 0));
         
         //float3 pos_offset = scale * (curve.xyz + g_axis_val * xy_norm - float3(t, g_axis_val, 0));
     

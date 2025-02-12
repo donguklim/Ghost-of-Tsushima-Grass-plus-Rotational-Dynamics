@@ -1,0 +1,31 @@
+
+float4 QuaternionFromAxisAngle(float3 axis, float angle)
+{
+    float halfAngle = angle * 0.5;
+    float s = sin(halfAngle);
+    return float4(axis * s, cos(halfAngle));
+}
+    
+float4 QuaternionFromRotationalVector(float3 vec)
+{
+    float angle = length(vec);
+    vec = angle > 0 ? vec / angle : vec;
+    return QuaternionFromAxisAngle(vec, angle);
+
+}
+
+float4 QuaternionMultiply(float4 q1, float4 q2)
+{
+    return float4(
+            q1.w * q2.xyz + q2.w * q1.xyz + cross(q1.xyz, q2.xyz),
+            q1.w * q2.w - dot(q1.xyz, q2.xyz)
+        );
+}
+
+float3 RotateVectorByQuaternion(float3 v, float4 q)
+{
+    float3 qVec = q.xyz;
+    float3 uv = cross(qVec, v);
+    float3 uuv = cross(qVec, uv);
+    return v + ((uv * q.w) + uuv) * 2.0;
+}

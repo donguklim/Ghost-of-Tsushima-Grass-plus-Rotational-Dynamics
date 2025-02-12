@@ -28,9 +28,6 @@ public:
     virtual FText GetCreationName() const override { return FText::FromString(TEXT("Get rotated Bezier Points")); }
     virtual void GetExpressionToolTip(TArray<FString>& OutToolTip) override;
     virtual uint32 GetOutputType(int32 OutputIndex) override;
-    virtual FExpressionInput* GetInput(int32 InputIndex) override;
-    virtual FName GetInputName(int32 InputIndex) const override;
-
 
 
     //~ End UMaterialExpression Interface

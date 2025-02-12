@@ -5,20 +5,18 @@
 UGetRotatedPoints::UGetRotatedPoints(const FObjectInitializer& ObjectInitializer):Super(ObjectInitializer)
 {
     DefaultInputAngularDisplacement = FVector4f(0, 0, 0, 0);
+#if WITH_EDITORONLY_DATA
+
+    Outputs.Reset();
+    Outputs.Add(FExpressionOutput(TEXT("P1"), 1, 1, 1, 1, 0));
+    Outputs.Add(FExpressionOutput(TEXT("P2"), 1, 1, 1, 1, 0));
+    Outputs.Add(FExpressionOutput(TEXT("Side Direction"), 1, 1, 1, 1, 0));
+
+#endif
 }
 
 
 #if WITH_EDITOR
-uint32 UGetRotatedPoints::GetOutputType(int32 OutputIndex)
-{
-    switch (OutputIndex)
-    {
-        case 0: return MCT_Float3;  // P1 position
-        case 1: return MCT_Float3; // P2 position
-        case 2: return MCT_Float3;  // Grass side direction
-        default: return MCT_Unknown;
-    }
-}
 
 void UGetRotatedPoints::GetExpressionToolTip(TArray<FString>& OutToolTip) {
     OutToolTip.Add(TEXT("Get P1, P2 and Curve side direction after the angular displacement is applied"));
@@ -29,38 +27,15 @@ void UGetRotatedPoints::GetCaption(TArray<FString>& OutCaptions) const
     OutCaptions.Add(TEXT("P1, P2, Curve side direction"));
 }
 
-FExpressionInput* UGetRotatedPoints::GetInput(int32 InputIndex)
+uint32 UGetRotatedPoints::GetOutputType(int32 OutputIndex)
 {
-    switch (InputIndex)
+    switch (OutputIndex)
     {
-        case 0: // Angular displacement
-            return &InputAngularDisplacement;
-
-        case 1: // P1 point of the Bezier curve
-            return &InputP1;
-
-        case 2: // P2 point of the Bezier curve
-            return &InputP2;
+    case 0: return MCT_Float3;  // P1 position
+    case 1: return MCT_Float3; // P2 position
+    case 2: return MCT_Float3;  // Grass side direction
+    default: return MCT_Unknown;
     }
-
-    return nullptr;
-}
-
-FName UGetRotatedPoints::GetInputName(int32 InputIndex) const
-{
-    switch (InputIndex)
-    {
-    case 0:
-        return TEXT("Angular Displacement");
-
-    case 1:
-        return TEXT("P1");
-
-    case 2:
-        return TEXT("P2");
-    }
-
-    return TEXT("");
 }
 
 UMaterialExpressionCustom* UGetRotatedPoints::GetInternalExpression()
@@ -152,6 +127,7 @@ int32 UGetRotatedPoints::Compile(FMaterialCompiler* Compiler, int32 OutputIndex)
     InternalExpression->Code = TEXT(R"(
         return GetBezierPoints(InputP1, InputP2, InputAngularDisplacement, P1, P2, SideDir);
     )");
+    
 
     // Just to be safe, clear out the InternalExpression input. This should only be used by GenerateHLSLExpression
     // Remove this if not useing GenerateHLSLExpression.
@@ -170,6 +146,8 @@ int32 UGetRotatedPoints::Compile(FMaterialCompiler* Compiler, int32 OutputIndex)
 
     int32 P1Code = InputP1.Compile(Compiler);
     int32 P2Code = InputP2.Compile(Compiler);
+
+    // return Compiler->Add(P1Code, P2Code);
     TArray<int32> Inputs{ AngularDispCode, P1Code, P2Code };
 
     return Compiler->CustomExpression(InternalExpression, OutputIndex, Inputs);
@@ -182,6 +160,7 @@ bool UGetRotatedPoints::GenerateHLSLExpression(
     UE::HLSLTree::FExpression const*& OutExpression
 ) const
 {
+    
     UMaterialExpressionCustom* InternalExpression = CustomExpression;
     if (!InternalExpression)
     {
@@ -197,6 +176,21 @@ bool UGetRotatedPoints::GenerateHLSLExpression(
     InternalExpression->Inputs[2].Input = InputP2;
 
     return InternalExpression->GenerateHLSLExpression(Generator, Scope, OutputIndex, OutExpression);
+
+    /*
+    // Adds A and B together, and optionally negates the result.
+    const UE::HLSLTree::FExpression* InputAExpression = InputP1.AcquireHLSLExpression(Generator, Scope);
+    const UE::HLSLTree::FExpression* InputBExpression = InputP2.AcquireHLSLExpression(Generator, Scope);
+    if (!InputAExpression || !InputBExpression)
+    {
+        return false;
+    }
+
+    OutExpression = Generator.GetTree().NewAdd(InputAExpression, InputAExpression);
+    */
+   
+
+    return true;
 }
 
 #endif

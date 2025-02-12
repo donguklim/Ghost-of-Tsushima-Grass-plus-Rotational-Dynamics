@@ -1,0 +1,22 @@
+#include "Common/Quaternion.ush"
+
+#define PI_VALUE 3.14159265358979323846
+#define ROD_DOT_GROUND_THRESHOLD 0.3
+#define P1_ANGLE_THRESHOLD 0.2
+
+
+void GetBezierPoints(float3 input_p1, float3 input_p2, float4 angular_disp, out float3 p1, out float3 p2, out float3 side_dir)
+{
+        
+    float4 p1_quat = QuaternionFromRotationalVector(angular_disp.xyz);
+    float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
+        
+    float3 p1p2 = RotateVectorByQuaternion(input_p2 - input_p1, p1p2_quat);
+    input_p2 = input_p1 + p1p2;
+        
+    p1 = RotateVectorByQuaternion(input_p1, p1_quat);
+    p2 = RotateVectorByQuaternion(input_p2, p1_quat);
+        
+    side_dir = RotateVectorByQuaternion(float3(0, 1, 0), p1_quat);
+        
+}

@@ -124,9 +124,9 @@ float GetMomentOfInertia(float mass, float3 bar1_end, float3 bar2_end)
     // = Moment of Inertia of bar2 at its center of mass + (bar 2 center of mass distance from the pivot)^2
     //
     // Moment of Inertia of bar 2 at its center of mass = bar2_mass * bar2_length * bar2_length / 12.0
-    float bar2_MI = bar2_mass * (bar2_length * r2_length / 12.0 + r2_center_distance * r2_center_distance);
+    float bar2_MI = bar2_mass * (bar2_length * bar2_length / 12.0 + r2_center_distance * r2_center_distance);
         
-    float bar1_MI = (mass - r2_mass) / 3.0 * bar1_length * bar1_length;
+    float bar1_MI = (mass - bar2_mass) / 3.0 * bar1_length * bar1_length;
         
     return bar1_MI + bar2_MI;
     
@@ -156,7 +156,7 @@ void GrassUpdate(
     float2 p1_xz,
     float2 p2_xz,
     inout float4 angular_velocity,
-    inout float4 angular_disp,
+    inout float4 angular_disp
 )
 {
         

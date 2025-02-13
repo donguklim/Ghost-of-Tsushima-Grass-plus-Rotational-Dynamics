@@ -1,0 +1,74 @@
+#ifndef __ROTATIONAL_DYNAMIC_GRASS_BEZIER_CURVE_HLSL__
+#define __ROTATIONAL_DYNAMIC_GRASS_BEZIER_CURVE_HLSL__
+
+#include "Quaternion.ush"
+
+
+void GetRotatedBezierPoints(in float3 input_p1, in float3 input_p2, in float4 angular_disp, out float3 p1, out float3 p2)
+{
+        
+    float4 p1_quat = QuaternionFromRotationalVector(angular_disp.xyz);
+    float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
+        
+    float3 p1p2 = RotateVectorByQuaternion(input_p2 - input_p1, p1p2_quat);
+        
+    p1 = RotateVectorByQuaternion(input_p1, p1_quat);
+    p2 = RotateVectorByQuaternion(input_p1 + p1p2, p1_quat);
+}
+
+
+void GetRotatedBezierPoints(in float3 input_p1, in float3 input_p2, in float4 angular_disp, out float3 p1, out float3 p2, out float3 side_dir)
+{
+        
+    float4 p1_quat = QuaternionFromRotationalVector(angular_disp.xyz);
+    float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
+        
+    float3 p1p2 = RotateVectorByQuaternion(input_p2 - input_p1, p1p2_quat);
+        
+    p1 = RotateVectorByQuaternion(input_p1, p1_quat);
+    p2 = RotateVectorByQuaternion(input_p1 + p1p2, p1_quat);
+        
+    side_dir = RotateVectorByQuaternion(float3(0, 1, 0), p1_quat);
+        
+}
+
+
+float GetBezierCurveLength(in float3 bar1, in float3 p2)
+{
+    float3 bar2 = p2 - bar1;
+        
+    float sqrt_c_val = length(bar1);
+    float c_val = sqrt_c_val * sqrt_c_val;
+    float b_val = (dot(bar1, bar2) - c_val) * 2;
+        
+    float sqrt_a_val = length(bar1 - bar2);
+    float a_val = sqrt_a_val * sqrt_a_val;
+        
+    float quad_term = 4 * a_val * c_val - b_val * b_val;
+    float b_over_2a = b_val / (2 * a_val);
+        
+    if (quad_term < 0.01)
+    {
+        if (b_over_2a <= -1)
+        {
+            return -2.0 * sqrt_a_val * (0.5 + b_over_2a);
+
+        }
+        else if (b_over_2a >= 0)
+        {
+            return 2.0 * sqrt_a_val * (0.5 + b_over_2a);
+        }
+            
+        return 2.0 * sqrt_a_val * (0.5 + b_over_2a - b_over_2a * b_over_2a * 3);
+            
+    }
+        
+    float sum_sqrt = sqrt(a_val + b_val + c_val);
+        
+    return (
+            ((2 * a_val + b_val) * sum_sqrt - b_val * sqrt_c_val) / (4 * a_val)
+            + sqrt_a_val * quad_term / (8 * a_val) * (log(abs(1 + b_over_2a + sum_sqrt / sqrt_a_val)) - log(abs(b_over_2a + sqrt_c_val / sqrt_a_val)))
+        ) * 2.0;
+}
+
+#endif // __ROTATIONAL_DYNAMIC_GRASS_BEZIER_CURVE_HLSL__

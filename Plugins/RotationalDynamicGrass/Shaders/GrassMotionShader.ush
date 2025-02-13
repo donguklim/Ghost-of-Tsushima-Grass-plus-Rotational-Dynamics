@@ -1,22 +1,303 @@
-#include "Common/Quaternion.ush"
+#ifndef __ROTATIONAL_DYNAMIC_GRASS_MOTION_HLSL__
+#define __ROTATIONAL_DYNAMIC_GRASS_MOTION_HLSL__
+
+#include "Common/BezierCurve.ush"
 
 #define PI_VALUE 3.14159265358979323846
-#define ROD_DOT_GROUND_THRESHOLD 0.3
+#define BAR_DOT_GROUND_THRESHOLD 0.3
 #define P1_ANGLE_THRESHOLD 0.2
 
 
-void GetBezierPoints(float3 input_p1, float3 input_p2, float4 angular_disp, out float3 p1, out float3 p2, out float3 side_dir)
+float3 GetCollidingAngleDelta(float3 bar_dir, float3 angular_disp_delta)
+{
+    float angle = length(angular_disp_delta);
+    if (angle < 0.1)
+        return float3(0, 0, 0);
+        
+    float3 rot_axis = angular_disp_delta / angle;
+        
+        //float3 ground_norm = float3(0, 1, 0);
+        
+        
+    float3 rot_axis_c_bar = cross(rot_axis, bar_dir);
+        
+    float a_val = rot_axis_c_bar.z; // dot product with ground norm
+        
+    float b_val = -cross(rot_axis, rot_axis_c_bar).z; // dot product with ground norm
+        
+    // dot(ground_norm, bar_direction after angular_velocity is applied)
+    // = a_val * sin(angle * delta_time) + b_val * cos(angle * delta_time) + b_val + dot(current bar_direction, ground_norm)
+        
+    // we don't want anbove value to have value less than bar_GROUND_DOT_THRESHOLD
+        
+    // we  want
+    // dot(ground_norm, bar_direction after angular_velocity is applied) > BAR_DOT_GROUND_THRESHOLD
+        
+    float c_val = BAR_DOT_GROUND_THRESHOLD - bar_dir.z - b_val;
+        
+    // We want to solve x for  a * sin(x) + b * cos(x) = c
+                
+    float abs_a_val = abs(a_val);
+    float abs_b_val = abs(b_val);
+        
+    // changing magnitude of angular velocity won't significantly lift the rod from the ground
+    if (abs_a_val < 0.001 && abs_b_val < 0.001)
+    {
+        return float3(0, 0, 0);
+    }
+    // Solve b * cos(x) = c
+    else if (abs_a_val < 0.01)
+    {
+        return rot_axis * acos(c_val / b_val);
+    }
+    // Solve a * sin(x) = c
+    else if (abs_b_val < 0.01)
+    {
+        return rot_axis * asin(c_val / a_val);
+    }
+        
+    // Given a * sin(x) + b * cos(x) = c
+    // using trigonometric identity sin(i + j) = sin(i)cos(j) = cos(i)sin(j)
+    // R * sin(x + z) = c,  where tan(z) = b/a and R = sqrt(a^2 + b^2)
+    // x = asin(c/R) + z
+        
+    return rot_axis * asin(c_val / sqrt(a_val * a_val + b_val * b_val)) - atan(b_val / a_val);
+
+}
+
+
+float3 GetDistantBarTorque(
+    float damping_coefficient,
+    float3 wind_force,
+    float bar2_angular_velocity,
+    float3 bar2_rotational_axis,
+    float3 bar1_angular_velocity,
+    float3 bar1_end,
+    float3 bar2_end
+)
+{
+    float3 bar2 = (bar2_end - bar1_end);
+    float bar2_length = length(bar2);
+    float bar2_length_square = bar2_length * bar2_length;
+    float3 bar2_dir = bar2 / bar2_length;
+        
+    float3 bar2_torque_dir = cross(bar2_rotational_axis, bar2_dir);
+        
+    float3 l0_force_term = wind_force - damping_coefficient * cross(bar1_angular_velocity, bar1_end);
+    float3 l1_force_term = -damping_coefficient * bar2_angular_velocity * bar2_torque_dir - damping_coefficient * cross(bar1_angular_velocity, bar2_dir);
+    float3 l0_term = cross(bar1_end, l0_force_term);
+    float3 l1_term = cross(bar2_dir, l0_force_term) + cross(bar1_end, l1_force_term);
+    float3 l2_term = cross(bar2_dir, l1_force_term);
+        
+        
+    return l0_term * bar2_length + l1_term * bar2_length_square / 2.0 + l2_term * bar2_length * bar2_length_square / 3.0;
+
+}
+float3 GetPivotBarTorque(
+    float damping_coff,
+    float stiffness,
+    float3 wind_force,
+    float3 bar,
+    float3 angular_velocity,
+    float3 angular_disp
+)
+{
+    float bar_length = length(bar);
+    float3 wind_torque = cross(bar, wind_force) * bar_length / 2.0;
+    float3 damping_torque = -damping_coff * cross(bar, cross(angular_velocity, bar)) * bar_length / 3.0;
+       
+    return bar_length * (cross(bar, wind_force) / 2.0 - damping_coff * cross(bar, cross(angular_velocity, bar)) / 3.0) - stiffness * angular_disp;
+       
+}
+    
+    
+float GetMomentOfInertia(float mass, float3 bar1_end, float3 bar2_end)
+{
+    float3 bar2 = bar2_end - bar1_end;
+    float bar2_length = length(bar2);
+    float bar1_length = length(bar1_end);
+    float r2_center_distance = length(bar2 / 2 + bar1_end);
+        
+    float bar2_mass = mass * bar2_length / (bar1_length + bar2_length);
+        
+    // Moment of Inertia caused by bar 2
+    // = Moment of Inertia of bar2 at its center of mass + (bar 2 center of mass distance from the pivot)^2
+    //
+    // Moment of Inertia of bar 2 at its center of mass = bar2_mass * bar2_length * bar2_length / 12.0
+    float bar2_MI = bar2_mass * (bar2_length * r2_length / 12.0 + r2_center_distance * r2_center_distance);
+        
+    float bar1_MI = (mass - r2_mass) / 3.0 * bar1_length * bar1_length;
+        
+    return bar1_MI + bar2_MI;
+    
+}
+
+float Get2DAngle(float2 vec)
+{
+    float2 normalizedVector = normalize(vec);
+    
+    float angle = acos(normalizedVector.x);
+ 
+    if (normalizedVector.y < 0)
+    {
+        angle = -angle;
+    }
+    
+    return angle;
+}
+ 
+void GrassUpdate(
+    float damping_coff,
+    float stiffness,
+    float p2_stiffness,
+    float mass,
+    float time_delta,
+    float3 wind,
+    float2 p1_xz,
+    float2 p2_xz,
+    inout float4 angular_velocity,
+    inout float4 angular_disp,
+)
 {
         
-    float4 p1_quat = QuaternionFromRotationalVector(angular_disp.xyz);
-    float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
+    float2 p1p2_xz = p2_xz - p1_xz;
+    float p1_static_disp = Get2DAngle(p1p2_xz) - Get2DAngle(p1_xz);
+
+    float3 p1 = float3(0, 0, 0);
+    float3 p2 = float3(0, 0, 0);
+    float3 r2_rotational_axis = float3(0, 0, 0);
+    
+    float3 input_p1 = float3(p1_xz.x, 0, p1_xz.y);
+    float3 input_p2 = float3(p2_xz.x, 0, p2_xz.y);
+    GetRotatedBezierPoints(input_p1, input_p2, angular_disp, p1, p2, r2_rotational_axis);
+    float3 p1p2 = p2 - p1;
         
-    float3 p1p2 = RotateVectorByQuaternion(input_p2 - input_p1, p1p2_quat);
-    input_p2 = input_p1 + p1p2;
+    float3 p1_dir = p1 / length(p1);
+             
+    // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
+    float3 p0_angular_acc_with_sezied_p1 = GetPivotBarTorque(
+            damping_coff,
+            stiffness,
+            wind,
+            p1,
+            angular_velocity.xyz,
+            angular_disp.xyz
+        ) + GetDistantBarTorque(
+            damping_coff,
+            wind,
+            angular_velocity.w,
+            r2_rotational_axis,
+            angular_velocity.xyz,
+            p1,
+            p2
+        ) / GetMomentOfInertia(mass, p1, p2);
+
+    float p1_length = length(p1);
+    float p1p2_length = length(p1p2);
         
-    p1 = RotateVectorByQuaternion(input_p1, p1_quat);
-    p2 = RotateVectorByQuaternion(input_p2, p1_quat);
+    float legnth_sum = p1_length + p1p2_length;
+    float p1_mass = mass * p1_length / legnth_sum;
+    float p1p2_mass = mass * p1p2_length / legnth_sum;
         
-    side_dir = RotateVectorByQuaternion(float3(0, 1, 0), p1_quat);
+    // plain p1 acceleration (not anuglar), when p1 is seized.
+    // (angular acceleration) x p1 is the tangential acceleration
+    // (angular velocity) x (angular velocity x p1) is the centirpetal acceleration
+    float3 seized_p1_plain_acc = cross(p0_angular_acc_with_sezied_p1, p1) + cross(angular_velocity.xyz, cross(angular_velocity.xyz, p1));
+        
+    // Inertia force acting on center of mass point(the mid point) of P1P2 due to movement of P1
+    // = -(p1 acceleration) * mass of P1P2
+
+    float3 p1_inertia_force_torque = cross(p1p2 / 2.0, -seized_p1_plain_acc * p1p2_mass);
+        
+    float3 torque_sum = p1_inertia_force_torque + GetPivotBarTorque(
+        damping_coff,
+        p2_stiffness,
+        wind,
+        p1p2,
+        angular_velocity.w * r2_rotational_axis,
+        angular_disp.w * r2_rotational_axis
+    );
+        
+    float p1_bending_torque = dot(r2_rotational_axis, torque_sum);
+        
+    // The total torque  to P1 to make P1 seized is -p1_bending_torque.
+    // So p0_angular_acc_with_sezied_p1 is the acceleration at p0 that would occur if p1_bending_torque is subtracted from p1.
+    // Now add back the acceleration from p1_bending_torque
+        
+    float p1_acc = p1_bending_torque / (p1p2_mass * p1p2_length * p1p2_length / 3.0);
+        
+    // the p1_bending_torque acceleration is subtracted for p0, because 
+    // that is how you calculate the acceleration acting on p0 due to torque from p1
+    float3 p0_acc = p0_angular_acc_with_sezied_p1 - p1_bending_torque * r2_rotational_axis / (p1_mass * p1_length * p1_length / 3.0);
+        
+        
+    float4 velocity_delta = float4(p0_angular_acc_with_sezied_p1, p1_acc) * time_delta;
+    //float4 velocity_delta = float4(p0_angular_acc_with_sezied_p1, 0) * time_delta;
+    angular_velocity += velocity_delta;
+        
+    float4 angle_disp_delta = angular_velocity * time_delta;
+        
+    float3 new_p1_dir = RotateVectorByQuaternion(p1_dir, QuaternionFromRotationalVector(angle_disp_delta.xyz));
+        
+    // If the new p1 angle from normal direction is beynond threshold, 
+    // and current direction is also within some threshold range
+    // Don't move p1, and make velocity zero
+    //
+    // Else if the new p1 angle will go beyond the threshold
+    // but current direction is not within the threhsold range
+    // adjust the new angular displacement so that it reaches to the threshold 
+    // and make velcity zero.
+        
+    if (new_p1_dir.z < BAR_DOT_GROUND_THRESHOLD)
+    {
+        angular_velocity.xyz = float3(0, 0, 0);
+            
+        if (abs(p1_dir.z - BAR_DOT_GROUND_THRESHOLD) < 0.1)
+        {
+            angle_disp_delta.xyz = float3(0, 0, 0);
+        }
+        else
+        {
+            angle_disp_delta.xyz = GetCollidingAngleDelta(p1_dir, angle_disp_delta.xyz);
+        }
+
+    }
+        
+    float cur_p1_angle = p1_static_disp + angular_disp.w;
+    float new_p1_angle = cur_p1_angle + angle_disp_delta.w;
+           
+    // The new p1 angle will exceed the range of [- pi , pi]. Don't make p1 angle exceed the range.
+    if (abs(new_p1_angle) > PI_VALUE)
+    {
+        angular_velocity.w = 0;
+        angle_disp_delta.w = 0;
+            
+            // case current angle is already greater than pi but negative angle will be added
+        if (cur_p1_angle > PI_VALUE - P1_ANGLE_THRESHOLD && angle_disp_delta.w < 0)
+        {
+            angle_disp_delta.w = PI_VALUE - P1_ANGLE_THRESHOLD - cur_p1_angle;
+
+        }
+            // case current angle is already less than pi but positive angle wil be added
+        else if (cur_p1_angle < -PI_VALUE + P1_ANGLE_THRESHOLD && angle_disp_delta.w > 0)
+        {
+            angle_disp_delta.w = -PI_VALUE + P1_ANGLE_THRESHOLD - cur_p1_angle;
+        }
+            // case positive angle is added to make p1 angle greater than pi
+        else if (cur_p1_angle < PI_VALUE - P1_ANGLE_THRESHOLD && angle_disp_delta.w > 0)
+        {
+            angle_disp_delta.w = PI_VALUE - P1_ANGLE_THRESHOLD - cur_p1_angle;
+        }
+            // case negative angle is added to make p1 angle less than pi
+        else if (cur_p1_angle > -PI_VALUE + P1_ANGLE_THRESHOLD && angle_disp_delta.w < 0)
+        {
+            angle_disp_delta.w = -PI_VALUE + P1_ANGLE_THRESHOLD - cur_p1_angle;
+        }
+            
+    }
+        
+    angular_disp += angle_disp_delta;
         
 }
+
+#endif //  __ROTATIONAL_DYNAMIC_GRASS_MOTION_HLSL__

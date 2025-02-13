@@ -13,6 +13,14 @@ UGetRotatedPoints::UGetRotatedPoints(const FObjectInitializer& ObjectInitializer
     Outputs.Add(FExpressionOutput(TEXT("Side Direction"), 1, 1, 1, 1, 0));
 
 #endif
+    CustomExpression = NewObject<UMaterialExpressionCustom>();
+    CustomExpression->Inputs[0].InputName = TEXT("InputAngularDisplacement"); // the first input is already added
+    CustomExpression->Inputs.Add({ TEXT("InputP1") });
+    CustomExpression->Inputs.Add({ TEXT("InputP2") });
+    CustomExpression->OutputType = ECustomMaterialOutputType::CMOT_Float3;
+    CustomExpression->AdditionalOutputs.Add({ TEXT("P2"), ECustomMaterialOutputType::CMOT_Float3 });
+    CustomExpression->AdditionalOutputs.Add({ TEXT("SideDir"), ECustomMaterialOutputType::CMOT_Float3 });
+    CustomExpression->IncludeFilePaths.Add("/Plugin/RotationalDynamicGrass/GrassMotionShader.ush");
 }
 
 
@@ -38,23 +46,6 @@ uint32 UGetRotatedPoints::GetOutputType(int32 OutputIndex)
     }
 }
 
-UMaterialExpressionCustom* UGetRotatedPoints::GetInternalExpression()
-{
-    if (CustomExpression)
-    {
-        return CustomExpression;
-    }
-
-    CustomExpression = NewObject<UMaterialExpressionCustom>();
-    CustomExpression->Inputs[0].InputName = TEXT("InputAngularDisplacement"); // the first input is already added
-    CustomExpression->Inputs.Add({ TEXT("InputP1") });
-    CustomExpression->Inputs.Add({ TEXT("InputP2") });
-    CustomExpression->OutputType = ECustomMaterialOutputType::CMOT_Float3;
-    CustomExpression->AdditionalOutputs.Add({ TEXT("P2"), ECustomMaterialOutputType::CMOT_Float3 });
-    CustomExpression->AdditionalOutputs.Add({ TEXT("SideDir"), ECustomMaterialOutputType::CMOT_Float3 });
-    CustomExpression->IncludeFilePaths.Add("/RotationalDynamicGrass/Shaders/GrassMotionShader.ush");
-    return CustomExpression;
-}
 
 int32 UGetRotatedPoints::Compile(FMaterialCompiler* Compiler, int32 OutputIndex)
 {
@@ -118,22 +109,19 @@ int32 UGetRotatedPoints::Compile(FMaterialCompiler* Compiler, int32 OutputIndex)
     }
     */
 
-    UMaterialExpressionCustom* InternalExpression = GetInternalExpression();
-    if (!InternalExpression)
-    {
-        return Compiler->Errorf(TEXT("Internal expression is null."));
-    }
-
-    InternalExpression->Code = TEXT(R"(
-        return GetBezierPoints(InputP1, InputP2, InputAngularDisplacement, P1, P2, SideDir);
+    
+    CustomExpression->Code = TEXT(R"(
+        float3 P1;
+        GetBezierPoints(InputP1, InputP2, InputAngularDisplacement, P1, P2, SideDir);
+        return P1;
     )");
     
 
     // Just to be safe, clear out the InternalExpression input. This should only be used by GenerateHLSLExpression
     // Remove this if not useing GenerateHLSLExpression.
-    InternalExpression->Inputs[0].Input = FExpressionInput();
-    InternalExpression->Inputs[1].Input = FExpressionInput();
-    InternalExpression->Inputs[2].Input = FExpressionInput();
+    CustomExpression->Inputs[0].Input = FExpressionInput();
+    CustomExpression->Inputs[1].Input = FExpressionInput();
+    CustomExpression->Inputs[2].Input = FExpressionInput();
 
 
     int32 AngularDispCode = InputAngularDisplacement.GetTracedInput().Expression ? InputAngularDisplacement.Compile(Compiler) :
@@ -146,11 +134,14 @@ int32 UGetRotatedPoints::Compile(FMaterialCompiler* Compiler, int32 OutputIndex)
 
     int32 P1Code = InputP1.Compile(Compiler);
     int32 P2Code = InputP2.Compile(Compiler);
+  
 
-    // return Compiler->Add(P1Code, P2Code);
+    //return Compiler->Add(P1Code, P2Code);
+  
     TArray<int32> Inputs{ AngularDispCode, P1Code, P2Code };
 
-    return Compiler->CustomExpression(InternalExpression, OutputIndex, Inputs);
+    return Compiler->CustomExpression(CustomExpression, OutputIndex, Inputs);
+   
 }
 
 bool UGetRotatedPoints::GenerateHLSLExpression(
@@ -160,23 +151,20 @@ bool UGetRotatedPoints::GenerateHLSLExpression(
     UE::HLSLTree::FExpression const*& OutExpression
 ) const
 {
-    
-    UMaterialExpressionCustom* InternalExpression = CustomExpression;
-    if (!InternalExpression)
-    {
-        return Generator.Errorf(TEXT("Internal expression is null."));
-    }
-
-    InternalExpression->Code = TEXT(R"(
-        return GetBezierPoints(InputP1, InputP2, InputAngularDisplacement, P1, P2, SideDir);
+ 
+    CustomExpression->Code = TEXT(R"(
+        float3 P1;
+        GetBezierPoints(InputP1, InputP2, InputAngularDisplacement, P1, P2, SideDir);
+        return P1;
     )");
 
-    InternalExpression->Inputs[0].Input = InputAngularDisplacement;
-    InternalExpression->Inputs[1].Input = InputP1;
-    InternalExpression->Inputs[2].Input = InputP2;
+    CustomExpression->Inputs[0].Input = InputAngularDisplacement;
+    CustomExpression->Inputs[1].Input = InputP1;
+    CustomExpression->Inputs[2].Input = InputP2;
 
-    return InternalExpression->GenerateHLSLExpression(Generator, Scope, OutputIndex, OutExpression);
+    return CustomExpression->GenerateHLSLExpression(Generator, Scope, OutputIndex, OutExpression);
 
+  
     /*
     // Adds A and B together, and optionally negates the result.
     const UE::HLSLTree::FExpression* InputAExpression = InputP1.AcquireHLSLExpression(Generator, Scope);
@@ -190,7 +178,7 @@ bool UGetRotatedPoints::GenerateHLSLExpression(
     */
    
 
-    return true;
+    //return true;
 }
 
 #endif

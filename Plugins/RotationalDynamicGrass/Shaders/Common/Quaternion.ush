@@ -1,3 +1,5 @@
+#ifndef __ROTATIONAL_DYNAMIC_GRASS_QUATERNION_HLSL__
+#define __ROTATIONAL_DYNAMIC_GRASS_QUATERNION_HLSL__
 
 float4 QuaternionFromAxisAngle(float3 axis, float angle)
 {
@@ -29,3 +31,5 @@ float3 RotateVectorByQuaternion(float3 v, float4 q)
     float3 uuv = cross(qVec, uv);
     return v + ((uv * q.w) + uuv) * 2.0;
 }
+
+#endif // __ROTATIONAL_DYNAMIC_GRASS_QUATERNION_HLSL__

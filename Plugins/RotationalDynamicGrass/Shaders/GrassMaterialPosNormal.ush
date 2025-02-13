@@ -6,15 +6,10 @@
 
 #define GRASS_NORMAL_LENGTH_THRESHOLD 0.001
 
-/*
-    I am trying to decouple normal calculation and position offset calculation as best I can.
-    Calculating those two in one function and use the function in Material Custom node will cause the generated material shader
-    to calculate both normal and position offset values when only one of those is needed.
-
-    You should use one custom hlsl node for each of the bellow function.
-*/
 
 
+// This function should run on the vertex shader. Running this function on pixel shader would not give significantly more accurate result
+// Use vertext interpolator node between the custom nodes that runs this function and bellow GetGrassNormal function
 float3 GetRotatedCurvePointTangentSide(
     float4 p1, float4 p2,
     in float2 uv,
@@ -23,7 +18,7 @@ float3 GetRotatedCurvePointTangentSide(
     out float3 output_p1,
     out float3 output_p2,
     out float3 unit_tangent,
-    out float3 side_dir,
+    out float3 side_dir
 )
 {
     float t = uv.x;
@@ -37,8 +32,6 @@ float3 GetRotatedCurvePointTangentSide(
     p2.w = p1.w < p2.w ? p1.w : p2.w;
     float4 p0 = float4(0, 0, 0, 1);
     
-    float3 output_p1;
-    float3 output_p2;
     GetRotatedBezierPoints(p1.xyz, p2.xyz, angular_disp, output_p1, output_p2);
     p1.xyz = output_p1;
     p2.xyz = output_p2;
@@ -56,39 +49,19 @@ float3 GetRotatedCurvePointTangentSide(
         
     float tilt_amount = dot(side_dir, viewing_dir) * 0.8;
     side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
-    
+ 
     return curve_point.xyz;
 }
 
-
-float3 GetGrassPosOffset(
-    in float2 uv, 
-    in float3 p1, in float3 p2,
-    in float4 curve_point,
+// This function should be executed on the pixel shader for more detailed result
+// unit_tangent and side_dr are supposed to be the output parameters of GetRotatedCurvePointTangentSide function.
+float3 GetGrassNormal(
+    in float2 uv,
     in float3 unit_tangent,
     in float3 side_dir,
-    float scale, float width, float base
-)
-{    
-    float t = uv.x;
-    float s = 1 - t;
-    float g_axis_val = uv.y - 0.5;
-    
-    float curve_length = GetBezierCurveLength(p1, p2);
-    
-    /* get position offset */
-    // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
-        
-    return scale * (curve_point.xyz * 2.0 / curve_length + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
-}
-    
-float3 GrassPosOffsetAndNormal(
-    in float2 uv, 
-    in float3 unit_tangent,
-    in float3 side_dir,
-    float mid_smooth, 
-    float rim_pos, 
-    float rim_smooth, 
+    float mid_smooth,
+    float rim_pos,
+    float rim_smooth,
     float y_strength
 )
 {
@@ -109,6 +82,215 @@ float3 GrassPosOffsetAndNormal(
 
     return (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (normal_vector / vec_length) : normal_vector;
     
+}
+
+
+// This function is for vetext shader, but you would not really need to use vertex interploator node,
+// because you would connet output of this function to the material position offset result, which is ran on vertex shader.
+// p1, p2, curve_point, unit_tangent and side_dr are supposed to be the output parameters of GetRotatedCurvePointTangentSide function.
+float3 GetGrassPosOffset(
+    in float2 uv, 
+    in float3 p1, in float3 p2,
+    in float3 curve_point,
+    in float3 unit_tangent,
+    in float3 side_dir,
+    float scale, float width, float base
+)
+{    
+    float t = uv.x;
+    float s = 1 - t;
+    float g_axis_val = uv.y - 0.5;
+    
+    float curve_length = GetBezierCurveLength(p1, p2);
+    
+    /* get position offset */
+    // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
+        
+    return scale * (curve_point * 2.0 / curve_length + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
+}
+    
+
+
+float3 GetGrassPosOffsetNormal(
+    in float2 uv,
+    in float4 angular_disp,
+    in float3 viewing_dir,
+    float4 p1, float4 p2,
+    float scale, float width, float base,
+    float mid_smooth,
+    float rim_pos,
+    float rim_smooth,
+    float y_strength,
+    out float3 normal
+)
+{
+    float t = uv.x;
+    float s = 1 - t;
+    float s2 = s * s;
+    float t2 = t * t;
+    float g_axis_val = uv.y - 0.5;
+
+        
+    // initialize points at static positions
+    p1.w = p1.w > 1 ? 1 : p1.w;
+    p2.w = p1.w < p2.w ? p1.w : p2.w;
+    float4 p0 = float4(0, 0, 0, 1);
+    
+    float3 output_p1;
+    float3 output_p2;
+    GetRotatedBezierPoints(p1.xyz, p2.xyz, angular_disp, output_p1, output_p2);
+    p1.xyz = output_p1;
+    p2.xyz = output_p2;
+        
+    float4 curve_point = s2 * p0 + 2 * s * t * p1 + t2 * p2;
+    float3 curve_tangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
+        
+    /* tilt xy_plane norm abount the curve tangent */
+    float vec_length = length(curve_tangent);
+    float3 unit_tangent = (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curve_tangent / vec_length) : curve_tangent;
+        
+        
+     // make twist from p0 rotation
+    float3 side_dir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp.xyz * (1.0 - curve_point.w + p2.w * t)));
+        
+    float tilt_amount = dot(side_dir, viewing_dir) * 0.8;
+    side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
+    
+    float curve_length = GetBezierCurveLength(p1.xyz, p2.xyz);
+    
+    /* get position offset */
+    // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
+        
+    float3 pos_offset =  scale * (curve_point.xyz * 2.0 / curve_length + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
+    
+    
+    float3 curve_norm = cross(unit_tangent, side_dir);
+    
+    float smoothing_value = saturate((g_axis_val + mid_smooth) / (mid_smooth * 2));
+    float middle_value = smoothing_value * smoothing_value * (3.0 - 2.0 * smoothing_value);
+
+    float rim_smoothing_value = saturate((abs(g_axis_val) - rim_pos + rim_smooth) / (rim_smooth * 2));
+    float rim_value = rim_smoothing_value * rim_smoothing_value * (3.0 - 2.0 * rim_smoothing_value);
+
+    float linear_value = (1.0 - middle_value) * rim_value + middle_value * (1.0 - rim_value);
+
+    float y = (1 - 2 * linear_value) * y_strength;
+    float3 normal_vector = curve_norm + y * side_dir;
+    vec_length = length(normal_vector);
+
+    normal = (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (normal_vector / vec_length) : normal_vector;
+    
+    
+    return pos_offset;
+}
+
+
+float3 GetGrassPosOffset(
+    in float2 uv,
+    in float4 angular_disp,
+    in float3 viewing_dir,
+    float4 p1, float4 p2,
+    float scale, float width, float base
+)
+{
+    float t = uv.x;
+    float s = 1 - t;
+    float s2 = s * s;
+    float t2 = t * t;
+    float g_axis_val = uv.y - 0.5;
+
+        
+    // initialize points at static positions
+    p1.w = p1.w > 1 ? 1 : p1.w;
+    p2.w = p1.w < p2.w ? p1.w : p2.w;
+    float4 p0 = float4(0, 0, 0, 1);
+    
+    float3 output_p1;
+    float3 output_p2;
+    GetRotatedBezierPoints(p1.xyz, p2.xyz, angular_disp, output_p1, output_p2);
+    p1.xyz = output_p1;
+    p2.xyz = output_p2;
+        
+    float4 curve_point = s2 * p0 + 2 * s * t * p1 + t2 * p2;
+    float3 curve_tangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
+        
+    /* tilt xy_plane norm abount the curve tangent */
+    float vec_length = length(curve_tangent);
+    float3 unit_tangent = (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curve_tangent / vec_length) : curve_tangent;
+        
+        
+     // make twist from p0 rotation
+    float3 side_dir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp.xyz * (1.0 - curve_point.w + p2.w * t)));
+        
+    float tilt_amount = dot(side_dir, viewing_dir) * 0.8;
+    side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
+    
+    float curve_length = GetBezierCurveLength(p1.xyz, p2.xyz);
+    
+    /* get position offset */
+    // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
+        
+    return scale * (curve_point.xyz * 2.0 / curve_length + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
+    
+}
+
+
+float3 GetGrassNormal(
+    in float2 uv,
+    in float4 angular_disp,
+    in float3 viewing_dir,
+    float4 p1, float4 p2,
+    float mid_smooth,
+    float rim_pos,
+    float rim_smooth,
+    float y_strength
+)
+{
+    float t = uv.x;
+    float s = 1 - t;
+    float s2 = s * s;
+    float t2 = t * t;
+    float g_axis_val = uv.y - 0.5;
+        
+    // initialize points at static positions
+    p1.w = p1.w > 1 ? 1 : p1.w;
+    p2.w = p1.w < p2.w ? p1.w : p2.w;
+    float4 p0 = float4(0, 0, 0, 1);
+    
+    float3 output_p1;
+    float3 output_p2;
+    GetRotatedBezierPoints(p1.xyz, p2.xyz, angular_disp, output_p1, output_p2);
+        
+    float stiffness = s2 * p0.w + 2 * s * t * p1.w + t2 * p2.w;
+    float3 curve_tangent = 2 * s * (output_p1) + 2 * t * (output_p2 - output_p1);
+        
+    /* tilt xy_plane norm abount the curve tangent */
+    float vec_length = length(curve_tangent);
+    float3 unit_tangent = (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curve_tangent / vec_length) : curve_tangent;
+        
+        
+     // make twist from p0 rotation
+    float3 side_dir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp.xyz * (1.0 - stiffness + p2.w * t)));
+        
+    float tilt_amount = dot(side_dir, viewing_dir) * 0.8;
+    side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
+    
+    
+    float3 curve_norm = cross(unit_tangent, side_dir);
+    
+    float smoothing_value = saturate((g_axis_val + mid_smooth) / (mid_smooth * 2));
+    float middle_value = smoothing_value * smoothing_value * (3.0 - 2.0 * smoothing_value);
+
+    float rim_smoothing_value = saturate((abs(g_axis_val) - rim_pos + rim_smooth) / (rim_smooth * 2));
+    float rim_value = rim_smoothing_value * rim_smoothing_value * (3.0 - 2.0 * rim_smoothing_value);
+
+    float linear_value = (1.0 - middle_value) * rim_value + middle_value * (1.0 - rim_value);
+
+    float y = (1 - 2 * linear_value) * y_strength;
+    float3 normal_vector = curve_norm + y * side_dir;
+    vec_length = length(normal_vector);
+
+    return (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (normal_vector / vec_length) : normal_vector;
 }
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_POS_NORMAL_HLSL__

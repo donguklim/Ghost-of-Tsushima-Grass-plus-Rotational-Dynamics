@@ -10,12 +10,14 @@
 
 // This function should run on the vertex shader. Running this function on pixel shader would not give significantly more accurate result
 // Use vertext interpolator node between the custom nodes that runs this function and bellow GetGrassNormal function
+// Only rotation on P1 and twsit from P0 is applied.
+// Rotation from P0 is assumed to be already done by mesh orientation update in Niagara
 float3 GetRotatedCurvePointTangentSide(
     float4 p1, float4 p2,
+    float view_dependent_tilt_amount,
     in float2 uv,
     in float4 angular_disp,
     in float3 viewing_dir,
-    out float3 output_p1,
     out float3 output_p2,
     out float3 unit_tangent,
     out float3 side_dir
@@ -32,8 +34,9 @@ float3 GetRotatedCurvePointTangentSide(
     p2.w = p1.w < p2.w ? p1.w : p2.w;
     float4 p0 = float4(0, 0, 0, 1);
     
-    GetRotatedBezierPoints(p1.xyz, p2.xyz, angular_disp, output_p1, output_p2);
-    p1.xyz = output_p1;
+    float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
+        
+    output_p2 = p1.xyz + RotateVectorByQuaternion(p2.xyz - p1.xyz, p1p2_quat);
     p2.xyz = output_p2;
         
     float4 curve_point = s2 * p0 + 2 * s * t * p1 + t2 * p2;
@@ -45,10 +48,16 @@ float3 GetRotatedCurvePointTangentSide(
         
         
      // make twist from p0 rotation
-    side_dir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp.xyz * (1.0 - curve_point.w + p2.w * t)));
+    // the side dir at p2 is (0, 1 ,0) in the mesh space
+    // the side dier at p0 is the inverse rotation of the angualr_disp.xyz
+    side_dir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(-angular_disp.xyz * (1.0 - curve_point.w + p2.w * s)));
         
-    float tilt_amount = dot(side_dir, viewing_dir) * 0.8;
-    side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
+    if (view_dependent_tilt_amount != 0.0)
+    {
+        float tilt_amount = dot(side_dir, viewing_dir) * view_dependent_tilt_amount;
+        side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
+    }
+    
  
     return curve_point.xyz;
 }
@@ -106,7 +115,7 @@ float3 GetGrassPosOffset(
     /* get position offset */
     // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
         
-    return scale * (curve_point * 2.0 / curve_length + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
+    return scale * (curve_point / curve_length + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
 }
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_POS_NORMAL_HLSL__

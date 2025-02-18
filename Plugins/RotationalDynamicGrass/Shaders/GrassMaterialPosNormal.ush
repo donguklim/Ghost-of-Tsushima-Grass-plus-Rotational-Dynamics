@@ -10,9 +10,60 @@
 
 // This function should run on the vertex shader. Running this function on pixel shader would not give significantly more accurate result
 // Use vertext interpolator node between the custom nodes that runs this function and bellow GetGrassNormal function
+float3 GetRotatedCurvePointTangentSide(
+    float4 p1, float4 p2,
+    float view_dependent_tilt_amount,
+    in float2 uv,
+    in float4 angular_disp,
+    in float3 viewing_dir,
+    out float3 output_p1,
+    out float3 output_p2,
+    out float3 unit_tangent,
+    out float3 side_dir
+)
+{
+    float t = uv.x;
+    float s = 1 - t;
+    float s2 = s * s;
+    float t2 = t * t;
+
+        
+    // initialize points at static positions
+    p1.w = p1.w > 1 ? 1 : p1.w;
+    p2.w = p1.w < p2.w ? p1.w : p2.w;
+    float4 p0 = float4(0, 0, 0, 1);
+    
+    GetRotatedBezierPoints(p1.xyz, p2.xyz, angular_disp, output_p1, output_p2);
+    
+    p1.xyz = output_p1;
+    p2.xyz = output_p2;
+        
+    float4 curve_point = s2 * p0 + 2 * s * t * p1 + t2 * p2;
+    float3 curve_tangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
+        
+    /* tilt xy_plane norm abount the curve tangent */
+    float vec_length = length(curve_tangent);
+    unit_tangent = (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curve_tangent / vec_length) : curve_tangent;
+        
+
+    side_dir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp.xyz * (1.0 - curve_point.w + p2.w * t)));
+        
+    if (view_dependent_tilt_amount != 0.0)
+    {
+        float tilt_amount = dot(side_dir, viewing_dir) * view_dependent_tilt_amount;
+        side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
+    }
+    
+ 
+    return curve_point.xyz;
+}
+
+
+// This function should run on the vertex shader. Running this function on pixel shader would not give significantly more accurate result
+// Use vertext interpolator node between the custom nodes that runs this function and bellow GetGrassNormal function
 // Only rotation on P1 and twsit from P0 is applied.
 // Rotation from P0 is assumed to be already done by mesh orientation update in Niagara
-float3 GetRotatedCurvePointTangentSide(
+float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     float4 p1, float4 p2,
     float view_dependent_tilt_amount,
     in float2 uv,
@@ -62,6 +113,7 @@ float3 GetRotatedCurvePointTangentSide(
     return curve_point.xyz;
 }
 
+
 // This function should be executed on the pixel shader for more detailed result
 // unit_tangent and side_dr are supposed to be the output parameters of GetRotatedCurvePointTangentSide function.
 float3 GetGrassNormal(
@@ -99,9 +151,9 @@ float3 GetGrassNormal(
 // p1, p2, curve_point, unit_tangent and side_dr are supposed to be the output parameters of GetRotatedCurvePointTangentSide function.
 float3 GetGrassPosOffset(
     in float2 uv, 
-    in float3 p1, in float3 p2,
+    in float3 p1, 
+    in float3 p2,
     in float3 curve_point,
-    in float3 unit_tangent,
     in float3 side_dir,
     float scale, float width, float base
 )

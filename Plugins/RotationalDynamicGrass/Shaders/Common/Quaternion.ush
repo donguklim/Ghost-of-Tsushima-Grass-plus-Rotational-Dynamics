@@ -32,4 +32,19 @@ float3 RotateVectorByQuaternion(float3 v, float4 q)
     return v + ((uv * q.w) + uuv) * 2.0;
 }
 
+float3 RotateVectorByRotationalVector(float3 v, float3 rotational_v)
+{
+    float angle = length(rotational_v);
+    if (angle < 0.0001)
+    {
+        return v;
+    }
+    float rotational_axis = rotational_v / angle;
+    
+    float3 rot_c_v = cross(rotational_axis, v);
+    
+    return v + sin(angle) * rot_c_v + (1 - cos(angle)) * cross(rotational_axis, rot_c_v);
+
+}
+
 #endif // __ROTATIONAL_DYNAMIC_GRASS_QUATERNION_HLSL__

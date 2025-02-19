@@ -133,7 +133,7 @@ float Get2DAngle(float2 vec)
     
     float angle = acos(normalizedVector.x);
  
-    if (normalizedVector.y < 0)
+    if (normalizedVector.y > 0)
     {
         angle = -angle;
     }
@@ -157,7 +157,7 @@ void GrassUpdate(
 {
         
     float2 p1p2_xz = p2_xz - p1_xz;
-    float p1_static_disp = Get2DAngle(p1p2_xz) - Get2DAngle(p1_xz);
+    float p1_static_angle = Get2DAngle(p1p2_xz) - Get2DAngle(p1_xz);
 
     float3 p1 = float3(0, 0, 0);
     float3 p2 = float3(0, 0, 0);
@@ -258,38 +258,31 @@ void GrassUpdate(
         }
 
     }
-        
-    float cur_p1_angle = p1_static_disp + angular_disp.w;
-    float new_p1_angle = cur_p1_angle + angle_disp_delta.w;
-           
-    // The new p1 angle will exceed the range of [- pi , pi]. Don't make p1 angle exceed the range.
-    if (abs(new_p1_angle) > PI_VALUE)
+    
+    
+    float max_angle_delta = PI_VALUE - P1_ANGLE_THRESHOLD - (p1_static_angle + angular_disp.w);
+    float min_angle_delta = P1_ANGLE_THRESHOLD - PI_VALUE - (p1_static_angle + angular_disp.w);
+    
+    if (max_angle_delta < 0)
+    {
+        max_angle_delta = 0;
+    }
+    if (min_angle_delta > 0)
+    {
+        min_angle_delta = 0;
+    }
+    
+    
+    if (angle_disp_delta.w > max_angle_delta)
     {
         angular_velocity.w = 0;
-        angle_disp_delta.w = 0;
-            
-            // case current angle is already greater than pi but negative angle will be added
-        if (cur_p1_angle > PI_VALUE - P1_ANGLE_THRESHOLD && angle_disp_delta.w < 0)
-        {
-            angle_disp_delta.w = PI_VALUE - P1_ANGLE_THRESHOLD - cur_p1_angle;
-
-        }
-            // case current angle is already less than pi but positive angle wil be added
-        else if (cur_p1_angle < -PI_VALUE + P1_ANGLE_THRESHOLD && angle_disp_delta.w > 0)
-        {
-            angle_disp_delta.w = -PI_VALUE + P1_ANGLE_THRESHOLD - cur_p1_angle;
-        }
-            // case positive angle is added to make p1 angle greater than pi
-        else if (cur_p1_angle < PI_VALUE - P1_ANGLE_THRESHOLD && angle_disp_delta.w > 0)
-        {
-            angle_disp_delta.w = PI_VALUE - P1_ANGLE_THRESHOLD - cur_p1_angle;
-        }
-            // case negative angle is added to make p1 angle less than pi
-        else if (cur_p1_angle > -PI_VALUE + P1_ANGLE_THRESHOLD && angle_disp_delta.w < 0)
-        {
-            angle_disp_delta.w = -PI_VALUE + P1_ANGLE_THRESHOLD - cur_p1_angle;
-        }
-            
+        angle_disp_delta.w = max_angle_delta;
+        
+    }
+    else if (angle_disp_delta.w < min_angle_delta)
+    {
+        angular_velocity.w = 0;
+        angle_disp_delta.w = min_angle_delta;
     }
         
     angular_disp += angle_disp_delta;
@@ -331,7 +324,7 @@ float3 GetWindOnlyPivotBarTorque(
 }
     
 
-float4 GetEquilibriumAngularDisplacement(
+float4 GetApproximateAngularDisplacement(
     float stiffness,
     float p2_stiffness,
     float3 wind,
@@ -341,7 +334,7 @@ float4 GetEquilibriumAngularDisplacement(
 )
 {
     float2 p1p2_xz = p2_xz - p1_xz;
-    float p1_static_disp = Get2DAngle(p1p2_xz) - Get2DAngle(p1_xz);
+    float p1_static_angle = Get2DAngle(p1p2_xz) - Get2DAngle(p1_xz);
     
     float3 p1 = float3(p1_xz.x, 0, p1_xz.y);
     float3 p2 = float3(p2_xz.x, 0, p2_xz.y);
@@ -387,38 +380,22 @@ float4 GetEquilibriumAngularDisplacement(
         }
 
     }
-        
-    float cur_p1_angle = p1_static_disp;
-    float new_p1_angle = cur_p1_angle + angular_disp.w;
-           
-    // The new p1 angle will exceed the range of [- pi , pi]. Don't make p1 angle exceed the range.
-    if (abs(new_p1_angle) > PI_VALUE)
+    
+    
+    float max_angle = PI_VALUE - P1_ANGLE_THRESHOLD - p1_static_angle;
+    float min_angle = P1_ANGLE_THRESHOLD - PI_VALUE - p1_static_angle;
+    
+    if (max_angle < 0)
     {
-        angular_disp.w = 0;
-            
-        // case current angle is already greater than pi but negative angle will be added
-        if (cur_p1_angle > PI_VALUE - P1_ANGLE_THRESHOLD && angular_disp.w < 0)
-        {
-            angular_disp.w = PI_VALUE - P1_ANGLE_THRESHOLD - cur_p1_angle;
-
-        }
-        // case current angle is already less than pi but positive angle wil be added
-        else if (cur_p1_angle < -PI_VALUE + P1_ANGLE_THRESHOLD && angular_disp.w > 0)
-        {
-            angular_disp.w = -PI_VALUE + P1_ANGLE_THRESHOLD - cur_p1_angle;
-        }
-        // case positive angle is added to make p1 angle greater than pi
-        else if (cur_p1_angle < PI_VALUE - P1_ANGLE_THRESHOLD && angular_disp.w > 0)
-        {
-            angular_disp.w = PI_VALUE - P1_ANGLE_THRESHOLD - cur_p1_angle;
-        }
-        // case negative angle is added to make p1 angle less than pi
-        else if (cur_p1_angle > -PI_VALUE + P1_ANGLE_THRESHOLD && angular_disp.w < 0)
-        {
-            angular_disp.w = -PI_VALUE + P1_ANGLE_THRESHOLD - cur_p1_angle;
-        }
-            
+        max_angle = 0;
     }
+    if (min_angle > 0)
+    {
+        min_angle = 0;
+    }
+    
+    angular_disp.w = angular_disp.w > max_angle ? max_angle : angular_disp.w;
+    angular_disp.w = angular_disp.w < min_angle ? min_angle : angular_disp.w;
     
     return angular_disp;
     
@@ -431,6 +408,7 @@ float3 ApproximateAngularDisp(
 )
 {
     float bar_length = length(bar);
+    // return bar_length * cross(bar, wind) / 2.0 / stiffness;
     float wind_magnitude = length(wind);
     
     if (wind_magnitude < 0.0001 || bar_length < 0.0001)
@@ -446,10 +424,11 @@ float3 ApproximateAngularDisp(
         return float3(0, 0, 0);
     }
     
-    float3 bar1_c_wind = cross(bar, wind);
-    float bar_c_wind_length = length(bar1_c_wind);
-    float3 rotational_axis = bar1_c_wind / bar_c_wind_length;
-    float wind_bar_angle = abs(acos(bar_wind_angle_cos));
+    float3 bar_c_wind = cross(bar, wind);
+    float bar_c_wind_length = length(bar_c_wind);
+    
+    float3 rotational_axis = bar_c_wind / bar_c_wind_length;
+    float wind_bar_angle = acos(bar_wind_angle_cos);
     
     // torque from wind 
     float static_wind_torque = bar_length * bar_c_wind_length / 2.0;
@@ -462,12 +441,12 @@ float3 ApproximateAngularDisp(
     // t = (wind aligned restoration torque) / (wind torque - wind aligned restoration torque)
     // approximated angle = t * (wind bar angle)
     
-    return (wind_aligned_restoration_torque) / (static_wind_torque - wind_aligned_restoration_torque) * wind_bar_angle * rotational_axis;
+    return (static_wind_torque) / (static_wind_torque + wind_aligned_restoration_torque) * wind_bar_angle * rotational_axis;
 
 }
     
 
-float4 GetApproximateEquilibriumAngularDisplacement(
+float4 GetApproximateAngularDisplacement2(
     float stiffness,
     float p1_stiffness,
     float3 wind,
@@ -479,12 +458,9 @@ float4 GetApproximateEquilibriumAngularDisplacement(
     
     float3 p1 = float3(p1_xz.x, 0, p1_xz.y);
     float3 p2 = float3(p2_xz.x, 0, p2_xz.y);
-    float p1_static_disp = Get2DAngle(p2_xz - p1_xz) - Get2DAngle(p1_xz);
-    
+    float p1_static_angle = Get2DAngle(p2_xz - p1_xz) - Get2DAngle(p1_xz);
     
     float3 p0_rotation = ApproximateAngularDisp(wind, p1, stiffness);
-    
-    p1 = RotateVectorByRotationalVector(p1, p0_rotation);
     
     // If the new p1 angle from normal direction is beynond threshold, 
     // and current direction is also within some threshold range
@@ -495,8 +471,12 @@ float4 GetApproximateEquilibriumAngularDisplacement(
     // adjust the new angular displacement so that it reaches to the threshold 
     // and make velcity zero.
     
-    float3 bar1_dir = p1 / length(p1);
-    float3 new_bar1_dir = RotateVectorByRotationalVector(bar1_dir, p0_rotation);
+    
+    float bar1_length = length(p1);
+    
+    float3 bar1_dir = p1 / bar1_length;
+    float3 new_bar1 = RotateVectorByRotationalVector(p1, p0_rotation);
+    float3 new_bar1_dir = new_bar1 / bar1_length;
     if (dot(new_bar1_dir, ground_normal) < BAR_DOT_GROUND_THRESHOLD)
     {
         if (abs(dot(bar1_dir, ground_normal) - BAR_DOT_GROUND_THRESHOLD) < 0.1)
@@ -506,52 +486,40 @@ float4 GetApproximateEquilibriumAngularDisplacement(
         else
         {
             p0_rotation = GetCollidingAngleDelta(bar1_dir, p0_rotation, ground_normal);
+            p1 = RotateVectorByRotationalVector(p1, p0_rotation);
         }
-        
-        p1 = RotateVectorByRotationalVector(p1, p0_rotation);
 
+    }
+    else
+    {
+        p1 = new_bar1;
     }
     
     
     p2 = RotateVectorByRotationalVector(p2, p0_rotation);
-    
+  
     float3 bar2 = p2 - p1;
     
     float3 p1_rotational_axis = RotateVectorByRotationalVector(float3(0, 1, 0), p0_rotation);
     float3 bar2_wind = wind - dot(wind, p1_rotational_axis) * p1_rotational_axis;
     
-    float p1_rotation = dot(ApproximateAngularDisp(wind, bar2, p1_stiffness), p1_rotational_axis);
-
-    float new_p1_angle = p1_static_disp + p1_rotation;
-               
-    // The new p1 angle will exceed the range of [- pi , pi]. Don't make p1 angle exceed the range.
-    if (abs(new_p1_angle) > PI_VALUE)
+    float p1_rotation = dot(ApproximateAngularDisp(bar2_wind, bar2, p1_stiffness), p1_rotational_axis);
+    
+    
+    float max_angle = PI_VALUE - P1_ANGLE_THRESHOLD - p1_static_angle;
+    float min_angle = P1_ANGLE_THRESHOLD - PI_VALUE - p1_static_angle;
+    
+    if (max_angle < 0)
     {
-        p1_rotation = 0;
-            
-        // case current angle is already greater than pi but negative angle will be added
-        if (p1_static_disp > PI_VALUE - P1_ANGLE_THRESHOLD && p1_rotation < 0)
-        {
-            p1_rotation = PI_VALUE - P1_ANGLE_THRESHOLD - p1_static_disp;
-
-        }
-        // case current angle is already less than pi but positive angle wil be added
-        else if (p1_static_disp < -PI_VALUE + P1_ANGLE_THRESHOLD && p1_rotation > 0)
-        {
-            p1_rotation = -PI_VALUE + P1_ANGLE_THRESHOLD - p1_static_disp;
-        }
-        // case positive angle is added to make p1 angle greater than pi
-        else if (p1_static_disp < PI_VALUE - P1_ANGLE_THRESHOLD && p1_rotation > 0)
-        {
-            p1_rotation = PI_VALUE - P1_ANGLE_THRESHOLD - p1_static_disp;
-        }
-        // case negative angle is added to make p1 angle less than pi
-        else if (p1_static_disp > -PI_VALUE + P1_ANGLE_THRESHOLD && p1_rotation < 0)
-        {
-            p1_rotation = -PI_VALUE + P1_ANGLE_THRESHOLD - p1_static_disp;
-        }
-            
+        max_angle = 0;
     }
+    if (min_angle > 0)
+    {
+        min_angle = 0;
+    }
+    
+    p1_rotation = p1_rotation > max_angle ?  max_angle : p1_rotation;
+    p1_rotation = p1_rotation < min_angle ? min_angle : p1_rotation;
     
     return float4(p0_rotation, p1_rotation);
     

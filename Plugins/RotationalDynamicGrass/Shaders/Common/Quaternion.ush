@@ -32,6 +32,7 @@ float3 RotateVectorByQuaternion(float3 v, float4 q)
     return v + ((uv * q.w) + uuv) * 2.0;
 }
 
+// only works for angle greater than 0.0001
 float3 RotateVectorByRotationalVector(float3 v, float3 rotational_v)
 {
     float angle = length(rotational_v);

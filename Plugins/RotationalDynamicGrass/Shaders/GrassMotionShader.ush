@@ -424,4 +424,137 @@ float4 GetEquilibriumAngularDisplacement(
     
 }
 
+float3 ApproximateAngularDisp(
+    float3 wind,
+    float3 bar,
+    float stiffness
+)
+{
+    float bar_length = length(bar);
+    float wind_magnitude = length(wind);
+    
+    if (wind_magnitude < 0.0001 || bar_length < 0.0001)
+    {
+        return float3(0, 0, 0);
+    }
+    
+    float bar_wind_angle_cos = dot(wind, bar) / bar_length / wind_magnitude;
+    
+    // bar and wind is aligned
+    if (1 - abs(bar_wind_angle_cos) < 0.001)
+    {
+        return float3(0, 0, 0);
+    }
+    
+    float3 bar1_c_wind = cross(bar, wind);
+    float bar_c_wind_length = length(bar1_c_wind);
+    float3 rotational_axis = bar1_c_wind / bar_c_wind_length;
+    float wind_bar_angle = abs(acos(bar_wind_angle_cos));
+    
+    // torque from wind 
+    float static_wind_torque = bar_length * bar_c_wind_length / 2.0;
+    
+    // restoration torque, when the bar is rotated to be aligned with the wind direction
+    float3 wind_aligned_restoration_torque = stiffness * wind_bar_angle;
+    
+    //Linearlly approximate the equilibrium angle
+    // find t where (t * wind torque) = (1-t) * (wind aligned restoration torque)
+    // t = (wind aligned restoration torque) / (wind torque - wind aligned restoration torque)
+    // approximated angle = t * (wind bar angle)
+    
+    return (wind_aligned_restoration_torque) / (static_wind_torque - wind_aligned_restoration_torque) * wind_bar_angle * rotational_axis;
+
+}
+    
+
+float4 GetApproximateEquilibriumAngularDisplacement(
+    float stiffness,
+    float p1_stiffness,
+    float3 wind,
+    float2 p1_xz,
+    float2 p2_xz,
+    float3 ground_normal
+)
+{
+    
+    float3 p1 = float3(p1_xz.x, 0, p1_xz.y);
+    float3 p2 = float3(p2_xz.x, 0, p2_xz.y);
+    float p1_static_disp = Get2DAngle(p2_xz - p1_xz) - Get2DAngle(p1_xz);
+    
+    
+    float3 p0_rotation = ApproximateAngularDisp(wind, p1, stiffness);
+    
+    p1 = RotateVectorByRotationalVector(p1, p0_rotation);
+    
+    // If the new p1 angle from normal direction is beynond threshold, 
+    // and current direction is also within some threshold range
+    // Don't move p1, and make velocity zero
+    //
+    // Else if the new p1 angle will go beyond the threshold
+    // but current direction is not within the threhsold range
+    // adjust the new angular displacement so that it reaches to the threshold 
+    // and make velcity zero.
+    
+    float3 bar1_dir = p1 / length(p1);
+    float3 new_bar1_dir = RotateVectorByRotationalVector(bar1_dir, p0_rotation);
+    if (dot(new_bar1_dir, ground_normal) < BAR_DOT_GROUND_THRESHOLD)
+    {
+        if (abs(dot(bar1_dir, ground_normal) - BAR_DOT_GROUND_THRESHOLD) < 0.1)
+        {
+            p0_rotation = float3(0, 0, 0);
+        }
+        else
+        {
+            p0_rotation = GetCollidingAngleDelta(bar1_dir, p0_rotation, ground_normal);
+        }
+        
+        p1 = RotateVectorByRotationalVector(p1, p0_rotation);
+
+    }
+    
+    
+    p2 = RotateVectorByRotationalVector(p2, p0_rotation);
+    
+    float3 bar2 = p2 - p1;
+    
+    float3 p1_rotational_axis = RotateVectorByRotationalVector(float3(0, 1, 0), p0_rotation);
+    float3 bar2_wind = wind - dot(wind, p1_rotational_axis) * p1_rotational_axis;
+    
+    float p1_rotation = dot(ApproximateAngularDisp(wind, bar2, p1_stiffness), p1_rotational_axis);
+
+    float new_p1_angle = p1_static_disp + p1_rotation;
+               
+    // The new p1 angle will exceed the range of [- pi , pi]. Don't make p1 angle exceed the range.
+    if (abs(new_p1_angle) > PI_VALUE)
+    {
+        p1_rotation = 0;
+            
+        // case current angle is already greater than pi but negative angle will be added
+        if (p1_static_disp > PI_VALUE - P1_ANGLE_THRESHOLD && p1_rotation < 0)
+        {
+            p1_rotation = PI_VALUE - P1_ANGLE_THRESHOLD - p1_static_disp;
+
+        }
+        // case current angle is already less than pi but positive angle wil be added
+        else if (p1_static_disp < -PI_VALUE + P1_ANGLE_THRESHOLD && p1_rotation > 0)
+        {
+            p1_rotation = -PI_VALUE + P1_ANGLE_THRESHOLD - p1_static_disp;
+        }
+        // case positive angle is added to make p1 angle greater than pi
+        else if (p1_static_disp < PI_VALUE - P1_ANGLE_THRESHOLD && p1_rotation > 0)
+        {
+            p1_rotation = PI_VALUE - P1_ANGLE_THRESHOLD - p1_static_disp;
+        }
+        // case negative angle is added to make p1 angle less than pi
+        else if (p1_static_disp > -PI_VALUE + P1_ANGLE_THRESHOLD && p1_rotation < 0)
+        {
+            p1_rotation = -PI_VALUE + P1_ANGLE_THRESHOLD - p1_static_disp;
+        }
+            
+    }
+    
+    return float4(p0_rotation, p1_rotation);
+    
+}
+
 #endif //  __ROTATIONAL_DYNAMIC_GRASS_MOTION_HLSL__

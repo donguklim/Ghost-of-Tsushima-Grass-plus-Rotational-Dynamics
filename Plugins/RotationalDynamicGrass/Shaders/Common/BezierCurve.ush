@@ -39,6 +39,13 @@ float GetBezierCurveLength(in float3 bar1, in float3 p2)
         solving quadratic bezier curve length boils down to integrating
         sqrt(a * t^2 + b * t  + c) 
         with t in range [0, 1]
+        a = |bar1 - bar2|^2
+        b = 2(dot(bar1, bar2) - |bar1|^2)
+        c = |bar1|^2
+        
+        4ac - b2 = |bar1|^2 * |bar2|^2 - (dot(bar1, bar2))^2 
+                 = (|bar1||bar2|)^2(1 - cos^2(angle between the bars))
+        4ac - b2 >= 0
     */
     
     float3 bar2 = p2 - bar1;

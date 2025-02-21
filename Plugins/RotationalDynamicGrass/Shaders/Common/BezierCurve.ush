@@ -47,47 +47,48 @@ float GetBezierCurveLength(in float3 bar1, in float3 p2)
     
     
     float bar2_length = length(bar2);
-    float bar1_dot_bar2 = dot(bar1, bar2);
     
-    // The case bar1 and bar2 form a neaar straight line
-    if (abs(bar1_dot_bar2 / bar1_length / bar2_length - 1) < 0.01)
+    float sqrt_a_val = length(bar1 - bar2);
+    float a_val = sqrt_a_val * sqrt_a_val;
+    
+    // The case bar1 and bar2 form a near straight line and has the same length
+    if (a_val < 0.01)
     {
         return bar1_length + bar2_length;
     }
     
+    float bar1_dot_bar2 = dot(bar1, bar2);
+    
     float c_val = bar1_length * bar1_length;
     
     float b_val = (bar1_dot_bar2 - c_val) * 2;
-        
-    float sqrt_a_val = length(bar1 - bar2);
-    float a_val = sqrt_a_val * sqrt_a_val;
-        
+          
     float discriminant = 4 * a_val * c_val - b_val * b_val;
-    float b_over_2a = b_val / (2 * a_val);
     
-        
+    // bar1 and bar2 are nearlly aligned in either opposite or the same direction.    
     if (discriminant < 0.01)
     {
-        if (b_over_2a <= -1)
+        // bar1 and bar2 has the same or almost the same direction.
+        if (bar1_dot_bar2 > 0)
         {
-            return -2.0 * sqrt_a_val * (0.5 + b_over_2a);
-
+            return bar1_length + bar2_length;
         }
-        else if (b_over_2a >= 0)
-        {
-            return 2.0 * sqrt_a_val * (0.5 + b_over_2a);
-        }
-            
-        return 2.0 * sqrt_a_val * (0.5 + b_over_2a - b_over_2a * b_over_2a * 3);
+        
+        // bar1 and bar2 has almost opposite direction
+        return (c_val + bar2_length * bar2_length) / (bar1_length + bar2_length);
             
     }
-        
-    float sum_sqrt = sqrt(a_val + b_val + c_val);
-        
-    return (
-            ((2 * a_val + b_val) * sum_sqrt - b_val * bar1_length) / (4 * a_val)
-            + sqrt_a_val * discriminant / (8 * a_val) * (log(abs(1 + b_over_2a + sum_sqrt / sqrt_a_val)) - log(abs(b_over_2a + bar1_length / sqrt_a_val)))
-        ) * 2.0;
+    
+    // solution for the integration when descrimnant is positive
+    float term1 = (2 * a_val + b_val) / sqrt(discriminant);
+    float term2 = sqrt(1 + term1 * term1);
+    float term3 = b_val / sqrt(discriminant);
+    float term4 = sqrt(1 + term3 * term3);
+    
+    return 2 * discriminant / (8 * a_val * sqrt_a_val) * (
+        (term2 * term1 + log(term2 + term1)) 
+        - (term4 * term3 + log(term4 + term3))
+    );
 }
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_BEZIER_CURVE_HLSL__

@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "PCGGraph.h"
 #include "AGrassPCGActor.generated.h"
+
+class UPCGComponent;
 
 UCLASS()
 class ROTATIONALDYNAMICGRASS_API AAGrassPCGActor : public AActor
@@ -16,11 +17,11 @@ public:
 	// Sets default values for this actor's properties
 	AAGrassPCGActor();
 
-    UPROPERTY(EditAnywhere)
-    UPCGGraph* Graph;
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = PCG)
+    UPCGComponent* PCGComponent;
 
 protected:
-    USceneComponent* SceneRoot;
+    USceneComponent* RootSceneComponent;
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 

@@ -40,7 +40,7 @@ float3 RotateVectorByRotationalVector(float3 v, float3 rotational_v)
     {
         return v;
     }
-    float rotational_axis = rotational_v / angle;
+    float3 rotational_axis = rotational_v / angle;
     
     float3 rot_c_v = cross(rotational_axis, v);
     

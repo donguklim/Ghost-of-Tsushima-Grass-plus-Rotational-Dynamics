@@ -27,7 +27,8 @@ public class RotationalDynamicGrass : ModuleRules
 			{
 				"Core",
                 "RenderCore", // Needed for AddShaderSourceDirectoryMapping & ResetAllShaderSourceDirectoryMappings
-				"Projects" // Needed for IPluginManager
+				"Projects", // Needed for IPluginManager
+                "PCG"
 			}
 			);
 			

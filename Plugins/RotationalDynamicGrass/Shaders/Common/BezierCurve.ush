@@ -35,19 +35,38 @@ void GetRotatedBezierPoints(in float3 input_p1, in float3 input_p2, in float4 an
 
 float GetBezierCurveLength(in float3 bar1, in float3 p2)
 {
+    /*
+        solving quadratic bezier curve length boils down to integrating
+        sqrt(a * t^2 + b * t  + c) 
+        with t in range [0, 1]
+    */
+    
     float3 bar2 = p2 - bar1;
         
-    float sqrt_c_val = length(bar1);
-    float c_val = sqrt_c_val * sqrt_c_val;
-    float b_val = (dot(bar1, bar2) - c_val) * 2;
+    float bar1_length = length(bar1);
+    
+    
+    float bar2_length = length(bar2);
+    float bar1_dot_bar2 = dot(bar1, bar2);
+    
+    // The case bar1 and bar2 form a neaar straight line
+    if (abs(bar1_dot_bar2 / bar1_length / bar2_length - 1) < 0.01)
+    {
+        return bar1_length + bar2_length;
+    }
+    
+    float c_val = bar1_length * bar1_length;
+    
+    float b_val = (bar1_dot_bar2 - c_val) * 2;
         
     float sqrt_a_val = length(bar1 - bar2);
     float a_val = sqrt_a_val * sqrt_a_val;
         
-    float quad_term = 4 * a_val * c_val - b_val * b_val;
+    float discriminant = 4 * a_val * c_val - b_val * b_val;
     float b_over_2a = b_val / (2 * a_val);
+    
         
-    if (quad_term < 0.01)
+    if (discriminant < 0.01)
     {
         if (b_over_2a <= -1)
         {
@@ -66,8 +85,8 @@ float GetBezierCurveLength(in float3 bar1, in float3 p2)
     float sum_sqrt = sqrt(a_val + b_val + c_val);
         
     return (
-            ((2 * a_val + b_val) * sum_sqrt - b_val * sqrt_c_val) / (4 * a_val)
-            + sqrt_a_val * quad_term / (8 * a_val) * (log(abs(1 + b_over_2a + sum_sqrt / sqrt_a_val)) - log(abs(b_over_2a + sqrt_c_val / sqrt_a_val)))
+            ((2 * a_val + b_val) * sum_sqrt - b_val * bar1_length) / (4 * a_val)
+            + sqrt_a_val * discriminant / (8 * a_val) * (log(abs(1 + b_over_2a + sum_sqrt / sqrt_a_val)) - log(abs(b_over_2a + bar1_length / sqrt_a_val)))
         ) * 2.0;
 }
 

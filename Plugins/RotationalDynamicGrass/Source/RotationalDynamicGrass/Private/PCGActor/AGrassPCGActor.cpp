@@ -20,9 +20,8 @@ AAGrassPCGActor::AAGrassPCGActor()
     BaseBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     PCGComponent = CreateDefaultSubobject<UPCGComponent>(TEXT("PCG Component"));
-
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-
+    PCGComponent->SetIsPartitioned(true);
+    PCGComponent->GenerationTrigger = EPCGComponentGenerationTrigger::GenerateAtRuntime;
 
 }
 

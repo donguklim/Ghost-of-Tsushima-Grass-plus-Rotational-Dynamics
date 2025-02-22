@@ -7,6 +7,7 @@
 #include "AGrassPCGActor.generated.h"
 
 class UPCGComponent;
+class UBoxComponent;
 
 UCLASS()
 class ROTATIONALDYNAMICGRASS_API AAGrassPCGActor : public AActor
@@ -19,6 +20,9 @@ public:
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = PCG)
     UPCGComponent* PCGComponent;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Box)
+    UBoxComponent* BaseBox;
 
 protected:
     USceneComponent* RootSceneComponent;

@@ -12,14 +12,14 @@ public class RotationalDynamicGrass : ModuleRules
 			new string[] {
 				// ... add public include paths required here ...
 			}
-			);
+		);
 				
 		
 		PrivateIncludePaths.AddRange(
 			new string[] {
 				// ... add other private include paths required here ...
 			}
-			);
+		);
 			
 		
 		PublicDependencyModuleNames.AddRange(
@@ -28,9 +28,10 @@ public class RotationalDynamicGrass : ModuleRules
 				"Core",
                 "RenderCore", // Needed for AddShaderSourceDirectoryMapping & ResetAllShaderSourceDirectoryMappings
 				"Projects", // Needed for IPluginManager
-                "PCG"
-			}
-			);
+                "PCG",
+                "Niagara"
+            }
+		);
 			
 		
 		PrivateDependencyModuleNames.AddRange(
@@ -42,7 +43,7 @@ public class RotationalDynamicGrass : ModuleRules
 				"SlateCore",
 				// ... add private dependencies that you statically link with here ...	
 			}
-			);
+		);
 		
 		
 		DynamicallyLoadedModuleNames.AddRange(
@@ -50,6 +51,6 @@ public class RotationalDynamicGrass : ModuleRules
 			{
 				// ... add any modules that your module loads dynamically here ...
 			}
-			);
+		);
 	}
 }

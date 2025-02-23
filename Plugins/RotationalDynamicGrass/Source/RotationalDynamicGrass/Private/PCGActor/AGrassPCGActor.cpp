@@ -10,7 +10,7 @@
 // Sets default values
 AAGrassPCGActor::AAGrassPCGActor()
 {
-    PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = true;
     RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
     SetRootComponent(RootSceneComponent);
 
@@ -31,6 +31,7 @@ AAGrassPCGActor::AAGrassPCGActor()
     SetNDCWriter();
 
     BaseWind = FVector(1.0f, 1.0f, 0.1f);
+    TimeSinceLastPrint = 0.0f;
 
 }
 
@@ -60,7 +61,7 @@ void AAGrassPCGActor::SetNDCWriter() {
     );
 }
 
-void AAGrassPCGActor::WriteToNDC() {
+void AAGrassPCGActor::WriteToNDC(){
     if (NiagaraGrassDataChannel == nullptr) {
         return;
     }
@@ -71,20 +72,32 @@ void AAGrassPCGActor::WriteToNDC() {
     if (NDCWriter == nullptr) {
         SetNDCWriter();
     }
-
-    NDCWriter->WriteVector(TEXT("BaseWind"), 0, BaseWind);
+    GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, TEXT("Tick: Debug message"));
+    NDCWriter->WriteVector(TEXT("BaseWindForce"), 0, BaseWind);
 }
 
 // Called when the game starts or when spawned
 void AAGrassPCGActor::BeginPlay()
 {
 	Super::BeginPlay();
-    WriteToNDC();
+    //WriteToNDC();
 }
 
 // Called every frame
 void AAGrassPCGActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+    
 
+    TimeSinceLastPrint += DeltaTime;
+    if (TimeSinceLastPrint >= 10.0f)
+    {
+        if (GEngine)
+        {
+            WriteToNDC();
+            
+        }
+        TimeSinceLastPrint = 0.0f;
+    }
+        
 }

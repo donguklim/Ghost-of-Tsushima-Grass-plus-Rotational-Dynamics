@@ -19,6 +19,7 @@ class ROTATIONALDYNAMICGRASS_API AAGrassPCGActor : public AActor
 
 protected:
     UNiagaraDataChannelWriter* NDCWriter;
+    float TimeSinceLastPrint;
 	
 public:	
 	// Sets default values for this actor's properties

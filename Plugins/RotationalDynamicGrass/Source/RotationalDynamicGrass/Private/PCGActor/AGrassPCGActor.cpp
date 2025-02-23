@@ -10,7 +10,7 @@
 // Sets default values
 AAGrassPCGActor::AAGrassPCGActor()
 {
-    PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = false;
     RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
     SetRootComponent(RootSceneComponent);
 
@@ -31,7 +31,6 @@ AAGrassPCGActor::AAGrassPCGActor()
     SetNDCWriter();
 
     BaseWind = FVector(1.0f, 1.0f, 0.1f);
-    TimeSinceLastPrint = 0.0f;
 
 }
 
@@ -80,24 +79,29 @@ void AAGrassPCGActor::WriteToNDC(){
 void AAGrassPCGActor::BeginPlay()
 {
 	Super::BeginPlay();
-    //WriteToNDC();
 }
 
 // Called every frame
 void AAGrassPCGActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-    
-
-    TimeSinceLastPrint += DeltaTime;
-    if (TimeSinceLastPrint >= 10.0f)
-    {
-        if (GEngine)
-        {
-            WriteToNDC();
-            
-        }
-        TimeSinceLastPrint = 0.0f;
-    }
-        
 }
+
+#if WITH_EDITOR
+void AAGrassPCGActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+    Super::PostEditChangeProperty(PropertyChangedEvent);
+
+    FName PropertyName = PropertyChangedEvent.Property ? PropertyChangedEvent.Property->GetFName() : NAME_None;
+
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(AAGrassPCGActor, NiagaraGrassDataChannel))
+    {
+        SetNDCWriter();
+    }
+
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(AAGrassPCGActor, BaseWind))
+    {
+        //WriteToNDC();
+    }
+}
+#endif

@@ -19,7 +19,6 @@ class ROTATIONALDYNAMICGRASS_API AAGrassPCGActor : public AActor
 
 protected:
     UNiagaraDataChannelWriter* NDCWriter;
-    float TimeSinceLastPrint;
 	
 public:	
 	// Sets default values for this actor's properties
@@ -45,10 +44,16 @@ protected:
 	virtual void BeginPlay() override;
 
     virtual void SetNDCWriter();
-    virtual void WriteToNDC();
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+    UFUNCTION(BlueprintCallable, Category = NiagaraGrass)
+    virtual void WriteToNDC();
+
+#if WITH_EDITOR
+    void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
 };

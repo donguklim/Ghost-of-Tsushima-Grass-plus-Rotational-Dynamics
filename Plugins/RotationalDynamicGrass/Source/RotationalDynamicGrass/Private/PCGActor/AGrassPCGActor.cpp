@@ -79,7 +79,7 @@ void AAGrassPCGActor::WriteToNDC() {
 void AAGrassPCGActor::BeginPlay()
 {
 	Super::BeginPlay();
-    //WriteToNDC();
+    WriteToNDC();
 }
 
 // Called every frame
@@ -88,23 +88,3 @@ void AAGrassPCGActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
-
-#if WITH_EDITOR
-void AAGrassPCGActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-    Super::PostEditChangeProperty(PropertyChangedEvent);
-
-    FName PropertyName = PropertyChangedEvent.Property ? PropertyChangedEvent.Property->GetFName() : NAME_None;
-
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(AAGrassPCGActor, NiagaraGrassDataChannel))
-    {
-        SetNDCWriter();
-    }
-
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(AAGrassPCGActor, BaseWind))
-    {
-        WriteToNDC();
-    }
-}
-#endif
-

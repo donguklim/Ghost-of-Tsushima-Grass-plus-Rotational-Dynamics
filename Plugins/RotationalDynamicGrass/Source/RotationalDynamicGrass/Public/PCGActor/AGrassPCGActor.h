@@ -8,11 +8,17 @@
 
 class UPCGComponent;
 class UBoxComponent;
+class UNiagaraDataChannelAsset;
+class UNiagaraDataChannelWriter;
+
 
 UCLASS()
 class ROTATIONALDYNAMICGRASS_API AAGrassPCGActor : public AActor
 {
 	GENERATED_BODY()
+
+protected:
+    UNiagaraDataChannelWriter* NDCWriter;
 	
 public:	
 	// Sets default values for this actor's properties
@@ -24,13 +30,28 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Box)
     UBoxComponent* BaseBox;
 
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    UNiagaraDataChannelAsset* NiagaraGrassDataChannel;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    FVector BaseWind;
+
+
+
 protected:
     USceneComponent* RootSceneComponent;
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+    virtual void SetNDCWriter();
+    virtual void WriteToNDC();
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+#if WITH_EDITOR
+    void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
 };

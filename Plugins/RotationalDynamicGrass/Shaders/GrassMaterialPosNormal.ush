@@ -105,7 +105,7 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
         
     if (view_dependent_tilt_amount != 0.0)
     {
-        float tilt_amount = dot(side_dir, viewing_dir) * view_dependent_tilt_amount;
+        float tilt_amount = dot(side_dir, viewing_dir) * view_dependent_tilt_amount * t;
         side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
     }
     

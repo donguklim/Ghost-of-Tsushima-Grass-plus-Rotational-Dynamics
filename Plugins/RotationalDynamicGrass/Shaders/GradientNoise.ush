@@ -1,0 +1,63 @@
+#ifndef __ROTATIONAL_DYNAMIC_GRASS_WIND_NOISE_HLSL__
+#define __ROTATIONAL_DYNAMIC_GRASS_WIND_NOISE_HLSL__
+
+
+#define PI_VALUE 3.14159265358979323846
+
+/*
+    Claude AI made the gradient noise functions, 
+    and I just fixed a sintax error and changed the noise function range from [-1, 1] to [-PI, PI]
+*/
+float2 GradientNoiseHash(float2 p)
+{
+    p = float2(dot(p, float2(127.1, 311.7)),
+                  dot(p, float2(269.5, 183.3)));
+    return -1.0 + 2.0 * frac(sin(p) * 43758.5453123);
+}
+
+float GradientNoise(float2 uv)
+{
+    // Grid cell coordinates
+    float2 i = floor(uv);
+    float2 f = frac(uv);
+    
+    // Quintic interpolation curve for smoother gradients
+    float2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    
+    // Hash function for corner gradients
+
+    
+    // Get gradient vectors at grid corners
+    float2 g00 = GradientNoiseHash(i + float2(0.0, 0.0));
+    float2 g10 = GradientNoiseHash(i + float2(1.0, 0.0));
+    float2 g01 = GradientNoiseHash(i + float2(0.0, 1.0));
+    float2 g11 = GradientNoiseHash(i + float2(1.0, 1.0));
+    
+    // Calculate dot products between gradients and distance vectors
+    float n00 = dot(g00, f - float2(0.0, 0.0));
+    float n10 = dot(g10, f - float2(1.0, 0.0));
+    float n01 = dot(g01, f - float2(0.0, 1.0));
+    float n11 = dot(g11, f - float2(1.0, 1.0));
+    
+    // Bilinear interpolation with the quintic curve
+    float nx0 = lerp(n00, n10, u.x);
+    float nx1 = lerp(n01, n11, u.x);
+    float n = lerp(nx0, nx1, u.y);
+    
+    // Return value in range [-1, 1]
+    return n;
+}
+
+// Main function that returns a 3D noise vector
+float3 NoiseVector(float2 uv)
+{
+    // Different frequency and offset for each component to create variation
+    float nx = GradientNoise(uv);
+    float ny = GradientNoise(uv * 1.17 + float2(13.456, 7.89));
+    float nz = GradientNoise(uv * 1.31 + float2(27.289, 15.73));
+    
+    return float3(nx, ny, nz) * PI_VALUE;
+}
+
+
+#endif //  __ROTATIONAL_DYNAMIC_GRASS_WIND_NOISE_HLSL__

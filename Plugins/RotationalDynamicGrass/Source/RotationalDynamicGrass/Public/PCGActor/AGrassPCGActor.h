@@ -31,9 +31,6 @@ public:
     UBoxComponent* BaseBox;
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    UNiagaraDataChannelAsset* NiagaraGrassDataChannel;
-
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
     FVector BaseWind;
 
 
@@ -43,14 +40,10 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-    virtual void SetNDCWriter();
-
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-    UFUNCTION(BlueprintCallable, Category = NiagaraGrass)
-    virtual void WriteToNDC();
 
 #if WITH_EDITOR
     void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

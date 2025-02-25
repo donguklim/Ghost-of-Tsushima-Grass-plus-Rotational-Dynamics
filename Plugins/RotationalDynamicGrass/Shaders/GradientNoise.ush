@@ -48,16 +48,26 @@ float GradientNoise(float2 uv)
     return n;
 }
 
-// Main function that returns a 3D noise vector
-float3 NoiseVector(float2 uv)
+float LeveledGradientNoise(float2 UV, float Scale, int NumLevels, float OutputMin, float OutputMax)
 {
-    // Different frequency and offset for each component to create variation
-    float nx = GradientNoise(uv);
-    float ny = GradientNoise(uv * 1.17 + float2(13.456, 7.89));
-    float nz = GradientNoise(uv * 1.31 + float2(27.289, 15.73));
-    
-    return float3(nx, ny, nz) * PI_VALUE;
-}
+    UV *= Scale;
+    float LevelScale = 2.0;
+    float Out = 0.0f;
+    float InvLevelScale = 1.0f / LevelScale;
+    float OutScale = 1.0;
+    float OutScaleSum = 0.0f;
+	
+    for (uint i = 0; i <NumLevels; ++i)
+    {
+        Out += abs(GradientNoise(UV)) * OutScale;
+        
+        UV *= LevelScale;
+        OutScaleSum += OutScale;
+        OutScale *= InvLevelScale;
+    }
 
+    //Out /= OutScaleSum;
+    return lerp(OutputMin, OutputMax, Out);
+}
 
 #endif //  __ROTATIONAL_DYNAMIC_GRASS_WIND_NOISE_HLSL__

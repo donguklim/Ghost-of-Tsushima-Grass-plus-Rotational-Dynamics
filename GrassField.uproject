@@ -28,6 +28,10 @@
 		{
 			"Name": "PCGNiagaraInterop",
 			"Enabled": true
+		},
+		{
+			"Name": "GrassShaders",
+			"Enabled": false
 		}
 	]
 }

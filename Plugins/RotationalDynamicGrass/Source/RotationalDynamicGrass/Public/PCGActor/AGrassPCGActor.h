@@ -31,9 +31,34 @@ public:
     UBoxComponent* BaseBox;
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    FVector BaseWind;
+    float VoronoiPointNoiseThreshold;
 
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    float GrassYScaleMin;
 
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    float GrassYScaleMax;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    float GrassXScaleMin;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    float GrassXScaleMax;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    float GrassStiffnessMin;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    float GrassStiffnessMax;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    float P1StiffnessRatioMin;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    float P1StiffnessRatioMax;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
+    float P2StiffnessRatioMin;
 
 protected:
     USceneComponent* RootSceneComponent;
@@ -43,10 +68,5 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-
-#if WITH_EDITOR
-    void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif
 
 };

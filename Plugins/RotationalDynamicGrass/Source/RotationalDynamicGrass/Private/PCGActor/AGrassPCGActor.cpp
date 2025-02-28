@@ -26,8 +26,16 @@ AAGrassPCGActor::AAGrassPCGActor()
     PCGComponent->SetIsPartitioned(true);
     PCGComponent->GenerationTrigger = EPCGComponentGenerationTrigger::GenerateAtRuntime;
 
-    BaseWind = FVector(1.0f, 1.0f, 0.1f);
-
+    VoronoiPointNoiseThreshold = 0.2f;
+    GrassYScaleMin = 0.8f;
+    GrassYScaleMax = 2.0f;
+    GrassXScaleMin = 0.4f;
+    GrassXScaleMax = 3.0f;
+    GrassStiffnessMin = 0.5f;
+    GrassStiffnessMax = 4.0f;
+    P1StiffnessRatioMin = 0.7f;
+    P1StiffnessRatioMax = 0.9f;
+    P2StiffnessRatioMin = 0.5f;
 }
 
 // Called when the game starts or when spawned
@@ -41,16 +49,3 @@ void AAGrassPCGActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
-
-#if WITH_EDITOR
-void AAGrassPCGActor::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-    Super::PostEditChangeProperty(PropertyChangedEvent);
-
-    FName PropertyName = PropertyChangedEvent.Property ? PropertyChangedEvent.Property->GetFName() : NAME_None;
-
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(AAGrassPCGActor, BaseWind))
-    {
-    }
-}
-#endif

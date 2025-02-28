@@ -32,6 +32,10 @@
 		{
 			"Name": "GrassShaders",
 			"Enabled": false
+		},
+		{
+			"Name": "PCGExtendedToolkit",
+			"Enabled": true
 		}
 	]
 }

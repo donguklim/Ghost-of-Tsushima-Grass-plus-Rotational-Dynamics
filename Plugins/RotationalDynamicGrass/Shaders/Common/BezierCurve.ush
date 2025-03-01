@@ -1,35 +1,39 @@
 #ifndef __ROTATIONAL_DYNAMIC_GRASS_BEZIER_CURVE_HLSL__
 #define __ROTATIONAL_DYNAMIC_GRASS_BEZIER_CURVE_HLSL__
 
-#include "Quaternion.ush"
+
+#include "../EnginePrivateCopy/Quaternion.ush"
 
 
-void GetRotatedBezierPoints(in float3 input_p1, in float3 input_p2, in float4 angular_disp, out float3 p1, out float3 p2)
+void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angularDisp, out float3 p1, out float3 p2)
 {
+    float angle = length(angularDisp.xyz);
+    float3 axis = normalize(angularDisp.xyz);
         
-    float4 p1_quat = QuaternionFromRotationalVector(angular_disp.xyz);
-    float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
+    FQuat bar1Quat = QuatFromAxisAngle(axis, angle);
+    FQuat bar2Quat = QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w);
         
-    float3 p1p2 = RotateVectorByQuaternion(input_p2 - input_p1, p1p2_quat);
+    float3 bar2 = QuatRotateVector(bar2Quat, inputP2 - inputP1);
         
-    p1 = RotateVectorByQuaternion(input_p1, p1_quat);
-    p2 = RotateVectorByQuaternion(input_p1 + p1p2, p1_quat);
+    p1 = QuatRotateVector(bar1Quat, inputP1);
+    p2 = QuatRotateVector(bar1Quat, inputP1 + bar2);
 }
 
 
-void GetRotatedBezierPoints(in float3 input_p1, in float3 input_p2, in float4 angular_disp, out float3 p1, out float3 p2, out float3 side_dir)
+void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angularDisp, out float3 p1, out float3 p2, out float3 sideDir)
 {
+    float angle = length(angularDisp.xyz);
+    float3 axis = normalize(angularDisp.xyz);
         
-    float4 p1_quat = QuaternionFromRotationalVector(angular_disp.xyz);
-    float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
+    FQuat bar1Quat = QuatFromAxisAngle(axis, angle);
+    FQuat bar2Quat = QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w);
         
-    float3 p1p2 = RotateVectorByQuaternion(input_p2 - input_p1, p1p2_quat);
+    float3 bar2 = QuatRotateVector(bar2Quat, inputP2 - inputP1);
         
-    p1 = RotateVectorByQuaternion(input_p1, p1_quat);
-    p2 = RotateVectorByQuaternion(input_p1 + p1p2, p1_quat);
+    p1 = QuatRotateVector(bar1Quat, inputP1);
+    p2 = QuatRotateVector(bar1Quat, inputP1 + bar2);
         
-    side_dir = RotateVectorByQuaternion(float3(0, 1, 0), p1_quat);
-        
+    sideDir = QuatRotateVector(bar1Quat, float3(0, 1, 0));
 }
 
 

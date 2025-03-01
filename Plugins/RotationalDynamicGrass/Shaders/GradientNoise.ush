@@ -2,12 +2,14 @@
 #define __ROTATIONAL_DYNAMIC_GRASS_WIND_NOISE_HLSL__
 
 
-#define PI_VALUE 3.14159265358979323846
+#include "Common/Constants.ush"
 
 /*
-    Claude AI made the gradient noise functions, 
+    Claude AI made the gradient GradientNoiseHash and GradientNoise functions, 
     and I just fixed a sintax error and changed the noise function range from [-1, 1] to [-PI, PI]
 */
+
+
 float2 GradientNoiseHash(float2 p)
 {
     p = float2(dot(p, float2(127.1, 311.7)),

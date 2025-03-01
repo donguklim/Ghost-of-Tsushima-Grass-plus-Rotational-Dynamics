@@ -1,9 +1,9 @@
 #ifndef __ROTATIONAL_DYNAMIC_GRASS_MOTION_HLSL__
 #define __ROTATIONAL_DYNAMIC_GRASS_MOTION_HLSL__
 
+#include "Common/Constants.ush"
 #include "Common/BezierCurve.ush"
 
-#define PI_VALUE 3.14159265358979323846
 #define BAR_DOT_GROUND_THRESHOLD 0.3
 #define P1_ANGLE_THRESHOLD 0.2
 
@@ -142,98 +142,100 @@ float Get2DAngle(float2 vec)
 }
  
 void GrassUpdate(
-    float damping_coff,
-    float stiffness,
-    float p2_stiffness,
-    float mass,
-    float time_delta,
-    float3 wind,
-    float2 p1_xz,
-    float2 p2_xz,
-    in float3 ground_normal,
-    inout float4 angular_velocity,
-    inout float4 angular_disp
+    in float dampingCoff,
+    in float stiffness,
+    in float p2Stiffness,
+    in float timeDelta,
+    in float3 wind,
+    in float3 initialOrientation,
+    in float3 scale,
+    in float2 p1Position,
+    in float3 groundNormal,
+    inout float4 angularVelocity,
+    inout float4 angularDisp
 )
 {
-        
-    float2 p1p2_xz = p2_xz - p1_xz;
-    float p1_static_angle = Get2DAngle(p1p2_xz) - Get2DAngle(p1_xz);
+    float2 p1p2XZ = float2(1, 0) - p1Position;
+    float bar2StaticAngle = Get2DAngle(p1p2XZ) - Get2DAngle(p1Position);
+    float mass = scale.x * scale.y;
+    
+    float3 staticP1 = float3(p1Position.x, 0, p1Position.y) * scale.x;
+    float3 staticP2 = float3(1, 0, 0) * scale.x;
+    staticP1 = RotateVectorByRotationalVector(staticP1, initialOrientation);
+    staticP2 = RotateVectorByRotationalVector(staticP2, initialOrientation);
 
     float3 p1 = float3(0, 0, 0);
     float3 p2 = float3(0, 0, 0);
-    float3 bar2_rotational_axis = float3(0, 0, 0);
+    float3 bar2RotationalAxis = float3(0, 0, 0);
     
-    float3 input_p1 = float3(p1_xz.x, 0, p1_xz.y);
-    float3 input_p2 = float3(p2_xz.x, 0, p2_xz.y);
-    GetRotatedBezierPoints(input_p1, input_p2, angular_disp, p1, p2, bar2_rotational_axis);
-    float3 p1p2 = p2 - p1;
-        
-    float3 p1_dir = p1 / length(p1);
+
+    GetRotatedBezierPoints(staticP1, staticP2, angularDisp, p1, p2, bar2RotationalAxis);
              
     // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
-    float3 p0_angular_acc_with_sezied_p1 = GetPivotBarTorque(
-            damping_coff,
+    float3 p1SeizedP0AngularAcc = GetPivotBarTorque(
+            dampingCoff,
             stiffness,
             wind,
             p1,
-            angular_velocity.xyz,
-            angular_disp.xyz
+            angularVelocity.xyz,
+            angularDisp.xyz
         ) + GetDistantBarTorque(
-            damping_coff,
+            dampingCoff,
             wind,
-            angular_velocity.w,
-            bar2_rotational_axis,
-            angular_velocity.xyz,
+            angularVelocity.w,
+            bar2RotationalAxis,
+            angularVelocity.xyz,
             p1,
             p2
         ) / GetMomentOfInertia(mass, p1, p2);
 
-    float p1_length = length(p1);
-    float p1p2_length = length(p1p2);
+    float3 p1p2 = p2 - p1;
+    float3 p1Dir = normalize(p1);
+    float bar1Length = length(p1);
+    float bar2Length = length(p1p2);
         
-    float legnth_sum = p1_length + p1p2_length;
-    float p1_mass = mass * p1_length / legnth_sum;
-    float p1p2_mass = mass * p1p2_length / legnth_sum;
+    float totalLength = bar1Length + bar2Length;
+    float p1Mass = mass * bar1Length / totalLength;
+    float p1p2Mass = mass * bar2Length / totalLength;
         
     // plain p1 acceleration (not anuglar), when p1 is seized.
     // (angular acceleration) x p1 is the tangential acceleration
     // (angular velocity) x (angular velocity x p1) is the centirpetal acceleration
-    float3 seized_p1_plain_acc = cross(p0_angular_acc_with_sezied_p1, p1) + cross(angular_velocity.xyz, cross(angular_velocity.xyz, p1));
+    float3 seizedP1PlainAcc = cross(p1SeizedP0AngularAcc, p1) + cross(angularVelocity.xyz, cross(angularVelocity.xyz, p1));
         
     // Inertia force acting on center of mass point(the mid point) of P1P2 due to movement of P1
     // = -(p1 acceleration) * mass of P1P2
 
-    float3 p1_inertia_force_torque = cross(p1p2 / 2.0, -seized_p1_plain_acc * p1p2_mass);
+    float3 p1InertiaForceTorque = cross(p1p2 / 2.0, -seizedP1PlainAcc * p1p2Mass);
         
-    float3 torque_sum = p1_inertia_force_torque + GetPivotBarTorque(
-        damping_coff,
-        p2_stiffness,
+    float3 rawP1Torque = p1InertiaForceTorque + GetPivotBarTorque(
+        dampingCoff,
+        p2Stiffness,
         wind,
         p1p2,
-        angular_velocity.w * bar2_rotational_axis,
-        angular_disp.w * bar2_rotational_axis
+        angularVelocity.w * bar2RotationalAxis,
+        angularDisp.w * bar2RotationalAxis
     );
         
-    float p1_bending_torque = dot(bar2_rotational_axis, torque_sum);
+    float p1BendingTorque = dot(bar2RotationalAxis, rawP1Torque);
         
-    // The total torque  to P1 to make P1 seized is -p1_bending_torque.
+    // The total torque to P1 to make P1 seized is -p1_bending_torque.
     // So p0_angular_acc_with_sezied_p1 is the acceleration at p0 that would occur if p1_bending_torque is subtracted from p1.
     // Now add back the acceleration from p1_bending_torque
         
-    float p1_acc = p1_bending_torque / (p1p2_mass * p1p2_length * p1p2_length / 3.0);
+    float p1Acc = p1BendingTorque / (p1p2Mass * bar2Length * bar2Length / 3.0);
         
     // the p1_bending_torque acceleration is subtracted for p0, because 
     // that is how you calculate the acceleration acting on p0 due to torque from p1
-    float3 p0_acc = p0_angular_acc_with_sezied_p1 - p1_bending_torque * bar2_rotational_axis / (p1_mass * p1_length * p1_length / 3.0);
+    float3 p0Acc = p1SeizedP0AngularAcc - p1BendingTorque * bar2RotationalAxis / (p1Mass * bar1Length * bar1Length / 3.0);
         
         
-    float4 velocity_delta = float4(p0_angular_acc_with_sezied_p1, p1_acc) * time_delta;
-    //float4 velocity_delta = float4(p0_angular_acc_with_sezied_p1, 0) * time_delta;
-    angular_velocity += velocity_delta;
+    float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
+    angularVelocity += velocityDelta;
         
-    float4 angle_disp_delta = angular_velocity * time_delta;
+    float4 dispDelta = angularVelocity * timeDelta;
         
-    float3 new_p1_dir = RotateVectorByQuaternion(p1_dir, QuaternionFromRotationalVector(angle_disp_delta.xyz));
+    float3 newP1Dir = RotateVectorByQuaternion(p1Dir, QuaternionFromRotationalVector(dispDelta.xyz));
         
     // If the new p1 angle from normal direction is beynond threshold, 
     // and current direction is also within some threshold range
@@ -244,48 +246,48 @@ void GrassUpdate(
     // adjust the new angular displacement so that it reaches to the threshold 
     // and make velcity zero.
         
-    if (dot(new_p1_dir, ground_normal) < BAR_DOT_GROUND_THRESHOLD)
+    if (dot(newP1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {
-        angular_velocity.xyz = float3(0, 0, 0);
+        angularVelocity.xyz = float3(0, 0, 0);
             
-        if (abs(dot(p1_dir, ground_normal) - BAR_DOT_GROUND_THRESHOLD) < 0.1)
+        if (abs(dot(p1Dir, groundNormal) - BAR_DOT_GROUND_THRESHOLD) < 0.1)
         {
-            angle_disp_delta.xyz = float3(0, 0, 0);
+            angularVelocity.xyz = float3(0, 0, 0);
         }
         else
         {
-            angle_disp_delta.xyz = GetCollidingAngleDelta(p1_dir, angle_disp_delta.xyz, ground_normal);
+            dispDelta.xyz = GetCollidingAngleDelta(p1Dir, dispDelta.xyz, groundNormal);
         }
 
     }
     
     
-    float max_angle_delta = PI_VALUE - P1_ANGLE_THRESHOLD - (p1_static_angle + angular_disp.w);
-    float min_angle_delta = P1_ANGLE_THRESHOLD - PI_VALUE - (p1_static_angle + angular_disp.w);
+    float maxAngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
+    float minAngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
     
-    if (max_angle_delta < 0)
+    if (maxAngleDelta < 0)
     {
-        max_angle_delta = 0;
+        maxAngleDelta = 0;
     }
-    if (min_angle_delta > 0)
+    if (minAngleDelta > 0)
     {
-        min_angle_delta = 0;
+        minAngleDelta = 0;
     }
     
     
-    if (angle_disp_delta.w > max_angle_delta)
+    if (dispDelta.w > maxAngleDelta)
     {
-        angular_velocity.w = 0;
-        angle_disp_delta.w = max_angle_delta;
+        angularVelocity.w = 0;
+        dispDelta.w = maxAngleDelta;
         
     }
-    else if (angle_disp_delta.w < min_angle_delta)
+    else if (dispDelta.w < minAngleDelta)
     {
-        angular_velocity.w = 0;
-        angle_disp_delta.w = min_angle_delta;
+        angularVelocity.w = 0;
+        dispDelta.w = minAngleDelta;
     }
         
-    angular_disp += angle_disp_delta;
+    angularDisp += dispDelta;
         
 }
 
@@ -324,24 +326,28 @@ float3 GetWindOnlyPivotBarTorque(
 }
     
 
-float4 GetApproximateAngularDisplacement(
+float4 GetApproximateEquilibriumAngularDisplacement(
     float stiffness,
-    float p2_stiffness,
+    float p1Stiffness,
     float3 wind,
-    float2 p1_xz,
-    float2 p2_xz,
-    float3 ground_normal
+    float3 scale,
+    float2 p1Position,
+    float3 initialOrientation,
+    float3 groundNormal
 )
-{
-    float2 p1p2_xz = p2_xz - p1_xz;
-    float p1_static_angle = Get2DAngle(p1p2_xz) - Get2DAngle(p1_xz);
+{    
+    float2 p1p2XZ = float2(1, 0) - p1Position;
+    float p1StaticAngle = Get2DAngle(p1p2XZ) - Get2DAngle(p1Position);
     
-    float3 p1 = float3(p1_xz.x, 0, p1_xz.y);
-    float3 p2 = float3(p2_xz.x, 0, p2_xz.y);
-    float3 r2_rotational_axis = float3(0, 1, 0);
+    float3 p1 = float3(p1Position.x, 0, p1Position.y) * scale.x;
+    float3 p2 = float3(1, 0, 0) * scale.x;
+    p1 = RotateVectorByRotationalVector(p1, initialOrientation);
+    p2 = RotateVectorByRotationalVector(p2, initialOrientation);
+    
+    float3 r2_rotational_axis = RotateVectorByRotationalVector(float3(0, 1, 0), initialOrientation);
     float3 p1p2 = p2 - p1;
 
-    float3 p0_torque = GetWindOnlyPivotBarTorque(
+    float3 p0Torque = GetWindOnlyPivotBarTorque(
         wind,
         p1
     ) + GetWindOnlyDistantBarTorque(
@@ -351,12 +357,12 @@ float4 GetApproximateAngularDisplacement(
         p2
     );
         
-    float p1_torque = dot(GetWindOnlyPivotBarTorque(wind, p1p2), r2_rotational_axis);
+    float p1Torque = dot(GetWindOnlyPivotBarTorque(wind, p1p2), r2_rotational_axis);
         
-    float4 angular_disp =  float4(p0_torque / stiffness, p1_torque / p2_stiffness);
+    float4 angularDisp = float4(p0Torque / stiffness, p1Torque / p1Stiffness);
     
-    float3 p1_dir = p1 / length(p1);
-    float3 new_p1_dir = RotateVectorByQuaternion(p1_dir, QuaternionFromRotationalVector(angular_disp.xyz));
+    float3 p1Dir = p1 / length(p1);
+    float3 newP1Dir = RotateVectorByQuaternion(p1Dir, QuaternionFromRotationalVector(angularDisp.xyz));
         
     // If the new p1 angle from normal direction is beynond threshold, 
     // and current direction is also within some threshold range
@@ -368,36 +374,36 @@ float4 GetApproximateAngularDisplacement(
     // and make velcity zero.
         
     
-    if (dot(new_p1_dir, ground_normal) < BAR_DOT_GROUND_THRESHOLD)
+    if (dot(newP1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {
-        if (abs(dot(p1_dir, ground_normal) - BAR_DOT_GROUND_THRESHOLD) < 0.1)
+        if (abs(dot(p1Dir, groundNormal) - BAR_DOT_GROUND_THRESHOLD) < 0.1)
         {
-            angular_disp.xyz = float3(0, 0, 0);
+            angularDisp.xyz = float3(0, 0, 0);
         }
         else
         {
-            angular_disp.xyz = GetCollidingAngleDelta(p1_dir, angular_disp.xyz, ground_normal);
+            angularDisp.xyz = GetCollidingAngleDelta(p1Dir, angularDisp.xyz, groundNormal);
         }
 
     }
     
     
-    float max_angle = PI_VALUE - P1_ANGLE_THRESHOLD - p1_static_angle;
-    float min_angle = P1_ANGLE_THRESHOLD - PI_VALUE - p1_static_angle;
+    float maxAngle = PI_VALUE - P1_ANGLE_THRESHOLD - p1StaticAngle;
+    float minAngle = P1_ANGLE_THRESHOLD - PI_VALUE - p1StaticAngle;
     
-    if (max_angle < 0)
+    if (maxAngle < 0)
     {
-        max_angle = 0;
+        maxAngle = 0;
     }
-    if (min_angle > 0)
+    if (minAngle > 0)
     {
-        min_angle = 0;
+        minAngle = 0;
     }
     
-    angular_disp.w = angular_disp.w > max_angle ? max_angle : angular_disp.w;
-    angular_disp.w = angular_disp.w < min_angle ? min_angle : angular_disp.w;
+    angularDisp.w = angularDisp.w > maxAngle ? maxAngle : angularDisp.w;
+    angularDisp.w = angularDisp.w < minAngle ? minAngle : angularDisp.w;
     
-    return angular_disp;
+    return angularDisp;
     
 }
 
@@ -450,15 +456,20 @@ float4 GetApproximateAngularDisplacement2(
     float stiffness,
     float p1_stiffness,
     float3 wind,
-    float2 p1_xz,
-    float2 p2_xz,
+    float3 scale,
+    float2 p1Position,
+    float3 initialOrientation,
     float3 ground_normal
 )
 {
     
-    float3 p1 = float3(p1_xz.x, 0, p1_xz.y);
-    float3 p2 = float3(p2_xz.x, 0, p2_xz.y);
-    float p1_static_angle = Get2DAngle(p2_xz - p1_xz) - Get2DAngle(p1_xz);
+    float2 p1p2XZ = float2(1, 0) - p1Position;
+    float p1StaticAngle = Get2DAngle(p1p2XZ) - Get2DAngle(p1Position);
+    
+    float3 p1 = float3(p1Position.x, 0, p1Position.y) * scale.x;
+    float3 p2 = float3(1, 0, 0) * scale.x;
+    p1 = RotateVectorByRotationalVector(p1, initialOrientation);
+    p2 = RotateVectorByRotationalVector(p2, initialOrientation);
     
     float3 p0_rotation = ApproximateAngularDisp(wind, p1, stiffness);
     
@@ -506,8 +517,8 @@ float4 GetApproximateAngularDisplacement2(
     float p1_rotation = dot(ApproximateAngularDisp(bar2_wind, bar2, p1_stiffness), p1_rotational_axis);
     
     
-    float max_angle = PI_VALUE - P1_ANGLE_THRESHOLD - p1_static_angle;
-    float min_angle = P1_ANGLE_THRESHOLD - PI_VALUE - p1_static_angle;
+    float max_angle = PI_VALUE - P1_ANGLE_THRESHOLD - p1StaticAngle;
+    float min_angle = P1_ANGLE_THRESHOLD - PI_VALUE - p1StaticAngle;
     
     if (max_angle < 0)
     {

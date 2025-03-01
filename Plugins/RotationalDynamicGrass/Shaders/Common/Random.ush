@@ -1,0 +1,36 @@
+#ifndef __ROTATIONAL_DYNAMIC_GRASS_RANDOM_HLSL__
+#define __ROTATIONAL_DYNAMIC_GRASS_RANDOM_HLSL__
+
+/*
+    ComputeSeedFromPosition and FRand functions are Copied from "/Plugin/PCG/Private/PCGShaderUtils.ush"
+    Copied code instead of importing because the file is in private folder.
+*/
+
+
+uint ComputeSeedFromPosition(float3 InPosition)
+{
+    const int3 PosInt = (int3) InPosition;
+    const int Seed = ((PosInt.x * 196314165U) + 907633515U) ^ ((PosInt.y * 73148459U) + 453816763U) ^ ((PosInt.z * 34731343U) + 453816743U);
+    return (uint) Seed;
+}
+
+// This follows the implementation in FRandomStream.
+float FRand(inout uint InOutSeed)
+{
+    InOutSeed = (InOutSeed * 196314165U) + 907633515U;
+	
+    const float Result = asfloat(0x3F800000U | (InOutSeed >> 9));
+
+    return Result - 1.0f;
+}
+
+
+float GetNoiseMultiplier(
+    inout uint seed,
+    in float noiseRatio
+)
+{
+    return 1.0f + noiseRatio * (FRand(seed) - 0.5f) * 2.0f;
+}
+
+#endif // __ROTATIONAL_DYNAMIC_GRASS_RANDOM_HLSL__

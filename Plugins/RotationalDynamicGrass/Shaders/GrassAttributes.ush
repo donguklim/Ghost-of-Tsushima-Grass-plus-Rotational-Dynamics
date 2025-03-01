@@ -1,0 +1,83 @@
+#ifndef __ROTATIONAL_DYNAMIC_GRASS_GRASS_ATTRIBUTES_HLSL__
+#define __ROTATIONAL_DYNAMIC_GRASS_GRASS_ATTRIBUTES_HLSL__
+
+
+#include "Common/Constants.ush"
+#include "Common/Random.ush"
+#include "Common/Quaternion.ush"
+
+
+void GetGrassttributes(
+    uint clumpSeed,
+    in float yScaleMin,
+    in float yScaleMax,
+    in float xScaleMin,
+    in float xScaleMax,
+    in float stiffnessMin,
+    in float stiffnessMax,
+    in float p1StiffnessRatioMin,
+    in float p1StiffnessRatioMax,
+    in float p2StiffnessRatioMin,
+    in float positionNoiseRatio,
+    in float3 position,
+    in float3 pitchYawRollRotation,
+    out float3 landNormal,
+    out float3 scale,
+    out float3 initialOrientation,
+    out float stiffness, 
+    out float3 colorNoise,
+    out float2 p1Position,
+    out float2 pivotStiffnessRatio
+)
+{
+    uint positionSeed = ComputeSeedFromPosition(position);
+    
+    scale = float3(
+        lerp(xScaleMin, xScaleMax, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
+        lerp(yScaleMin, yScaleMax, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
+        1.0f
+    );
+    
+    colorNoise = float3(
+        lerp(0.0f, 1.0f, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
+        lerp(0.0f, 1.0f, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
+        lerp(0.0f, 1.0f, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio)
+    );
+    p1Position = float2(
+        lerp(0.1f, 1.0f, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
+        lerp(0.1f, 1.0f, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio)
+    );
+    
+    stiffness = lerp(stiffnessMin, stiffnessMax, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio);
+    
+    float p1StiffnessRatio = lerp(p1StiffnessRatioMin, p1StiffnessRatioMax, FRand(clumpSeed));
+    
+    pivotStiffnessRatio = float2(
+        p1StiffnessRatio,
+        lerp(p2StiffnessRatioMin, p1StiffnessRatio, FRand(clumpSeed))
+    ) * GetNoiseMultiplier(positionSeed, positionNoiseRatio);
+    
+    
+    pitchYawRollRotation /= 360.0f;
+    float3 rotation = float3(0, 0, pitchYawRollRotation.z);
+    rotation = rotation + RotateVectorByRotationalVector(float3(0, 1, 0), rotation) * pitchYawRollRotation.y;
+    rotation = rotation + RotateVectorByRotationalVector(float3(1, 0, 0), rotation) * pitchYawRollRotation.x;
+    
+    landNormal = RotateVectorByRotationalVector(float3(0, 0, 1), rotation);
+    float3 sideDir = RotateVectorByRotationalVector(float3(0, 1, 0), rotation);
+    
+    float3 landRelativeRotation = landNormal * lerp(-PI_VALUE, PI_VALUE, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio)
+        + sideDir * lerp(0, PI_VALUE * 0.45, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio);
+    
+    
+    // orientation due to rand scape + random orientation
+    initialOrientation = fmod(
+        rotation + landRelativeRotation,
+        PI_VALUE * 2.0f
+    );
+    
+    initialOrientation = initialOrientation - 2.0 * PI_VALUE * floor((initialOrientation + PI_VALUE) / (2.0 * PI_VALUE));
+    
+}
+
+#endif // __ROTATIONAL_DYNAMIC_GRASS_GRASS_ATTRIBUTES_HLSL__

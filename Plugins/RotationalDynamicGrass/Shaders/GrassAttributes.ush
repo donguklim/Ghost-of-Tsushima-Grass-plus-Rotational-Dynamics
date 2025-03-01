@@ -4,8 +4,18 @@
 
 #include "Common/Constants.ush"
 #include "Common/Random.ush"
-#include "Common/Quaternion.ush"
+#include "EnginePrivateCopy/Quaternion.ush"
 
+
+float getClumpPositionRandVal(
+    float positionNoiseRatio, 
+    inout uint clumpSeed, 
+    inout uint positionSeed
+)
+{
+    return clamp(FRand(clumpSeed) * GetNoiseMultiplier(positionSeed, positionNoiseRatio), 0.0, 1.0f);
+
+}
 
 void GetGrassttributes(
     uint clumpSeed,
@@ -20,10 +30,10 @@ void GetGrassttributes(
     in float p2StiffnessRatioMin,
     in float positionNoiseRatio,
     in float3 position,
-    in float4 quatRotation,
+    in FQuat quatRotation,
     out float3 landNormal,
     out float3 scale,
-    out float3 initialOrientation,
+    out FQuat staticOrientation,
     out float stiffness, 
     out float3 colorNoise,
     out float2 p1Position,
@@ -33,50 +43,44 @@ void GetGrassttributes(
     uint positionSeed = ComputeSeedFromPosition(position);
     
     scale = float3(
-        lerp(xScaleMin, xScaleMax, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
-        lerp(yScaleMin, yScaleMax, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
+        lerp(xScaleMin, xScaleMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)),
+        lerp(yScaleMin, yScaleMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)),
         1.0f
     );
     
     colorNoise = float3(
-        lerp(0.0f, 1.0f, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
-        lerp(0.0f, 1.0f, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
-        lerp(0.0f, 1.0f, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio)
+        lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
+        lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)),
+        lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
     );
     p1Position = float2(
-        lerp(0.0f, 1.0f, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
-        lerp(0.1f, 0.9f, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio)
+        lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)),
+        lerp(0.1f, 0.9f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
     );
     
-    stiffness = lerp(stiffnessMin, stiffnessMax, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio);
+    stiffness = lerp(stiffnessMin, stiffnessMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
     
-    float p1StiffnessRatio = lerp(p1StiffnessRatioMin, p1StiffnessRatioMax, FRand(clumpSeed));
+    float p1StiffnessRatio = lerp(p1StiffnessRatioMin, p1StiffnessRatioMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
     
     pivotStiffnessRatio = float2(
         p1StiffnessRatio,
-        lerp(p2StiffnessRatioMin, p1StiffnessRatio, FRand(clumpSeed))
-    ) * GetNoiseMultiplier(positionSeed, positionNoiseRatio);
-    
-    landNormal = RotateVectorByQuaternion(float3(0, 0, 1), quatRotation);
-    float3 sideDir = RotateVectorByQuaternion(float3(0, 1, 0), quatRotation);
-    
-    
-    float3 landRelativeRotation = landNormal * lerp(-PI_VALUE, PI_VALUE, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio)
-        + sideDir * lerp(0, -PI_VALUE * 0.45, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio);
-
-    /*
-    float3 landRelativeRotation = landNormal * lerp(-PI_VALUE, PI_VALUE, FRand(clumpSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio)
-        + sideDir * -PI_VALUE;
-    */
-    float3 rotation = normalize(quatRotation.xyz) * acos(quatRotation.w) * 2.0f;
-    // orientation due to rand scape + random orientation
-    initialOrientation = fmod(
-        rotation + landRelativeRotation,
-        PI_VALUE * 2.0f
+        lerp(p2StiffnessRatioMin, p1StiffnessRatio, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
     );
     
-    initialOrientation = initialOrientation - 2.0 * PI_VALUE * floor((initialOrientation + PI_VALUE) / (2.0 * PI_VALUE));
-    
+    landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));
+    FQuat landLocalOrientation = QuatMultiply(
+        QuatFromAxisAngle(
+            float3(0, 0, 1),
+            lerp(-PI_VALUE, PI_VALUE, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
+        ),
+        QuatFromAxisAngle(
+            float3(0, 1, 0),
+            lerp(-0.05, -PI_VALUE * 0.45, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
+        )
+    );
+    staticOrientation = QuatMultiply(landLocalOrientation, quatRotation);
+    staticOrientation = landLocalOrientation;
+
 }
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_GRASS_ATTRIBUTES_HLSL__

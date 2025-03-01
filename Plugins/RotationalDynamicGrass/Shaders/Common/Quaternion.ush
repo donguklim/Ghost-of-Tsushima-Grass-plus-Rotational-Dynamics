@@ -1,6 +1,10 @@
 #ifndef __ROTATIONAL_DYNAMIC_GRASS_QUATERNION_HLSL__
 #define __ROTATIONAL_DYNAMIC_GRASS_QUATERNION_HLSL__
 
+
+#include "Constants.ush"
+
+
 float4 QuaternionFromAxisAngle(float3 axis, float angle)
 {
     float halfAngle = angle * 0.5;
@@ -32,19 +36,19 @@ float3 RotateVectorByQuaternion(float3 v, float4 q)
     return v + ((uv * q.w) + uuv) * 2.0;
 }
 
-// only works for angle greater than 0.001
-float3 RotateVectorByRotationalVector(float3 v, float3 rotational_v)
+// angle magnitude less than 0.001 is ignored
+float3 RotateVectorByRotationalVector(float3 v, float3 rotationalVec)
 {
-    float angle = length(rotational_v);
+    float angle = length(rotationalVec);
     if (angle < 0.001)
     {
         return v;
     }
-    float3 rotational_axis = rotational_v / angle;
+    float3 axis = rotationalVec / angle;
     
-    float3 rot_c_v = cross(rotational_axis, v);
+    float3 axisCrossVec = cross(axis, v);
     
-    return v + sin(angle) * rot_c_v + (1 - cos(angle)) * cross(rotational_axis, rot_c_v);
+    return v + sin(angle) * axisCrossVec + (1 - cos(angle)) * cross(axis, axisCrossVec);
 
 }
 

@@ -147,7 +147,7 @@ void GrassUpdate(
     in float p2Stiffness,
     in float timeDelta,
     in float3 wind,
-    in float3 initialOrientation,
+    in float4 initialOrientation,
     in float3 scale,
     in float2 p1Position,
     in float3 groundNormal,
@@ -161,8 +161,8 @@ void GrassUpdate(
     
     float3 staticP1 = float3(p1Position.x, 0, p1Position.y) * scale.x;
     float3 staticP2 = float3(1, 0, 0) * scale.x;
-    staticP1 = RotateVectorByRotationalVector(staticP1, initialOrientation);
-    staticP2 = RotateVectorByRotationalVector(staticP2, initialOrientation);
+    staticP1 = RotateVectorByQuaternion(staticP1, initialOrientation);
+    staticP2 = RotateVectorByQuaternion(staticP2, initialOrientation);
 
     float3 p1 = float3(0, 0, 0);
     float3 p2 = float3(0, 0, 0);
@@ -332,7 +332,7 @@ float4 GetApproximateEquilibriumAngularDisplacement(
     float3 wind,
     float3 scale,
     float2 p1Position,
-    float3 initialOrientation,
+    float4 initialOrientation,
     float3 groundNormal
 )
 {    
@@ -341,10 +341,10 @@ float4 GetApproximateEquilibriumAngularDisplacement(
     
     float3 p1 = float3(p1Position.x, 0, p1Position.y) * scale.x;
     float3 p2 = float3(1, 0, 0) * scale.x;
-    p1 = RotateVectorByRotationalVector(p1, initialOrientation);
-    p2 = RotateVectorByRotationalVector(p2, initialOrientation);
+    p1 = RotateVectorByQuaternion(p1, initialOrientation);
+    p2 = RotateVectorByQuaternion(p2, initialOrientation);
     
-    float3 r2_rotational_axis = RotateVectorByRotationalVector(float3(0, 1, 0), initialOrientation);
+    float3 r2_rotational_axis = RotateVectorByQuaternion(float3(0, 1, 0), initialOrientation);
     float3 p1p2 = p2 - p1;
 
     float3 p0Torque = GetWindOnlyPivotBarTorque(
@@ -458,7 +458,7 @@ float4 GetApproximateAngularDisplacement2(
     float3 wind,
     float3 scale,
     float2 p1Position,
-    float3 initialOrientation,
+    float4 initialOrientation,
     float3 ground_normal
 )
 {
@@ -468,8 +468,8 @@ float4 GetApproximateAngularDisplacement2(
     
     float3 p1 = float3(p1Position.x, 0, p1Position.y) * scale.x;
     float3 p2 = float3(1, 0, 0) * scale.x;
-    p1 = RotateVectorByRotationalVector(p1, initialOrientation);
-    p2 = RotateVectorByRotationalVector(p2, initialOrientation);
+    p1 = RotateVectorByQuaternion(p1, initialOrientation);
+    p2 = RotateVectorByQuaternion(p2, initialOrientation);
     
     float3 p0_rotation = ApproximateAngularDisp(wind, p1, stiffness);
     

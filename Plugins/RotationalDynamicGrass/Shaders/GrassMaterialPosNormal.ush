@@ -5,21 +5,23 @@
 #include "Common/BezierCurve.ush"
 
 #define GRASS_NORMAL_LENGTH_THRESHOLD 0.001
+#define MIN_STIFFNESS_RATIO 0.05
 
 
 
 // This function should run on the vertex shader. Running this function on pixel shader would not give significantly more accurate result
 // Use vertext interpolator node between the custom nodes that runs this function and bellow GetGrassNormal function
 float3 GetRotatedCurvePointTangentSide(
-    float4 p1, float4 p2,
-    float view_dependent_tilt_amount,
+    float2 p1Position,
+    float2 stiffnessRatios,
+    float viewDependentTiltScale,
     in float2 uv,
-    in float4 angular_disp,
-    in float3 viewing_dir,
-    out float3 output_p1,
-    out float3 output_p2,
-    out float3 unit_tangent,
-    out float3 side_dir
+    in float4 angularDisp,
+    in float3 viewingDir,
+    out float3 outputP1,
+    out float3 outputP2,
+    out float3 unitTangent,
+    out float3 sideDir
 )
 {
     float t = uv.x;
@@ -27,35 +29,40 @@ float3 GetRotatedCurvePointTangentSide(
     float s2 = s * s;
     float t2 = t * t;
 
-        
+    float4 p0 = float4(0, 0, 0, 1);
+    float4 p1 = float4(p1Position.x, 0, p1Position.y, stiffnessRatios.x);
+    float4 p2 = float4(1, 0, 0, stiffnessRatios.y);
+    
     // initialize points at static positions
     p1.w = p1.w > 1 ? 1 : p1.w;
+    p1.w = p1.w < MIN_STIFFNESS_RATIO ? 1 : p1.w;
     p2.w = p1.w < p2.w ? p1.w : p2.w;
-    float4 p0 = float4(0, 0, 0, 1);
+    p2.w = p2.w < MIN_STIFFNESS_RATIO ? p1.w : p2.w;
+
     
-    GetRotatedBezierPoints(p1.xyz, p2.xyz, angular_disp, output_p1, output_p2);
+    GetRotatedBezierPoints(p1.xyz, p2.xyz, angularDisp, outputP1, outputP2);
     
-    p1.xyz = output_p1;
-    p2.xyz = output_p2;
+    p1.xyz = outputP1;
+    p2.xyz = outputP2;
         
-    float4 curve_point = s2 * p0 + 2 * s * t * p1 + t2 * p2;
-    float3 curve_tangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
+    float4 curvePoint = s2 * p0 + 2 * s * t * p1 + t2 * p2;
+    float3 curveTangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
         
     /* tilt xy_plane norm abount the curve tangent */
-    float vec_length = length(curve_tangent);
-    unit_tangent = (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curve_tangent / vec_length) : curve_tangent;
+    float vec_length = length(curveTangent);
+    unitTangent = (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curveTangent / vec_length) : curveTangent;
         
 
-    side_dir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(angular_disp.xyz * (1.0 - curve_point.w + p2.w * t)));
+    sideDir = RotateVectorByRotationalVector(float3(0, 1, 0), angularDisp.xyz * (1.0 - curvePoint.w + p2.w * t));
         
-    if (view_dependent_tilt_amount != 0.0)
+    if (viewDependentTiltScale != 0.0)
     {
-        float tilt_amount = dot(side_dir, viewing_dir) * view_dependent_tilt_amount;
-        side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
+        float tiltAngle = dot(sideDir, viewingDir) * viewDependentTiltScale;
+        sideDir = RotateVectorByQuaternion(sideDir, QuaternionFromRotationalVector(unitTangent * tiltAngle));
     }
     
  
-    return curve_point.xyz;
+    return curvePoint.xyz;
 }
 
 
@@ -64,14 +71,14 @@ float3 GetRotatedCurvePointTangentSide(
 // Only rotation on P1 and twsit from P0 is applied.
 // Rotation from P0 is assumed to be already done by mesh orientation update in Niagara
 float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
-    float4 p1, float4 p2,
-    float view_dependent_tilt_amount,
+    in float4 bezierPointsData,
+    in float viewDependentTiltScale,
     in float2 uv,
-    in float4 angular_disp,
-    in float3 viewing_dir,
-    out float3 output_p2,
-    out float3 unit_tangent,
-    out float3 side_dir
+    in float4 angularDisp,
+    in float3 viewingDir,
+    out float3 outputP2,
+    out float3 unitTangent,
+    out float3 sideDir
 )
 {
     float t = uv.x;
@@ -79,38 +86,41 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     float s2 = s * s;
     float t2 = t * t;
 
-        
+    
+    float4 p0 = float4(0, 0, 0, 1);
+    float4 p1 = float4(bezierPointsData.x, 0, bezierPointsData.y, bezierPointsData.z);
+    float4 p2 = float4(1, 0, 0, bezierPointsData.w);
+    
     // initialize points at static positions
     p1.w = p1.w > 1 ? 1 : p1.w;
+    p1.w = p1.w < MIN_STIFFNESS_RATIO ? 1 : p1.w;
     p2.w = p1.w < p2.w ? p1.w : p2.w;
-    float4 p0 = float4(0, 0, 0, 1);
+    p2.w = p2.w < MIN_STIFFNESS_RATIO ? p1.w : p2.w;
     
-    float4 p1p2_quat = QuaternionFromAxisAngle(float3(0, 1, 0), angular_disp.w);
+    
+    outputP2 = p1 + RotateVectorByRotationalVector(p2.xyz - p1.xyz, float3(0, 1, 0) * angularDisp.w);
+    p2.xyz = outputP2;
         
-    output_p2 = p1.xyz + RotateVectorByQuaternion(p2.xyz - p1.xyz, p1p2_quat);
-    p2.xyz = output_p2;
-        
-    float4 curve_point = s2 * p0 + 2 * s * t * p1 + t2 * p2;
-    float3 curve_tangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
+    float4 curvePoint = s2 * p0 + 2 * s * t * p1 + t2 * p2;
+    float3 curveTangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
         
     /* tilt xy_plane norm abount the curve tangent */
-    float vec_length = length(curve_tangent);
-    unit_tangent = (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curve_tangent / vec_length) : curve_tangent;
+    float vecLength = length(curveTangent);
+    unitTangent = (vecLength > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curveTangent / vecLength) : curveTangent;
         
         
      // make twist from p0 rotation
     // the side dir at p2 is (0, 1 ,0) in the mesh space
     // the side dier at p0 is the inverse rotation of the angualr_disp.xyz
-    side_dir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(-angular_disp.xyz * (1.0 - curve_point.w + p2.w * s)));
+    sideDir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(-angularDisp.xyz * (1.0 - curvePoint.w + p2.w * s)));
         
-    if (view_dependent_tilt_amount != 0.0)
+    if (viewDependentTiltScale != 0.0)
     {
-        float tilt_amount = dot(side_dir, viewing_dir) * view_dependent_tilt_amount * t;
-        side_dir = RotateVectorByQuaternion(side_dir, QuaternionFromRotationalVector(unit_tangent * tilt_amount));
+        float tiltAngle = dot(sideDir, viewingDir) * viewDependentTiltScale * t;
+        sideDir = RotateVectorByQuaternion(sideDir, QuaternionFromRotationalVector(unitTangent * tiltAngle));
     }
     
- 
-    return curve_point.xyz;
+    return curvePoint.xyz;
 }
 
 
@@ -153,9 +163,11 @@ float3 GetGrassPosOffset(
     in float2 uv, 
     in float3 p1, 
     in float3 p2,
-    in float3 curve_point,
+    in float3 curvePoint,
     in float3 side_dir,
-    float scale, float width, float base
+    float3 scale, 
+    float width, 
+    float base
 )
 {    
     float t = uv.x;
@@ -167,7 +179,7 @@ float3 GetGrassPosOffset(
     /* get position offset */
     // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
         
-    return scale * (curve_point / curve_length + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
+    return scale.x * (curvePoint / curve_length + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
 }
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_POS_NORMAL_HLSL__

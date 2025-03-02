@@ -71,7 +71,7 @@ void GetGrassttributes(
     FQuat landLocalOrientation = QuatMultiply(
         QuatFromAxisAngle(
             float3(0, 0, 1),
-            lerp(-PI_VALUE, PI_VALUE, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
+            lerp(-PI_VALUE * 0.9, PI_VALUE * 0.9, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
         ),
         QuatFromAxisAngle(
             float3(0, 1, 0),

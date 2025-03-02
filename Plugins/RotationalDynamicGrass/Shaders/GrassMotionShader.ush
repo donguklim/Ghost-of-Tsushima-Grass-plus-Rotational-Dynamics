@@ -222,15 +222,17 @@ void GrassUpdate(
         
     float p1BendingTorque = dot(bar2RotationalAxis, rawP1Torque);
         
-    // The total torque to P1 to make P1 seized is -p1_bending_torque.
-    // So p0_angular_acc_with_sezied_p1 is the acceleration at p0 that would occur if p1_bending_torque is subtracted from p1.
-    // Now add back the acceleration from p1_bending_torque
-        
-    float p1Acc = p1BendingTorque / (bar2Mass * bar2Length * bar2Length / 3.0);
-        
-    // the p1_bending_torque acceleration is subtracted for p0, because 
-    // that is how you calculate the acceleration acting on p0 due to torque from p1
-    float3 p0Acc = p1SeizedP0AngularAcc - p1BendingTorque * bar2RotationalAxis / (bar1Mass * bar1Length * bar1Length / 3.0);
+    // The total torque to P1 required to make P1 seized is -p1BendingTorque.
+    
+    // get bar1 angular accelerataion     
+    float bar1AccFromP1Torque = -p1BendingTorque / (bar1Mass * bar1Length * bar1Length / 3.0);
+    
+    // total acceleration on P1 is bar2 acceleration from p1 torque minus bar1 acceleration from p1 torque
+    float p1Acc = p1BendingTorque / (bar2Mass * bar2Length * bar2Length / 3.0) - bar1AccFromP1Torque;
+    
+    
+    // total acceleration on P0 is the seized acceleration plus the bar1 acceleration from p1 torque
+    float3 p0Acc = p1SeizedP0AngularAcc + (bar1AccFromP1Torque * bar2RotationalAxis);
         
         
     //float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;

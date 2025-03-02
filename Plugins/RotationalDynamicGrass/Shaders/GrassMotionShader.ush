@@ -242,7 +242,7 @@ void GrassUpdate(
     float4 dispDelta = angularVelocity * timeDelta;
         
     float deltaAngle = length(dispDelta);
-    FQuat rotation = deltaAngle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1) : QuatFromAxisAngle(dispDelta.xyz / deltaAngle, deltaAngle);
+    FQuat rotation = deltaAngle < ANGLE_THRESHOLD ? FQuat(0.0f, 0.0f, 0.0f, 1.0f) : QuatFromAxisAngle(dispDelta.xyz / deltaAngle, deltaAngle);
     float3 newP1Dir = QuatRotateVector(rotation, p1Dir);
         
     // If the new p1 angle from normal direction is beynond threshold, 

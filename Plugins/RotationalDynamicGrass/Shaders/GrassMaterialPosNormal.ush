@@ -105,11 +105,20 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     p2.w = p1.w < p2.w ? p1.w : p2.w;
     p2.w = p2.w < MIN_STIFFNESS_RATIO ? p1.w : p2.w;
     
-    outputP2 = p1.xyz + QuatRotateVector(
-        QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w),
-        p2.xyz - p1.xyz
-    );
-    p2.xyz = outputP2;
+    if (angularDisp.w < ANGLE_THRESHOLD)
+    {
+        outputP2 = p2.xyz;
+
+    }
+    else
+    {
+        outputP2 = p1.xyz + QuatRotateVector(
+            QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w),
+            p2.xyz - p1.xyz
+        );
+        p2.xyz = outputP2;
+    }
+    
         
     float4 curvePoint = s2 * p0 + 2 * s * t * p1 + t2 * p2;
     float3 curveTangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
@@ -123,16 +132,16 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     // the side dier at p0 is the inverse rotation of the angualr_disp.xyz
     float3 rotationalVector = -angularDisp.xyz * (1.0 - curvePoint.w + p2.w * s);
     float rotAngle = length(rotationalVector);
-    if (rotAngle > ANGLE_THRESHOLD)
+    if (rotAngle < ANGLE_THRESHOLD)
     {
-        sideDir = QuatRotateVector(
-            QuatFromAxisAngle(rotationalVector / rotAngle, rotAngle), 
-            float3(0, 1, 0)
-        );
+        sideDir = float3(0, 1, 0);
     }
     else
     {
-        sideDir = float3(0, 1, 0);
+        sideDir = QuatRotateVector(
+            QuatFromAxisAngle(rotationalVector / rotAngle, rotAngle),
+            float3(0, 1, 0)
+        );
     }
         
     if (viewDependentTiltScale != 0.0)

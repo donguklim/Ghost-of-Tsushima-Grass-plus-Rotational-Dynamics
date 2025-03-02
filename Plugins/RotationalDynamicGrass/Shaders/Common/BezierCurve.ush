@@ -1,14 +1,20 @@
 #ifndef __ROTATIONAL_DYNAMIC_GRASS_BEZIER_CURVE_HLSL__
 #define __ROTATIONAL_DYNAMIC_GRASS_BEZIER_CURVE_HLSL__
 
-
+#include "Constants.ush"
 #include "../EnginePrivateCopy/Quaternion.ush"
 
 
 void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angularDisp, out float3 p1, out float3 p2)
 {
     float angle = length(angularDisp.xyz);
-    float3 axis = normalize(angularDisp.xyz);
+    if (angle < ANGLE_THRESHOLD)
+    {
+        p1 = inputP1;
+        p2 = inputP2;
+        return;
+    }
+    float3 axis = angularDisp.xyz / angle;
         
     FQuat bar1Quat = QuatFromAxisAngle(axis, angle);
     FQuat bar2Quat = QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w);
@@ -23,7 +29,13 @@ void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angu
 void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angularDisp, out float3 p1, out float3 p2, out float3 sideDir)
 {
     float angle = length(angularDisp.xyz);
-    float3 axis = normalize(angularDisp.xyz);
+    if (angle < ANGLE_THRESHOLD)
+    {
+        p1 = inputP1;
+        p2 = inputP2;
+        return;
+    }
+    float3 axis = angularDisp.xyz / angle;
         
     FQuat bar1Quat = QuatFromAxisAngle(axis, angle);
     FQuat bar2Quat = QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w);

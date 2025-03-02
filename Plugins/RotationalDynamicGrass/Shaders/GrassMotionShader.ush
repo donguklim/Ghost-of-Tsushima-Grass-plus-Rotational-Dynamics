@@ -127,7 +127,13 @@ float GetMomentOfInertia(float mass, float3 bar1_end, float3 bar2_end)
 
 float Get2DAngle(float2 vec)
 {
-    float2 normalizedVector = normalize(vec);
+    float vecLength = length(vec);
+    if (vecLength < 0.001f)
+    {
+        return 0.0f;
+    }
+    
+    float2 normalizedVector = vec / vecLength;
     
     float angle = acos(normalizedVector.x);
  
@@ -234,10 +240,9 @@ void GrassUpdate(
         
     float4 dispDelta = angularVelocity * timeDelta;
         
-    float3 newP1Dir = QuatRotateVector(
-        QuatFromAxisAngle(normalize(dispDelta.xyz), length(dispDelta)),
-            p1Dir
-    );
+    float deltaAngle = length(dispDelta);
+    FQuat rotation = deltaAngle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1) : QuatFromAxisAngle(dispDelta.xyz / deltaAngle, deltaAngle);
+    float3 newP1Dir = QuatRotateVector(rotation, p1Dir);
         
     // If the new p1 angle from normal direction is beynond threshold, 
     // and current direction is also within some threshold range
@@ -364,10 +369,10 @@ float4 GetApproximateEquilibriumAngularDisplacement(
     float4 angularDisp = float4(p0Torque / stiffness, p1Torque / p1Stiffness);
     
     float3 p1Dir = p1 / length(p1);
-    float3 newP1Dir = QuatRotateVector(
-        QuatFromAxisAngle(normalize(angularDisp.xyz), length(angularDisp)),
-        p1Dir
-    );
+    
+    float dispAngle = length(angularDisp.xyz);
+    FQuat rotation = dispAngle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1) : QuatFromAxisAngle(angularDisp.xyz / dispAngle, dispAngle);
+    float3 newP1Dir = QuatRotateVector(rotation, p1Dir);
         
     // If the new p1 angle from normal direction is beynond threshold, 
     // and current direction is also within some threshold range
@@ -476,7 +481,7 @@ float4 GetApproximateAngularDisplacement2(
     p1 = QuatRotateVector(initialOrientation, p1);
     p2 = QuatRotateVector(initialOrientation, p2);
     
-    float3 p0_rotation = ApproximateAngularDisp(wind, p1, stiffness);
+    float3 p0Rotation = ApproximateAngularDisp(wind, p1, stiffness);
     
     // If the new p1 angle from normal direction is beynond threshold, 
     // and current direction is also within some threshold range
@@ -487,7 +492,8 @@ float4 GetApproximateAngularDisplacement2(
     // adjust the new angular displacement so that it reaches to the threshold 
     // and make velcity zero.
     
-    FQuat p0Quat = QuatFromAxisAngle(normalize(p0_rotation), length(p0_rotation));
+    float p0RotAngle = length(p0Rotation);
+    FQuat p0Quat = p0RotAngle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1) : QuatFromAxisAngle(p0Rotation / p0RotAngle, p0RotAngle);
     float bar1_length = length(p1);
     
     float3 bar1_dir = p1 / bar1_length;
@@ -497,12 +503,13 @@ float4 GetApproximateAngularDisplacement2(
     {
         if (abs(dot(bar1_dir, ground_normal) - BAR_DOT_GROUND_THRESHOLD) < 0.1)
         {
-            p0_rotation = float3(0, 0, 0);
+            p0Rotation = float3(0, 0, 0);
         }
         else
         {
-            p0_rotation = GetCollidingAngleDelta(bar1_dir, p0_rotation, ground_normal);
-            p0Quat = QuatFromAxisAngle(normalize(p0_rotation), length(p0_rotation));
+            p0Rotation = GetCollidingAngleDelta(bar1_dir, p0Rotation, ground_normal);
+            p0RotAngle = length(p0Rotation);
+            p0Quat = p0RotAngle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1) : QuatFromAxisAngle(p0Rotation / p0RotAngle, p0RotAngle);
             p1 = QuatRotateVector(p0Quat, p1);
         }
 

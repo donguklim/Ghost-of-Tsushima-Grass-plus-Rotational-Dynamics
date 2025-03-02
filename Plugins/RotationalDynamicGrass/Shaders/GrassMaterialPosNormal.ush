@@ -98,7 +98,7 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     p2.w = p2.w < MIN_STIFFNESS_RATIO ? p1.w : p2.w;
     
     
-    outputP2 = p1 + RotateVectorByRotationalVector(p2.xyz - p1.xyz, float3(0, 1, 0) * angularDisp.w);
+    outputP2 = p1.xyz + RotateVectorByRotationalVector(p2.xyz - p1.xyz, float3(0, 1, 0) * angularDisp.w);
     p2.xyz = outputP2;
         
     float4 curvePoint = s2 * p0 + 2 * s * t * p1 + t2 * p2;
@@ -164,7 +164,7 @@ float3 GetGrassPosOffset(
     in float3 p1, 
     in float3 p2,
     in float3 curvePoint,
-    in float3 side_dir,
+    in float3 sideDir,
     float3 scale, 
     float width, 
     float base
@@ -179,7 +179,7 @@ float3 GetGrassPosOffset(
     /* get position offset */
     // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
         
-    return scale.x * (curvePoint / curve_length + g_axis_val * s * (t + base) * width * side_dir - float3(t, g_axis_val, 0));
+    return scale.x * (curvePoint / curve_length + g_axis_val * s * (t + base) * width * sideDir - float3(t, g_axis_val, 0));
 }
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_POS_NORMAL_HLSL__

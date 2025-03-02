@@ -49,13 +49,13 @@ void GetGrassttributes(
     );
     
     colorNoise = float3(
-        lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)) * GetNoiseMultiplier(positionSeed, positionNoiseRatio),
+        lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)),
         lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)),
         lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
     );
     p1Position = float2(
-        lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)),
-        lerp(0.1f, 0.9f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
+        lerp(0.4f, 0.8f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)),
+        lerp(0.05, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
     );
     
     stiffness = lerp(stiffnessMin, stiffnessMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
@@ -78,9 +78,7 @@ void GetGrassttributes(
             lerp(-0.05, -PI_VALUE * 0.45, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
         )
     );
-    staticOrientation = QuatMultiply(landLocalOrientation, quatRotation);
-    staticOrientation = landLocalOrientation;
-
+    staticOrientation = QuatMultiply(quatRotation, landLocalOrientation);
 }
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_GRASS_ATTRIBUTES_HLSL__

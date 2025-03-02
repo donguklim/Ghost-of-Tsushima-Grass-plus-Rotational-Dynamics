@@ -67,8 +67,6 @@ float GetBezierCurveLength(in float3 bar1, in float3 p2)
     float3 bar2 = p2 - bar1;
         
     float bar1_length = length(bar1);
-    
-    
     float bar2_length = length(bar2);
     
     float sqrt_a_val = length(bar1 - bar2);
@@ -80,10 +78,9 @@ float GetBezierCurveLength(in float3 bar1, in float3 p2)
         return bar1_length + bar2_length;
     }
     
-    float bar1_dot_bar2 = dot(bar1, bar2);
-    
     float c_val = bar1_length * bar1_length;
     
+    float bar1_dot_bar2 = dot(bar1, bar2);
     float b_val = (bar1_dot_bar2 - c_val) * 2;
           
     float discriminant = 4 * a_val * c_val - b_val * b_val;

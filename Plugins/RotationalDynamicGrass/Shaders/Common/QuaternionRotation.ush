@@ -1,0 +1,23 @@
+#ifndef __ROTATIONAL_DYNAMIC_GRASS_QUATERNION_HLSL__
+#define __ROTATIONAL_DYNAMIC_GRASS_QUATERNION_HLSL__
+
+#include "Constants.ush"
+#include "/Engine/Private/Quaternion.ush"
+
+
+// angle magnitude less than 0.001 is ignored
+float3 RotateVectorByRotationalVector(float3 v, float3 rotationalVec)
+{
+    float angle = length(rotationalVec);
+    if (angle < ANGLE_THRESHOLD)
+    {
+        return v;
+    }
+    
+    float3 axis = rotationalVec / angle;
+    
+    return QuatRotateVector(QuatFromAxisAngle(axis, angle), v);
+
+}
+
+#endif // __ROTATIONAL_DYNAMIC_GRASS_QUATERNION_HLSL__

@@ -1,7 +1,6 @@
 #ifndef __ROTATIONAL_DYNAMIC_GRASS_POS_NORMAL_HLSL__
 #define __ROTATIONAL_DYNAMIC_GRASS_POS_NORMAL_HLSL__
 
-#include "Common/Quaternion.ush"
 #include "Common/BezierCurve.ush"
 
 #define GRASS_NORMAL_LENGTH_THRESHOLD 0.001
@@ -52,15 +51,25 @@ float3 GetRotatedCurvePointTangentSide(
     float vec_length = length(curveTangent);
     unitTangent = (vec_length > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curveTangent / vec_length) : curveTangent;
         
+    float3 rotationalVector = angularDisp.xyz * (1.0 - curvePoint.w + p2.w * t);
+    float rotAngle = length(rotationalVector);
+    if (rotAngle > ANGLE_THRESHOLD)
+    {
+        sideDir = QuatRotateVector(QuatFromAxisAngle(rotationalVector / rotAngle, rotAngle), float3(0, 1, 0));
+    }
+    else
+    {
+        sideDir = float3(0, 1, 0);
+    }
 
-    sideDir = RotateVectorByRotationalVector(float3(0, 1, 0), angularDisp.xyz * (1.0 - curvePoint.w + p2.w * t));
-        
     if (viewDependentTiltScale != 0.0)
     {
         float tiltAngle = dot(sideDir, viewingDir) * viewDependentTiltScale;
-        sideDir = RotateVectorByQuaternion(sideDir, QuaternionFromRotationalVector(unitTangent * tiltAngle));
+        sideDir = QuatRotateVector(
+            QuatFromAxisAngle(unitTangent, tiltAngle),
+            sideDir
+        );
     }
-    
  
     return curvePoint.xyz;
 }
@@ -85,7 +94,6 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     float s = 1 - t;
     float s2 = s * s;
     float t2 = t * t;
-
     
     float4 p0 = float4(0, 0, 0, 1);
     float4 p1 = float4(bezierPointsData.x, 0, bezierPointsData.y, bezierPointsData.z);
@@ -97,8 +105,10 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     p2.w = p1.w < p2.w ? p1.w : p2.w;
     p2.w = p2.w < MIN_STIFFNESS_RATIO ? p1.w : p2.w;
     
-    
-    outputP2 = p1.xyz + RotateVectorByRotationalVector(p2.xyz - p1.xyz, float3(0, 1, 0) * angularDisp.w);
+    outputP2 = p1.xyz + QuatRotateVector(
+        QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w),
+        p2.xyz - p1.xyz
+    );
     p2.xyz = outputP2;
         
     float4 curvePoint = s2 * p0 + 2 * s * t * p1 + t2 * p2;
@@ -108,16 +118,30 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     float vecLength = length(curveTangent);
     unitTangent = (vecLength > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curveTangent / vecLength) : curveTangent;
         
-        
      // make twist from p0 rotation
     // the side dir at p2 is (0, 1 ,0) in the mesh space
     // the side dier at p0 is the inverse rotation of the angualr_disp.xyz
-    sideDir = RotateVectorByQuaternion(float3(0, 1, 0), QuaternionFromRotationalVector(-angularDisp.xyz * (1.0 - curvePoint.w + p2.w * s)));
+    float3 rotationalVector = -angularDisp.xyz * (1.0 - curvePoint.w + p2.w * s);
+    float rotAngle = length(rotationalVector);
+    if (rotAngle > ANGLE_THRESHOLD)
+    {
+        sideDir = QuatRotateVector(
+            QuatFromAxisAngle(rotationalVector / rotAngle, rotAngle), 
+            float3(0, 1, 0)
+        );
+    }
+    else
+    {
+        sideDir = float3(0, 1, 0);
+    }
         
     if (viewDependentTiltScale != 0.0)
     {
         float tiltAngle = dot(sideDir, viewingDir) * viewDependentTiltScale * t;
-        sideDir = RotateVectorByQuaternion(sideDir, QuaternionFromRotationalVector(unitTangent * tiltAngle));
+        sideDir = QuatRotateVector(
+            QuatFromAxisAngle(unitTangent, tiltAngle), 
+            sideDir
+        );
     }
     
     return curvePoint.xyz;

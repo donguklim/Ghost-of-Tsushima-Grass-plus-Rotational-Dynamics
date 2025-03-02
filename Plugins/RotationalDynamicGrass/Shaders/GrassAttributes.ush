@@ -4,7 +4,7 @@
 
 #include "Common/Constants.ush"
 #include "Common/Random.ush"
-#include "EnginePrivateCopy/Quaternion.ush"
+#include "Common/QuaternionRotation.ush"
 
 
 float getClumpPositionRandVal(

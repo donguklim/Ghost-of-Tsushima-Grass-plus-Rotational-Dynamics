@@ -2,48 +2,67 @@
 #define __ROTATIONAL_DYNAMIC_GRASS_BEZIER_CURVE_HLSL__
 
 #include "Constants.ush"
-#include "../EnginePrivateCopy/Quaternion.ush"
+#include "QuaternionRotation.ush"
 
 
 void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angularDisp, out float3 p1, out float3 p2)
 {
+    
+    if (angularDisp.w < ANGLE_THRESHOLD)
+    {
+        p2 = inputP2;
+    }
+    else
+    {
+        p2 = inputP1 + QuatRotateVector(
+            QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w),
+            inputP2 - inputP1
+        );
+    }
+    
     float angle = length(angularDisp.xyz);
     if (angle < ANGLE_THRESHOLD)
     {
         p1 = inputP1;
-        p2 = inputP2;
         return;
     }
+    
     float3 axis = angularDisp.xyz / angle;
         
     FQuat bar1Quat = QuatFromAxisAngle(axis, angle);
-    FQuat bar2Quat = QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w);
-        
-    float3 bar2 = QuatRotateVector(bar2Quat, inputP2 - inputP1);
         
     p1 = QuatRotateVector(bar1Quat, inputP1);
-    p2 = QuatRotateVector(bar1Quat, inputP1 + bar2);
+    p2 = QuatRotateVector(bar1Quat, p2);
 }
 
 
 void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angularDisp, out float3 p1, out float3 p2, out float3 sideDir)
 {
+    if (angularDisp.w < ANGLE_THRESHOLD)
+    {
+        p2 = inputP2;
+    }
+    else
+    {
+        p2 = inputP1 + QuatRotateVector(
+            QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w),
+            inputP2 - inputP1
+        );
+    }
+    
     float angle = length(angularDisp.xyz);
     if (angle < ANGLE_THRESHOLD)
     {
         p1 = inputP1;
-        p2 = inputP2;
         return;
     }
+    
     float3 axis = angularDisp.xyz / angle;
         
     FQuat bar1Quat = QuatFromAxisAngle(axis, angle);
-    FQuat bar2Quat = QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w);
-        
-    float3 bar2 = QuatRotateVector(bar2Quat, inputP2 - inputP1);
         
     p1 = QuatRotateVector(bar1Quat, inputP1);
-    p2 = QuatRotateVector(bar1Quat, inputP1 + bar2);
+    p2 = QuatRotateVector(bar1Quat, p2);
         
     sideDir = QuatRotateVector(bar1Quat, float3(0, 1, 0));
 }

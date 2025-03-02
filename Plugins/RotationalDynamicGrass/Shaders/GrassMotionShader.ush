@@ -547,7 +547,7 @@ float4 GetApproximateAngularDisplacement2(
     p1_rotation = p1_rotation > max_angle ?  max_angle : p1_rotation;
     p1_rotation = p1_rotation < min_angle ? min_angle : p1_rotation;
     
-    return float4(p0_rotation, p1_rotation);
+    return float4(p0Rotation, p1_rotation);
     
 }
 

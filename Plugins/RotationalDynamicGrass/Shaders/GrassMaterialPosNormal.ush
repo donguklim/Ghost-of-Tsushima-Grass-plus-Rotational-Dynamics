@@ -3,8 +3,8 @@
 
 #include "Common/BezierCurve.ush"
 
-#define GRASS_NORMAL_LENGTH_THRESHOLD 0.001
-#define MIN_STIFFNESS_RATIO 0.05
+#define GRASS_NORMAL_LENGTH_THRESHOLD 0.05
+#define MIN_STIFFNESS_RATIO 0.1
 
 
 
@@ -115,8 +115,8 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     float3 curveTangent = 2 * s * (p1.xyz) + 2 * t * (p2.xyz - p1.xyz);
         
     /* tilt xy_plane norm abount the curve tangent */
-    float vecLength = length(curveTangent);
-    unitTangent = (vecLength > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curveTangent / vecLength) : curveTangent;
+    float tangentLength = length(curveTangent);
+    unitTangent = (tangentLength > GRASS_NORMAL_LENGTH_THRESHOLD) ? (curveTangent / tangentLength) : curveTangent;
         
      // make twist from p0 rotation
     // the side dir at p2 is (0, 1 ,0) in the mesh space
@@ -138,10 +138,14 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     if (viewDependentTiltScale != 0.0)
     {
         float tiltAngle = dot(sideDir, viewingDir) * viewDependentTiltScale * t;
-        sideDir = QuatRotateVector(
-            QuatFromAxisAngle(unitTangent, tiltAngle), 
-            sideDir
-        );
+        
+        if (tiltAngle > ANGLE_THRESHOLD && tangentLength > GRASS_NORMAL_LENGTH_THRESHOLD)
+        {
+            sideDir = QuatRotateVector(
+                QuatFromAxisAngle(unitTangent, tiltAngle),
+                sideDir
+            );
+        }
     }
     
     return curvePoint.xyz;

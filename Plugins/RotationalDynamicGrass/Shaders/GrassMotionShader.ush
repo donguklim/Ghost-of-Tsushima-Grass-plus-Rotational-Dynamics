@@ -235,9 +235,8 @@ void GrassUpdate(
     float3 p0Acc = p1SeizedP0AngularAcc + (bar1AccFromP1Torque * bar2RotationalAxis);
         
         
-    //float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
-    
-    float4 velocityDelta = float4(p1SeizedP0AngularAcc, p1Acc) * timeDelta;
+    float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
+    //float4 velocityDelta = float4(p1SeizedP0AngularAcc, p1Acc) * timeDelta;
     angularVelocity += velocityDelta;
         
     float4 dispDelta = angularVelocity * timeDelta;

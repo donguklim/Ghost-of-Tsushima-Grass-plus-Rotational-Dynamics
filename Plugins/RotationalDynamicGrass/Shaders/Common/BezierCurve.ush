@@ -85,46 +85,52 @@ float GetBezierCurveLength(in float3 bar1, in float3 p2)
     
     float3 bar2 = p2 - bar1;
         
-    float bar1_length = length(bar1);
-    float bar2_length = length(bar2);
+    float bar1Length = length(bar1);
+    float bar2Length = length(bar2);
     
-    float sqrt_a_val = length(bar1 - bar2);
-    float a_val = sqrt_a_val * sqrt_a_val;
-    
-    // The case bar1 and bar2 form a near straight line and has the same length
-    if (a_val < 0.01)
+    if (bar1Length < 0.05 || bar2Length < 0.05)
     {
-        return bar1_length + bar2_length;
+        return bar1Length + bar2Length;
     }
     
-    float c_val = bar1_length * bar1_length;
+    float bar2LengthSquare = bar2Length * bar2Length;
+    
+    float sqrtAVal = length(bar1 - bar2);
+    float aVal = sqrtAVal * sqrtAVal;
+    
+    // The case bar1 and bar2 form a near straight line and has the same length
+    if (aVal / min(bar1Length, bar2Length) < 0.01)
+    {
+        return bar1Length + bar2Length;
+    }
+    
+    float cVal = bar1Length * bar1Length;
     
     float bar1_dot_bar2 = dot(bar1, bar2);
-    float b_val = (bar1_dot_bar2 - c_val) * 2;
+    float bVal = (bar1_dot_bar2 - cVal) * 2;
           
-    float discriminant = 4 * a_val * c_val - b_val * b_val;
+    float discriminant = 4 * aVal * cVal - bVal * bVal;
     
     // bar1 and bar2 are nearlly aligned in either opposite or the same direction.    
-    if (discriminant < 0.01)
+    if (discriminant / (cVal * bar2LengthSquare) < 0.01)
     {
         // bar1 and bar2 has the same or almost the same direction.
         if (bar1_dot_bar2 > 0)
         {
-            return bar1_length + bar2_length;
+            return bar1Length + bar2Length;
         }
         
         // bar1 and bar2 has almost opposite direction
-        return (c_val + bar2_length * bar2_length) / (bar1_length + bar2_length);
-            
+        return (cVal + bar2LengthSquare) / (bar1Length + bar2Length);      
     }
     
     // solution for the integration when descrimnant is positive
-    float term1 = (2 * a_val + b_val) / sqrt(discriminant);
+    float term1 = (2 * aVal + bVal) / sqrt(discriminant);
     float term2 = sqrt(1 + term1 * term1);
-    float term3 = b_val / sqrt(discriminant);
+    float term3 = bVal / sqrt(discriminant);
     float term4 = sqrt(1 + term3 * term3);
     
-    return 2 * discriminant / (8 * a_val * sqrt_a_val) * (
+    return 2 * discriminant / (8 * aVal * sqrtAVal) * (
         (term2 * term1 + log(term2 + term1)) 
         - (term4 * term3 + log(term4 + term3))
     );

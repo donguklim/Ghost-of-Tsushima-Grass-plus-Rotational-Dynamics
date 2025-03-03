@@ -147,10 +147,11 @@ float Get2DAngle(float2 vec)
     
     return angle;
 }
+
  
 void GrassUpdate(
     in float dampingCoff,
-    float massDensity,
+    in float massDensity,
     in float stiffness,
     in float p2Stiffness,
     in float timeDelta,
@@ -163,13 +164,9 @@ void GrassUpdate(
     inout float4 angularDisp
 )
 {
-    if (massDensity < 0.01f)
-    {
-        massDensity = 1.0f;
-    }
     float2 p1p2XZ = float2(1, 0) - p1Position;
     float bar2StaticAngle = Get2DAngle(p1p2XZ) - Get2DAngle(p1Position);
-    float mass = scale.x * scale.y * massDensity;
+    float mass = scale.x * scale.y * massDensity < 0.01f ? 1.0f : massDensity;
     
     float3 staticP1 = float3(p1Position.x, 0, p1Position.y) * scale.x;
     float3 staticP2 = float3(1, 0, 0) * scale.x;
@@ -223,7 +220,7 @@ void GrassUpdate(
 
     float3 p1InertiaForceTorque = cross(bar2 / 2.0, -seizedP1PlainAcc * bar2Mass);
         
-    float3 rawP1Torque = p1InertiaForceTorque + GetPivotBarTorque(
+    float3 p1Torque = p1InertiaForceTorque + GetPivotBarTorque(
         dampingCoff,
         p2Stiffness,
         wind,
@@ -232,28 +229,46 @@ void GrassUpdate(
         angularDisp.w * bar2RotationalAxis
     );
         
-    float p1Torque = dot(bar2RotationalAxis, rawP1Torque);
+    float p1TorqueMagnitude = dot(bar2RotationalAxis, p1Torque);
         
     // The total torque to P1 required to make P1 seized is -p1BendingTorque.
     // Now payback the torque
     
-    float p1Acc = p1Torque / (bar2Mass * bar2Length * bar2Length / 3.0);
-    //float p1Acc = p1BendingTorque / (bar2Mass * bar2Length * bar2Length / 3.0);
+    float p1Acc = p1TorqueMagnitude / (bar2Mass * bar2Length * bar2Length / 3.0);
     
-    
-    //float3 p0RecoilTorque = p1BendingTorque * bar2RotationalAxis;
-    float3 p0Acc = p1SeizedP0AngularAcc - p1Torque / momentOfIntertia * bar2RotationalAxis;
-        
-      
-    //float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
-    float4 velocityDelta = float4(p1SeizedP0AngularAcc, p1Acc) * timeDelta;
+    float3 p0Acc = p1SeizedP0AngularAcc - p1Torque / momentOfIntertia;
+           
+    float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
+    //float4 velocityDelta = float4(p1SeizedP0AngularAcc, p1Acc) * timeDelta;
     
     angularVelocity += velocityDelta;
         
     float4 dispDelta = angularVelocity * timeDelta;
     
-    angularDisp += dispDelta;
-    return;
+    float maxAngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
+    float minAngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
+    
+    if (maxAngleDelta < 0)
+    {
+        maxAngleDelta = 0;
+    }
+    if (minAngleDelta > 0)
+    {
+        minAngleDelta = 0;
+    }
+    
+    
+    if (dispDelta.w > maxAngleDelta)
+    {
+        angularVelocity.w = 0;
+        dispDelta.w = maxAngleDelta;
+        
+    }
+    else if (dispDelta.w < minAngleDelta)
+    {
+        angularVelocity.w = 0;
+        dispDelta.w = minAngleDelta;
+    }
         
     float deltaAngle = length(dispDelta);
     FQuat rotation = deltaAngle < ANGLE_THRESHOLD ? FQuat(0.0f, 0.0f, 0.0f, 1.0f) : QuatFromAxisAngle(dispDelta.xyz / deltaAngle, deltaAngle);
@@ -282,34 +297,153 @@ void GrassUpdate(
         }
 
     }
-    
-    float maxAngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
-    float minAngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
-    
-    if (maxAngleDelta < 0)
-    {
-        maxAngleDelta = 0;
-    }
-    if (minAngleDelta > 0)
-    {
-        minAngleDelta = 0;
-    }
-    
-    
-    if (dispDelta.w > maxAngleDelta)
-    {
-        angularVelocity.w = 0;
-        dispDelta.w = maxAngleDelta;
-        
-    }
-    else if (dispDelta.w < minAngleDelta)
-    {
-        angularVelocity.w = 0;
-        dispDelta.w = minAngleDelta;
-    }
         
     angularDisp += dispDelta;
         
+}
+
+void VerletGrassUpdate(
+    in float dampingCoff,
+    float massDensity,
+    in float stiffness,
+    in float p2Stiffness,
+    in float timeDelta,
+    in float3 wind,
+    in FQuat initialOrientation,
+    in float3 scale,
+    in float2 p1Position,
+    float3 groundNormal,
+    inout float4 angularVelocity,
+    inout float4 angularDisp
+)
+{
+    float2 p1p2XZ = float2(1, 0) - p1Position;
+    float bar2StaticAngle = Get2DAngle(p1p2XZ) - Get2DAngle(p1Position);
+    float mass = scale.x * scale.y * massDensity < 0.01f ? 1.0f : massDensity;
+    
+    float3 staticP1 = float3(p1Position.x, 0, p1Position.y) * scale.x;
+    float3 staticP2 = float3(1, 0, 0) * scale.x;
+    staticP1 = QuatRotateVector(initialOrientation, staticP1);
+    staticP2 = QuatRotateVector(initialOrientation, staticP2);
+
+    float3 p1 = float3(0, 0, 0);
+    float3 p2 = float3(0, 0, 0);
+    float3 bar2RotationalAxis = float3(0, 0, 0);
+
+    GetRotatedBezierPoints(staticP1, staticP2, angularDisp, p1, p2, bar2RotationalAxis);
+    
+    float momentOfIntertia = GetMomentOfInertia(mass, p1, p2);
+    
+    float3 tempSeizedAcc = (
+        GetPivotBarTorque(
+            dampingCoff,
+            stiffness,
+            wind,
+            p1,
+            angularVelocity.xyz,
+            angularDisp.xyz
+        ) + GetBar2TorqueOnP0(
+            dampingCoff,
+            wind,
+            angularVelocity.xyz,
+            p1,
+            angularVelocity.w,
+            bar2RotationalAxis,
+            p2
+        )
+    ) / momentOfIntertia;
+
+    float3 tempP0AngularVelocity = angularVelocity.xyz + 0.5 * tempSeizedAcc * timeDelta;
+    float3 tempP0AngularDisp = angularDisp.xyz + (tempP0AngularVelocity * timeDelta);
+    
+    float3 tempP1 = float3(0, 0, 0);
+    float3 tempP2 = float3(0, 0, 0);
+    float3 tempBar2RotationalAxis = float3(0, 0, 0);
+    
+    GetRotatedBezierPoints(staticP1, staticP2, float4(tempP0AngularDisp, angularDisp.w), tempP1, tempP2, tempBar2RotationalAxis);
+    
+    float3 p1SeizedP0AngularAcc = 0.5 * (
+        tempSeizedAcc + (
+            GetPivotBarTorque(
+                dampingCoff,
+                stiffness,
+                wind,
+                tempP1,
+                tempP0AngularVelocity,
+                tempP0AngularDisp
+            ) + GetBar2TorqueOnP0(
+                dampingCoff,
+                wind,
+                tempP0AngularVelocity,
+                tempP1,
+                angularVelocity.w,
+                tempBar2RotationalAxis,
+                tempP2
+            )
+        ) / momentOfIntertia
+    );
+    
+    float3 bar2 = p2 - p1;
+    float3 bar1Dir = normalize(p1);
+    float bar1Length = length(p1);
+    float bar2Length = length(bar2);
+        
+    float totalLength = bar1Length + bar2Length;
+    float bar1Mass = mass * bar1Length / totalLength;
+    float bar2Mass = mass * bar2Length / totalLength;
+        
+    
+    float3 seizedP1PlainAcc = cross(p1SeizedP0AngularAcc, p1) + cross(angularVelocity.xyz, cross(angularVelocity.xyz, p1));
+    float3 p1InertiaForceTorque = 0.5 * bar2Mass * cross(bar2, -seizedP1PlainAcc);
+        
+    float3 p1Torque = p1InertiaForceTorque + GetPivotBarTorque(
+        dampingCoff,
+        p2Stiffness,
+        wind,
+        bar2,
+        angularVelocity.w * bar2RotationalAxis,
+        angularDisp.w * bar2RotationalAxis
+    );
+        
+    float p1TorqueMagnitude = dot(bar2RotationalAxis, p1Torque);
+    
+    float p1Acc = p1TorqueMagnitude / (bar2Mass * bar2Length * bar2Length / 3.0);
+    float3 p0Acc = p1SeizedP0AngularAcc - p1Torque / momentOfIntertia;
+    
+    float4 tempAcc = float4(p0Acc, p1Acc);
+    float4 tempAngularVelocity = angularVelocity + 0.5 * tempAcc * timeDelta;
+    float4 tempAngulardisp = angularDisp + tempAngularVelocity * timeDelta;
+    
+    GetRotatedBezierPoints(staticP1, staticP2, tempAngulardisp, tempP1, tempP2, tempBar2RotationalAxis);
+    
+    float tempMomentOfIntertia = GetMomentOfInertia(mass, tempP1, tempP2);
+    float3 tempBar2 = tempP2 - tempP1;
+    
+    seizedP1PlainAcc = cross(p1SeizedP0AngularAcc, tempP1) + cross(tempAngularVelocity.xyz, cross(tempAngularVelocity.xyz, tempP2));
+    p1InertiaForceTorque = 0.5 * bar2Mass * cross(tempBar2, -seizedP1PlainAcc);
+    p1Torque = p1InertiaForceTorque + GetPivotBarTorque(
+        dampingCoff,
+        p2Stiffness,
+        wind,
+        tempBar2,
+        tempAngularVelocity.w * tempBar2RotationalAxis,
+        tempAngulardisp.w * tempBar2RotationalAxis
+    );
+    
+    p1TorqueMagnitude = dot(bar2RotationalAxis, p1Torque);
+    
+    p1Acc = p1TorqueMagnitude / (bar2Mass * bar2Length * bar2Length / 3.0);
+    p0Acc = p1SeizedP0AngularAcc - p1Torque / tempMomentOfIntertia;
+    
+    float angularAcc = 0.5 * (tempAcc + float4(p0Acc, P1Acc));
+    
+    float4 velocityDelta = angularAcc * timeDelta;
+    angularVelocity += velocityDelta;
+        
+    float4 dispDelta = angularVelocity * timeDelta;
+    
+    angularDisp += dispDelta;
+    return;
 }
 
 

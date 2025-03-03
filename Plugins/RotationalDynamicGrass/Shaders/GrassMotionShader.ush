@@ -235,52 +235,31 @@ void GrassUpdate(
     // Now payback the torque
     
     float p1Acc = p1TorqueMagnitude / (bar2Mass * bar2Length * bar2Length / 3.0);
-    
     float3 p0Acc = p1SeizedP0AngularAcc - p1Torque / momentOfIntertia;
            
     float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
-    //float4 velocityDelta = float4(p1SeizedP0AngularAcc, p1Acc) * timeDelta;
     
     angularVelocity += velocityDelta;
         
     float4 dispDelta = angularVelocity * timeDelta;
     
-    float maxAngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
-    float minAngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
-    
-    if (maxAngleDelta < 0)
-    {
-        maxAngleDelta = 0;
-    }
-    if (minAngleDelta > 0)
-    {
-        minAngleDelta = 0;
-    }
-    
-    
-    if (dispDelta.w > maxAngleDelta)
-    {
-        angularVelocity.w = 0;
-        dispDelta.w = maxAngleDelta;
-        
-    }
-    else if (dispDelta.w < minAngleDelta)
-    {
-        angularVelocity.w = 0;
-        dispDelta.w = minAngleDelta;
-    }
-    
-    // Limit each x, y, z angular displacement within [-2 PI, 2 PI]
+    // Limit each x, y, z angular displacement of P0 within [-2 PI, 2 PI]
+    // Limit P1 angular displacement such that bar1 does not pass through bar1 
+    float maxP2AngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
+    float minP2AngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
     float3 maxP0AngleDispDelta = -angularDisp.xyz + 2 * PI_VALUE;
     float3 minP0AngleDispDelta = -angularDisp.xyz - 2 * PI_VALUE;
     
-    maxP0AngleDispDelta = maxP0AngleDispDelta < 0 ? 0 : maxP0AngleDispDelta;
-    minP0AngleDispDelta = minP0AngleDispDelta > 0 ? 0 : minP0AngleDispDelta;
+    float4 minAngleDispDelta = float4(minP0AngleDispDelta, minP2AngleDelta);
+    float4 maxAngleDispDelta = float4(maxP0AngleDispDelta, maxP2AngleDelta);
     
-    float3 isOffLimit = step(dispDelta.xyz, maxAngleDelta) * step(minP0AngleDispDelta, dispDelta.xyz);
+    maxAngleDispDelta = maxAngleDispDelta < 0 ? 0 : maxAngleDispDelta;
+    minAngleDispDelta = minAngleDispDelta > 0 ? 0 : minAngleDispDelta;
     
-    dispDelta.xyz = clamp(dispDelta.xyz, minP0AngleDispDelta, maxP0AngleDispDelta);
-    angularVelocity.xyz = angularVelocity.xyz * isOffLimit;
+    float4 isOffLimit = step(dispDelta, maxAngleDispDelta) * step(minAngleDispDelta, dispDelta);
+    
+    dispDelta = clamp(dispDelta, minAngleDispDelta, maxAngleDispDelta);
+    angularVelocity *= isOffLimit;
     
     angularDisp += dispDelta;
     return;
@@ -457,42 +436,21 @@ void VerletGrassUpdate(
         
     float4 dispDelta = angularVelocity * timeDelta;
     
-    float maxAngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
-    float minAngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
-    
-    if (maxAngleDelta < 0)
-    {
-        maxAngleDelta = 0;
-    }
-    if (minAngleDelta > 0)
-    {
-        minAngleDelta = 0;
-    }
-    
-    
-    if (dispDelta.w > maxAngleDelta)
-    {
-        angularVelocity.w = 0;
-        dispDelta.w = maxAngleDelta;
-        
-    }
-    else if (dispDelta.w < minAngleDelta)
-    {
-        angularVelocity.w = 0;
-        dispDelta.w = minAngleDelta;
-    }
-    
-     // Limit each x, y, z angular displacement within [-2 PI, 2 PI]
+    float maxP2AngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
+    float minP2AngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
     float3 maxP0AngleDispDelta = -angularDisp.xyz + 2 * PI_VALUE;
     float3 minP0AngleDispDelta = -angularDisp.xyz - 2 * PI_VALUE;
     
-    maxP0AngleDispDelta = maxP0AngleDispDelta < 0 ? 0 : maxP0AngleDispDelta;
-    minP0AngleDispDelta = minP0AngleDispDelta > 0 ? 0 : minP0AngleDispDelta;
+    float4 minAngleDispDelta = float4(minP0AngleDispDelta, minP2AngleDelta);
+    float4 maxAngleDispDelta = float4(maxP0AngleDispDelta, maxP2AngleDelta);
     
-    float3 isOffLimit = step(dispDelta.xyz, maxAngleDelta) * step(minP0AngleDispDelta, dispDelta.xyz);
+    maxAngleDispDelta = maxAngleDispDelta < 0 ? 0 : maxAngleDispDelta;
+    minAngleDispDelta = minAngleDispDelta > 0 ? 0 : minAngleDispDelta;
     
-    dispDelta.xyz = clamp(dispDelta.xyz, minP0AngleDispDelta, maxP0AngleDispDelta);
-    angularVelocity.xyz = angularVelocity.xyz * isOffLimit;
+    float4 isOffLimit = step(dispDelta, maxAngleDispDelta) * step(minAngleDispDelta, dispDelta);
+    
+    dispDelta = clamp(dispDelta, minAngleDispDelta, maxAngleDispDelta);
+    angularVelocity *= isOffLimit;
     
     angularDisp += dispDelta;
 }

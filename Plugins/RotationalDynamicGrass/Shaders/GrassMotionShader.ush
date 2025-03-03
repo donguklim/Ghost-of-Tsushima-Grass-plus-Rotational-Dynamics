@@ -67,6 +67,8 @@ float3 GetBar2TorqueOnP0(
     float3 windForce,
     float3 bar1AngularVelocity,
     float3 bar1,
+    float bar2AngularVelocity,
+    float3 bar2RotationalAxis,
     float3 p2
 )
 {
@@ -74,9 +76,10 @@ float3 GetBar2TorqueOnP0(
     float bar2Length = length(bar2);
     float bar2LengthSquare = bar2Length * bar2Length;
     float3 bar2Dir = bar2 / bar2Length;
+    float3 bar2TorqueDir = cross(bar2RotationalAxis, bar2Dir);
         
     float3 l0ForceTerm = windForce - dampingCoeff * cross(bar1AngularVelocity, bar1);
-    float3 l1ForceTerm = -dampingCoeff * cross(bar1AngularVelocity, bar2Dir);
+    float3 l1ForceTerm = -dampingCoeff * bar2AngularVelocity * bar2TorqueDir - dampingCoeff * cross(bar1AngularVelocity, bar2Dir);
     float3 l0Term = cross(bar1, l0ForceTerm);
     float3 l1Term = cross(bar2Dir, l0ForceTerm) + cross(bar1, l1ForceTerm);
     float3 l2Term = cross(bar2Dir, l1ForceTerm);
@@ -180,6 +183,8 @@ void GrassUpdate(
     GetRotatedBezierPoints(staticP1, staticP2, angularDisp, p1, p2, bar2RotationalAxis);
              
     // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
+    
+    float momentOfIntertia = GetMomentOfInertia(mass, p1, p2);
     float3 p1SeizedP0AngularAcc = (
         GetPivotBarTorque(
             dampingCoff,
@@ -193,9 +198,11 @@ void GrassUpdate(
             wind,
             angularVelocity.xyz,
             p1,
+            angularVelocity.w,
+            bar2RotationalAxis,
             p2
         )
-    ) / GetMomentOfInertia(mass, p1, p2);
+    ) / momentOfIntertia;
 
     float3 bar2 = p2 - p1;
     float3 bar1Dir = normalize(p1);
@@ -225,22 +232,17 @@ void GrassUpdate(
         angularDisp.w * bar2RotationalAxis
     );
         
-    float p1BendingTorque = dot(bar2RotationalAxis, rawP1Torque);
+    float p1Torque = dot(bar2RotationalAxis, rawP1Torque);
         
     // The total torque to P1 required to make P1 seized is -p1BendingTorque.
+    // Now payback the torque
     
-    // get bar1 angular accelerataion     
-    float bar1AngularAccFromP1Torque = -p1BendingTorque / (bar1Mass * bar1Length * bar1Length / 3.0);
-    
-    // total acceleration on P1 is bar2 acceleration from p1 torque minus bar1 acceleration from p1 torque
-    
-    float p1Acc = p1BendingTorque / (bar2Mass * bar2Length * bar2Length / 3.0) - bar1AngularAccFromP1Torque;
+    float p1Acc = p1Torque / (bar2Mass * bar2Length * bar2Length / 3.0);
     //float p1Acc = p1BendingTorque / (bar2Mass * bar2Length * bar2Length / 3.0);
     
     
     //float3 p0RecoilTorque = p1BendingTorque * bar2RotationalAxis;
-    
-    float3 p0Acc = p1SeizedP0AngularAcc + (bar1AngularAccFromP1Torque * bar2RotationalAxis);
+    float3 p0Acc = p1SeizedP0AngularAcc - p1Torque / momentOfIntertia * bar2RotationalAxis;
         
       
     //float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;

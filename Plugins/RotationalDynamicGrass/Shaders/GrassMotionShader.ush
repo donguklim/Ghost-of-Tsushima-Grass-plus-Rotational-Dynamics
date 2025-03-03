@@ -235,7 +235,7 @@ void GrassUpdate(
     // total acceleration on P1 is bar2 acceleration from p1 torque minus bar1 acceleration from p1 torque
     
     float p1Acc = p1BendingTorque / (bar2Mass * bar2Length * bar2Length / 3.0) - bar1AngularAccFromP1Torque;
-    // float p1Acc = p1BendingTorque / (bar2Mass * bar2Length * bar2Length / 3.0);
+    //float p1Acc = p1BendingTorque / (bar2Mass * bar2Length * bar2Length / 3.0);
     
     
     //float3 p0RecoilTorque = p1BendingTorque * bar2RotationalAxis;

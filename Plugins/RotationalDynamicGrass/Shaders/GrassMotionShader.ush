@@ -269,8 +269,23 @@ void GrassUpdate(
         angularVelocity.w = 0;
         dispDelta.w = minAngleDelta;
     }
-        
-    float deltaAngle = length(dispDelta);
+    
+    // Limit each x, y, z angular displacement within [-2 PI, 2 PI]
+    float3 maxP0AngleDispDelta = -angularDisp.xyz + 2 * PI_VALUE;
+    float3 minP0AngleDispDelta = -angularDisp.xyz - 2 * PI_VALUE;
+    
+    maxP0AngleDispDelta = maxP0AngleDispDelta < 0 ? 0 : maxP0AngleDispDelta;
+    minP0AngleDispDelta = minP0AngleDispDelta > 0 ? 0 : minP0AngleDispDelta;
+    
+    float3 isOffLimit = step(dispDelta.xyz, maxAngleDelta) * step(minP0AngleDispDelta, dispDelta.xyz);
+    
+    dispDelta.xyz = clamp(dispDelta.xyz, minP0AngleDispDelta, maxP0AngleDispDelta);
+    angularVelocity.xyz = angularVelocity.xyz * isOffLimit;
+    
+    angularDisp += dispDelta;
+    return;
+    
+    float deltaAngle = length(dispDelta.xyz);
     FQuat rotation = deltaAngle < ANGLE_THRESHOLD ? FQuat(0.0f, 0.0f, 0.0f, 1.0f) : QuatFromAxisAngle(dispDelta.xyz / deltaAngle, deltaAngle);
     float3 newBar1Dir = QuatRotateVector(rotation, bar1Dir);
         
@@ -435,15 +450,51 @@ void VerletGrassUpdate(
     p1Acc = p1TorqueMagnitude / (bar2Mass * bar2Length * bar2Length / 3.0);
     p0Acc = p1SeizedP0AngularAcc - p1Torque / tempMomentOfIntertia;
     
-    float angularAcc = 0.5 * (tempAcc + float4(p0Acc, P1Acc));
+    float4 angularAcc = 0.5 * (tempAcc + float4(p0Acc, p1Acc));
     
     float4 velocityDelta = angularAcc * timeDelta;
     angularVelocity += velocityDelta;
         
     float4 dispDelta = angularVelocity * timeDelta;
     
+    float maxAngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
+    float minAngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
+    
+    if (maxAngleDelta < 0)
+    {
+        maxAngleDelta = 0;
+    }
+    if (minAngleDelta > 0)
+    {
+        minAngleDelta = 0;
+    }
+    
+    
+    if (dispDelta.w > maxAngleDelta)
+    {
+        angularVelocity.w = 0;
+        dispDelta.w = maxAngleDelta;
+        
+    }
+    else if (dispDelta.w < minAngleDelta)
+    {
+        angularVelocity.w = 0;
+        dispDelta.w = minAngleDelta;
+    }
+    
+     // Limit each x, y, z angular displacement within [-2 PI, 2 PI]
+    float3 maxP0AngleDispDelta = -angularDisp.xyz + 2 * PI_VALUE;
+    float3 minP0AngleDispDelta = -angularDisp.xyz - 2 * PI_VALUE;
+    
+    maxP0AngleDispDelta = maxP0AngleDispDelta < 0 ? 0 : maxP0AngleDispDelta;
+    minP0AngleDispDelta = minP0AngleDispDelta > 0 ? 0 : minP0AngleDispDelta;
+    
+    float3 isOffLimit = step(dispDelta.xyz, maxAngleDelta) * step(minP0AngleDispDelta, dispDelta.xyz);
+    
+    dispDelta.xyz = clamp(dispDelta.xyz, minP0AngleDispDelta, maxP0AngleDispDelta);
+    angularVelocity.xyz = angularVelocity.xyz * isOffLimit;
+    
     angularDisp += dispDelta;
-    return;
 }
 
 

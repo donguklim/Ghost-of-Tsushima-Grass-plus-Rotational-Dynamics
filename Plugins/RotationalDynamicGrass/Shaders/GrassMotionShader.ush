@@ -37,6 +37,7 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
     
     df/dx(x) = a * cos(x) - b * sin(x)
     the critical values of x where df/dx(x) = 0 is 
+        
         atan(a/b)
     
     two critical values exist since tan(x) == tan(x + pi)
@@ -161,7 +162,7 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
         return;
     }
     
-    float maginitude = sqrt(aVal * aVal + bVal * aVal);
+    float maginitude = sqrt(aVal * aVal + bVal * bVal);
     
     // no colliding at any angle
     if (maginitude - 1.0 < COLLISION_COEFFICENT_TRHESHOLD)
@@ -373,7 +374,7 @@ float GetMomentOfInertia(float mass, float3 bar1, float3 p2)
 float Get2DAngle(float2 vec)
 {
     float vecLength = length(vec);
-    if (vecLength < 0.001f)
+    if (vecLength < ANGLE_THRESHOLD)
     {
         return 0.0f;
     }
@@ -471,7 +472,7 @@ void GrassUpdate(
     // Inertia force acting on center of mass point(the mid point) of Bar2 due to movement of P1
     // = -(p1 acceleration) * mass of Bar2
 
-    float3 p1InertiaForceTorque = cross(bar2 / 2.0, -seizedP1PlainAcc * bar2Mass);
+    float3 p1InertiaForceTorque = -0.5f * bar2Mass * cross(bar2, seizedP1PlainAcc);
         
     float3 p1Torque = p1InertiaForceTorque + GetPivotBarTorque(
         dampingCoff,
@@ -494,8 +495,7 @@ void GrassUpdate(
     
     angularVelocity += velocityDelta;
         
-    float4 dispDelta = angularVelocity * timeDelta;
-    
+    float4 dispDelta = angularVelocity * timeDelta; 
 
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {

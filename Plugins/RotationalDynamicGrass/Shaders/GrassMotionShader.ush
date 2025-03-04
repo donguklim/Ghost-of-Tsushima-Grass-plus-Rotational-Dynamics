@@ -497,17 +497,6 @@ void GrassUpdate(
         
     float4 dispDelta = angularVelocity * timeDelta; 
 
-    if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
-    {
-        GetMaximumUpwardDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);
-    }
-    else
-    {
-        GetCollidingAngleDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);
-    }
-    
-    angularDisp += dispDelta;
-    return;
     
     // Limit each x, y, z angular displacement of P0 within [-2 PI, 2 PI]
     // Limit P1 angular displacement such that bar1 does not pass through bar1 
@@ -527,8 +516,17 @@ void GrassUpdate(
     dispDelta = clamp(dispDelta, minAngleDispDelta, maxAngleDispDelta);
     angularVelocity *= isOffLimit;
     
+    angularDisp += dispDelta;
     
-        
+    if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
+    {
+        GetMaximumUpwardDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);
+    }
+    else
+    {
+        GetCollidingAngleDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);
+    }
+    
     angularDisp += dispDelta;
         
 }
@@ -637,7 +635,7 @@ void VerletGrassUpdate(
         
     
     float3 seizedP1PlainAcc = cross(p1SeizedP0AngularAcc, p1) + cross(angularVelocity.xyz, cross(angularVelocity.xyz, p1));
-    float3 p1InertiaForceTorque = 0.5 * bar2Mass * cross(bar2, -seizedP1PlainAcc);
+    float3 p1InertiaForceTorque = -0.5 * bar2Mass * cross(bar2, seizedP1PlainAcc);
         
     float3 p1Torque = p1InertiaForceTorque + GetPivotBarTorque(
         dampingCoff,
@@ -663,7 +661,7 @@ void VerletGrassUpdate(
     float3 tempBar2 = tempP2 - tempP1;
     
     seizedP1PlainAcc = cross(p1SeizedP0AngularAcc, tempP1) + cross(tempAngularVelocity.xyz, cross(tempAngularVelocity.xyz, tempP2));
-    p1InertiaForceTorque = 0.5 * bar2Mass * cross(tempBar2, -seizedP1PlainAcc);
+    p1InertiaForceTorque = -0.5 * bar2Mass * cross(tempBar2, seizedP1PlainAcc);
     p1Torque = p1InertiaForceTorque + GetPivotBarTorque(
         dampingCoff,
         p2Stiffness,

@@ -211,8 +211,8 @@ float3 GetGrassPosOffset(
     float s = 1 - t;
     float g_axis_val = uv.y - 0.5;
     
-    //float curveLength = GetBezierCurveLength(p1, p2);
-    float curveLength = 1.0f;
+    float curveLength = GetBezierCurveLength(p1, p2);
+    //float curveLength = 1.0f;
     
     /* get position offset */
     // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 

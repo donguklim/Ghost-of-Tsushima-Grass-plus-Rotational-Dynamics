@@ -12,7 +12,7 @@
 void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 angularDispDelta, inout float4 angularVelocity)
 {
     float deltaAngle = length(angularDispDelta.xyz);
-    if (deltaAngle < 0.1)
+    if (deltaAngle < 0.05)
     {
         return;
     }
@@ -119,14 +119,15 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
      // f(x) = 1 + b * cos(x), 
     if (absA < COLLISION_COEFFICENT_TRHESHOLD)
     {
+        float cosVal = -1.0 / bVal;
         // no colliding at any angle
-        if (absB <= 1.0f)
+        if (1.0 - abs(cosVal) < COLLISION_COEFFICENT_TRHESHOLD)
         {
             return;
         }
        
         
-        float allowedAngleMax = acos(-1.0f / bVal);
+        float allowedAngleMax = acos(cosVal);
         if (deltaAngle <= allowedAngleMax)
         {
             return;
@@ -140,13 +141,13 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
     //  f(x) = 1 + a * sin(x)
     if (absB < COLLISION_COEFFICENT_TRHESHOLD)
     {
-        // no colliding at any angle
-        if (absA <= 1)
+        float sinVal = -1.0f / aVal;
+        if (1.0 - abs(sinVal) < COLLISION_COEFFICENT_TRHESHOLD)
         {
             return;
         }
         
-        float allowedAngleMax = asin(-1.0f / aVal);
+        float allowedAngleMax = asin(sinVal);
         
         allowedAngleMax = allowedAngleMax < 0.0f ? PI_VALUE - allowedAngleMax : allowedAngleMax;
         
@@ -163,7 +164,7 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
     float maginitude = sqrt(aVal * aVal + bVal * aVal);
     
     // no colliding at any angle
-    if (maginitude < 1.0f)
+    if (maginitude - 1.0 < COLLISION_COEFFICENT_TRHESHOLD)
     {
         return;
     }
@@ -213,7 +214,7 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
 void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDispDelta, inout float4 angularVelocity)
 {
     float deltaAngle = length(angularDispDelta.xyz);
-    if (deltaAngle < 0.01)
+    if (deltaAngle < 0.05)
     {
         return;
     }
@@ -684,15 +685,6 @@ void VerletGrassUpdate(
         
     float4 dispDelta = angularVelocity * timeDelta;
     
-    if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
-    {
-        GetMaximumUpwardDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);
-    }
-    else
-    {
-        GetCollidingAngleDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);
-    }
-    
     float maxP2AngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
     float minP2AngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
     float3 maxP0AngleDispDelta = -angularDisp.xyz + 2 * PI_VALUE;
@@ -708,6 +700,15 @@ void VerletGrassUpdate(
     
     dispDelta = clamp(dispDelta, minAngleDispDelta, maxAngleDispDelta);
     angularVelocity *= isOffLimit;
+    
+    if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
+    {
+        GetMaximumUpwardDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);
+    }
+    else
+    {
+        GetCollidingAngleDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);
+    }
         
     angularDisp += dispDelta;
 }

@@ -517,8 +517,6 @@ void GrassUpdate(
     dispDelta = clamp(dispDelta, minAngleDispDelta, maxAngleDispDelta);
     angularVelocity *= isOffLimit;
     
-    angularDisp += dispDelta;
-    
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {
         GetMaximumUpwardDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);

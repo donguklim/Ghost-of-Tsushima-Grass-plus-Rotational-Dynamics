@@ -420,12 +420,13 @@ void GrassUpdate(
     float3 staticP2 = float3(1, 0, 0) * scale.x;
     staticP1 = QuatRotateVector(initialOrientation, staticP1);
     staticP2 = QuatRotateVector(initialOrientation, staticP2);
+    float3 bar2RotationalAxis = QuatRotateVector(initialOrientation, float3(0, 1, 0));
 
     float3 p1 = float3(0, 0, 0);
     float3 p2 = float3(0, 0, 0);
-    float3 bar2RotationalAxis = float3(0, 0, 0);
+    
 
-    GetRotatedBezierPoints(staticP1, staticP2, angularDisp, p1, p2, bar2RotationalAxis);
+    GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis);
     
     float3 bar1Dir = normalize(p1);
     if (dot(bar1Dir, groundNormal) < 0.0f)
@@ -489,7 +490,7 @@ void GrassUpdate(
     // Now payback the torque
     
     float p1Acc = p1TorqueMagnitude / (bar2Mass * bar2Length * bar2Length / 3.0);
-    float3 p0Acc = p1SeizedP0AngularAcc - p1Torque / momentOfIntertia;
+    float3 p0Acc = p1SeizedP0AngularAcc - p1TorqueMagnitude * bar2RotationalAxis / momentOfIntertia;
            
     float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
     
@@ -561,12 +562,13 @@ void VerletGrassUpdate(
     float3 staticP2 = float3(1, 0, 0) * scale.x;
     staticP1 = QuatRotateVector(initialOrientation, staticP1);
     staticP2 = QuatRotateVector(initialOrientation, staticP2);
+    float3 staticBar2RotationalAxis = QuatRotateVector(initialOrientation, float3(0, 1, 0));
 
     float3 p1 = float3(0, 0, 0);
     float3 p2 = float3(0, 0, 0);
     float3 bar2RotationalAxis = float3(0, 0, 0);
 
-    GetRotatedBezierPoints(staticP1, staticP2, angularDisp, p1, p2, bar2RotationalAxis);
+    GetRotatedBezierPoints(staticP1, staticP2, staticBar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis);
     
     float3 bar1Dir = normalize(p1);
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
@@ -602,7 +604,7 @@ void VerletGrassUpdate(
     float3 tempP2 = float3(0, 0, 0);
     float3 tempBar2RotationalAxis = float3(0, 0, 0);
     
-    GetRotatedBezierPoints(staticP1, staticP2, float4(tempP0AngularDisp, angularDisp.w), tempP1, tempP2, tempBar2RotationalAxis);
+    GetRotatedBezierPoints(staticP1, staticP2, staticBar2RotationalAxis, float4(tempP0AngularDisp, angularDisp.w), tempP1, tempP2, tempBar2RotationalAxis);
     
     float3 p1SeizedP0AngularAcc = 0.5 * (
         tempSeizedAcc + (
@@ -649,13 +651,13 @@ void VerletGrassUpdate(
     float p1TorqueMagnitude = dot(bar2RotationalAxis, p1Torque);
     
     float p1Acc = p1TorqueMagnitude / (bar2Mass * bar2Length * bar2Length / 3.0);
-    float3 p0Acc = p1SeizedP0AngularAcc - p1Torque / momentOfIntertia;
+    float3 p0Acc = p1SeizedP0AngularAcc - p1TorqueMagnitude * bar2RotationalAxis / momentOfIntertia;
     
     float4 tempAcc = float4(p0Acc, p1Acc);
     float4 tempAngularVelocity = angularVelocity + 0.5 * tempAcc * timeDelta;
     float4 tempAngulardisp = angularDisp + tempAngularVelocity * timeDelta;
     
-    GetRotatedBezierPoints(staticP1, staticP2, tempAngulardisp, tempP1, tempP2, tempBar2RotationalAxis);
+    GetRotatedBezierPoints(staticP1, staticP2, staticBar2RotationalAxis, tempAngulardisp, tempP1, tempP2, tempBar2RotationalAxis);
     
     float tempMomentOfIntertia = GetMomentOfInertia(mass, tempP1, tempP2);
     float3 tempBar2 = tempP2 - tempP1;
@@ -674,7 +676,7 @@ void VerletGrassUpdate(
     p1TorqueMagnitude = dot(bar2RotationalAxis, p1Torque);
     
     p1Acc = p1TorqueMagnitude / (bar2Mass * bar2Length * bar2Length / 3.0);
-    p0Acc = p1SeizedP0AngularAcc - p1Torque / tempMomentOfIntertia;
+    p0Acc = p1SeizedP0AngularAcc - p1TorqueMagnitude * bar2RotationalAxis / tempMomentOfIntertia;
     
     float4 angularAcc = 0.5 * (tempAcc + float4(p0Acc, p1Acc));
     

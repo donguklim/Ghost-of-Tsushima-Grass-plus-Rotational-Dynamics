@@ -5,7 +5,7 @@
 #include "QuaternionRotation.ush"
 
 
-void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angularDisp, out float3 p1, out float3 p2)
+void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float3 sideDir, in float4 angularDisp, out float3 p1, out float3 p2)
 {
     
     if (abs(angularDisp.w) < ANGLE_THRESHOLD)
@@ -15,7 +15,7 @@ void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angu
     else
     {
         p2 = inputP1 + QuatRotateVector(
-            QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w),
+            QuatFromAxisAngle(sideDir, angularDisp.w),
             inputP2 - inputP1
         );
     }
@@ -36,9 +36,9 @@ void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angu
 }
 
 
-void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angularDisp, out float3 p1, out float3 p2, out float3 sideDir)
+void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float3 inputSideDir, in float4 angularDisp, out float3 p1, out float3 p2, out float3 sideDir)
 {
-    sideDir = float3(0, 1, 0);
+    sideDir = inputSideDir;
     
     if (abs(angularDisp.w) < ANGLE_THRESHOLD)
     {
@@ -47,7 +47,7 @@ void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angu
     else
     {
         p2 = inputP1 + QuatRotateVector(
-            QuatFromAxisAngle(float3(0, 1, 0), angularDisp.w),
+            QuatFromAxisAngle(inputSideDir, angularDisp.w),
             inputP2 - inputP1
         );
     }
@@ -66,7 +66,7 @@ void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angu
     p1 = QuatRotateVector(bar1Quat, inputP1);
     p2 = QuatRotateVector(bar1Quat, p2);
         
-    sideDir = QuatRotateVector(bar1Quat, float3(0, 1, 0));
+    sideDir = QuatRotateVector(bar1Quat, inputSideDir);
 }
 
 

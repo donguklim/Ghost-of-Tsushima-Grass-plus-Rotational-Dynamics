@@ -39,7 +39,7 @@ float3 GetRotatedCurvePointTangentSide(
     p2.w = p2.w < MIN_STIFFNESS_RATIO ? p1.w : p2.w;
 
     
-    GetRotatedBezierPoints(p1.xyz, p2.xyz, angularDisp, outputP1, outputP2);
+    GetRotatedBezierPoints(p1.xyz, p2.xyz, float3(0, 1, 0), angularDisp, outputP1, outputP2);
     
     p1.xyz = outputP1;
     p2.xyz = outputP2;

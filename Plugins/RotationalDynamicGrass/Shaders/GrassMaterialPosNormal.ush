@@ -105,7 +105,7 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     p2.w = p1.w < p2.w ? p1.w : p2.w;
     p2.w = p2.w < MIN_STIFFNESS_RATIO ? p1.w : p2.w;
     
-    if (angularDisp.w < ANGLE_THRESHOLD)
+    if (abs(angularDisp.w) < ANGLE_THRESHOLD)
     {
         outputP2 = p2.xyz;
 
@@ -211,7 +211,8 @@ float3 GetGrassPosOffset(
     float s = 1 - t;
     float g_axis_val = uv.y - 0.5;
     
-    float curveLength = GetBezierCurveLength(p1, p2);
+    //float curveLength = GetBezierCurveLength(p1, p2);
+    float curveLength = 1.0f;
     
     /* get position offset */
     // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 

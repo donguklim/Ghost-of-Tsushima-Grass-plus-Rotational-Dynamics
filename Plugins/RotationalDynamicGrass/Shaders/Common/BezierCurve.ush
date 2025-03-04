@@ -8,7 +8,7 @@
 void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angularDisp, out float3 p1, out float3 p2)
 {
     
-    if (angularDisp.w < ANGLE_THRESHOLD)
+    if (abs(angularDisp.w) < ANGLE_THRESHOLD)
     {
         p2 = inputP2;
     }
@@ -40,7 +40,7 @@ void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float4 angu
 {
     sideDir = float3(0, 1, 0);
     
-    if (angularDisp.w < ANGLE_THRESHOLD)
+    if (abs(angularDisp.w) < ANGLE_THRESHOLD)
     {
         p2 = inputP2;
     }

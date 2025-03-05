@@ -397,7 +397,7 @@ void GrassUpdate(
     float stiffness,
     float p2Stiffness,
     in float timeDelta,
-    float3 wind,
+    in float3 wind,
     in FQuat initialOrientation,
     in float3 scale,
     in float2 p1Position,
@@ -428,10 +428,6 @@ void GrassUpdate(
     GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis);
     
     float3 bar1Dir = normalize(p1);
-    if (dot(bar1Dir, groundNormal) < 0.0f)
-    {
-        wind = float3(0, 0, 0);
-    }
              
     // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
     
@@ -492,22 +488,25 @@ void GrassUpdate(
     float p1Acc = 3 * p1TorqueMagnitude / (bar2Mass * bar2LengthSquare);
     
     /*
-        Force acting on the end of bar1(p1) due to P1 torque
+        The force that would yield the same amount of torque if the force is applied at P2
         
-        F = -cross(bar2RotationalAxis, bar2 / bar2Length) * p1TorqueMagnitude / bar2Length
-          = cross(bar2, bar2RotationalAxis) * p1TorqueMagnitude / bar2Length^2
+        F = cross(bar2RotationalAxis, bar2 / bar2Length) * p1TorqueMagnitude / bar2Length
+          = cross(bar2RotationalAxis, bar2) * p1TorqueMagnitude / bar2Length^2
        
-        Torque on P0 due to the force
-        T = cross(p1, F)
+        If P1 is not stationary, this would be equivalent to 0.5 F acting on P2 and 0.5 F actiong on P1
+        with bar2 center of mass point(middle point of P1 and P2) as pivot.
     
-        Angualr acceleration on P0 due to T
+        Convert the 0.5 F acting on P1 to -0.5 F acting on P1 with P0 as pivot.
+       
     
-        3 * T / (bar1Mass * bar1Length * bar1Length)
+        Angualr acceleration on P0 would be
+    
+        (-0.5 * F) * bar1 / (bar1Mass * bar1Length * bar1Length / 3)
+        = 1.5 * cross(bar1, cross(bar2, bar2RotationalAxis)) * p1TorqueMagnitude / (bar2Length^2 * bar1Mass * bar1Length * bar1Length)
         
     */
-    // Get point force acting on bar1 end with P0 as pivot due to the torque acting on bar2.
-    // And get the angualr acceleration on bar1 due to the force.
-    float p0AccFromP1Torque = 3 * cross(p1, cross(bar2, bar2RotationalAxis)) * p1TorqueMagnitude / (bar2LengthSquare) / (bar1Mass * bar1Length * bar1Length);
+  
+    float3 p0AccFromP1Torque = 1.5 * cross(p1, cross(bar2, bar2RotationalAxis)) * p1TorqueMagnitude / (bar2LengthSquare * bar1Mass * bar1Length * bar1Length);
     
     float3 p0Acc = p1SeizedP0AngularAcc + p0AccFromP1Torque;
            
@@ -715,8 +714,8 @@ void VerletGrassUpdate(
     
     float4 isOffLimit = step(dispDelta, maxAngleDispDelta) * step(minAngleDispDelta, dispDelta);
     
-    dispDelta = clamp(dispDelta, minAngleDispDelta, maxAngleDispDelta);
-    angularVelocity *= isOffLimit;
+    dispDelta.w = clamp(dispDelta.w, minAngleDispDelta.w, maxAngleDispDelta.w);
+    angularVelocity.w *= isOffLimit.w;
     
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {

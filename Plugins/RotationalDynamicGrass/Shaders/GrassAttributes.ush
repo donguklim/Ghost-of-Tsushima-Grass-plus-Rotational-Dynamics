@@ -73,9 +73,10 @@ void GetGrassttributes(
             float3(0, 0, 1),
             lerp(-PI_VALUE * 0.9, PI_VALUE * 0.9, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
         ),
+        // minimum value should be higher or equal to (0.5*PI - acos(BAR_DOT_GROUND_THRESHOLD)) in Common/Constants.ush
         QuatFromAxisAngle(
             float3(0, 1, 0),
-            lerp(-0.05, -PI_VALUE * 0.45, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
+            lerp(MIN_BAR1_PITCH, -PI_VALUE * 0.45, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
         )
     );
     staticOrientation = QuatMultiply(quatRotation, landLocalOrientation);

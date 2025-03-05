@@ -4,7 +4,6 @@
 #include "Common/Constants.ush"
 #include "Common/BezierCurve.ush"
 
-#define BAR_DOT_GROUND_THRESHOLD 0.15
 #define P1_ANGLE_THRESHOLD 0.2
 #define COLLISION_COEFFICENT_TRHESHOLD 0.01
 
@@ -460,6 +459,7 @@ void GrassUpdate(
 
     float bar1Length = length(p1);
     float bar2Length = length(bar2);
+    float bar2LengthSquare = bar2Length * bar2Length;
         
     float totalLength = bar1Length + bar2Length;
     float bar1Mass = mass * bar1Length / totalLength;
@@ -489,8 +489,27 @@ void GrassUpdate(
     // The total torque to P1 required to make P1 seized is -p1BendingTorque.
     // Now payback the torque
     
-    float p1Acc = p1TorqueMagnitude / (bar2Mass * bar2Length * bar2Length / 3.0);
-    float3 p0Acc = p1SeizedP0AngularAcc - p1TorqueMagnitude * bar2RotationalAxis / momentOfIntertia;
+    float p1Acc = 3 * p1TorqueMagnitude / (bar2Mass * bar2LengthSquare);
+    
+    /*
+        Force acting on the end of bar1(p1) due to P1 torque
+        
+        F = -cross(bar2RotationalAxis, bar2 / bar2Length) * p1TorqueMagnitude / bar2Length
+          = cross(bar2, bar2RotationalAxis) * p1TorqueMagnitude / bar2Length^2
+       
+        Torque on P0 due to the force
+        T = cross(p1, F)
+    
+        Angualr acceleration on P0 due to T
+    
+        3 * T / (bar1Mass * bar1Length * bar1Length)
+        
+    */
+    // Get point force acting on bar1 end with P0 as pivot due to the torque acting on bar2.
+    // And get the angualr acceleration on bar1 due to the force.
+    float p0AccFromP1Torque = 3 * cross(p1, cross(bar2, bar2RotationalAxis)) * p1TorqueMagnitude / (bar2LengthSquare) / (bar1Mass * bar1Length * bar1Length);
+    
+    float3 p0Acc = p1SeizedP0AngularAcc + p0AccFromP1Torque;
            
     float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
     

@@ -102,23 +102,29 @@ void GetGrassttributes(
     uint positionSeed = ComputeSeedFromPosition(position);
     
     float growth = pow(FRand(positionSeed), 0.25);
-    float relativeClumpStifness = lerp(0.05f, 1.0f, FRand(clumpSeed));
-    stiffness = lerp(stiffnessMin, stiffnessMax, clamp(relativeClumpStifness * GetNoiseMultiplier(positionSeed, positionNoiseRatio), 0.0, 1.0f));
+    float relativeClumpStifness = lerp(0.05f, 0.98f, FRand(clumpSeed));
+    float relativeClumpStiffnessSqaure = relativeClumpStifness * relativeClumpStifness;
+    float relativeStiffness = clamp(relativeClumpStifness * GetNoiseMultiplier(positionSeed, positionNoiseRatio), 0.0, 1.0f);
+    stiffness = lerp(stiffnessMin, stiffnessMax, relativeStiffness);
     
+    // growth is only applied for grass attributes
+    relativeStiffness *= growth;
     
-    if (growth < 0.5)
-    {
-        stiffness = lerp((stiffnessMin + stiffness) / 2.0, stiffness, growth * 2.0f);
-
-    }
     
     // low angle differences with grass clump with low stiffness
     // high angle diffrences with grass clump with high stiffness
-    float p0Angle = lerp(-PI_VALUE * 0.48, -max(MIN_GRASS_PITCH, 0.4 * PI_VALUE * relativeClumpStifness), FRand(positionSeed));
+    float p0Angle = lerp(
+        -PI_VALUE * 0.48, 
+        -max(MIN_GRASS_PITCH, 0.4 * PI_VALUE * relativeStiffness), 
+        getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
+    );
     
-    float yScale = (yScaleMax - yScaleMin) * relativeClumpStifness * min(growth + 0.5 + FRand(positionSeed) * 0.05, 1.0) + yScaleMin;
-    float bar1Length = findEquilibriumBarLength(yScale, p0Angle, 0.0f, stiffness);   
-    float bar2Length = bar1Length * lerp(0.35, 0.95, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
+    float yScale = (yScaleMax - yScaleMin) * relativeClumpStifness * min(
+        growth + 0.5 + getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed) * 0.05, 
+        1.0
+    ) + yScaleMin;
+    float bar1Length = findEquilibriumBarLength(yScale, p0Angle, 0.0f, relativeStiffness);
+    float bar2Length = bar1Length * lerp(0.7, 0.98, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
     
     scale = float3(
         (bar1Length + bar2Length),
@@ -137,16 +143,17 @@ void GetGrassttributes(
             -|bar1| / |bar2| <= cos(angle btween bar1 and bar2)
     
     */
-    float p1AngleMax = acos(-bar2Length / bar1Length);
-    p1AngleMax *= relativeClumpStifness;
-    
+    float p1AngleMax = acos(-bar2Length / bar1Length);    
     // p0Angle + p1Angle should not exceed 0.5 PI which is direction toward ground
     p1AngleMax = min(PI_VALUE * 0.48 - p0Angle, p1AngleMax);
+    p1AngleMax *= pow((1.0f - relativeClumpStifness), 0.1);
     
-    float p1Angle = lerp(0.0f, p1AngleMax, FRand(positionSeed));    
-    float p1Stiffness = p1Angle <= 0.01 ? stiffness : GRAVITY * bar2Length * sin(p0Angle + p1Angle) / p1Angle;
+    float p1Angle = lerp(0, p1AngleMax, pow(getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed), relativeStiffness));
     
-    float p1StiffnessRatio = p1Stiffness / stiffness;
+    //p1Angle = p1AngleMax;
+    float p1RelativeStiffness = p1Angle <= 0.01 ? relativeStiffness : GRAVITY * bar2Length * sin(p0Angle + p1Angle) / p1Angle;
+    
+    float p1StiffnessRatio = p1RelativeStiffness / relativeStiffness;
     float p2StiffnessRatio = lerp(
         min(p1StiffnessRatio, p2StiffnessRatioMin), 
         p1StiffnessRatio, 
@@ -182,7 +189,7 @@ void GetGrassttributes(
     );
     
     pivotStiffnessRatio = float2(
-        p1Stiffness / stiffness,
+        p1StiffnessRatio,
         p2StiffnessRatio
     );
     

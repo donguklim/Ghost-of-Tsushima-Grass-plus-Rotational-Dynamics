@@ -14,17 +14,17 @@ float findEquilibriumAngle(float yScale, float barLength, float stiffness)
     /*
         we want to find angle of the bar from the gravity force direction where 
             
-            gravity torque = sitffness * angle
-            (world scale) * gravity * (bar1 length)^2/2 * sin(x) = stiffness * x
+            gravity force torque = sitffness * angle
+            gravity force * (bar1 length)^2/2 * sin(x) = stiffness * x
     
             use tylor series approximation sin(x) = x - x^3/3! + x^5/5!
             (This sin approximation works bad with |x| > 0.5 PI)
     
-            then x^2 = 20 +- sqrt(100 + 120 *(2 * stiffness / (wolrd scale * gravity * bar1 length^2) - 1))
+            then x^2 = 20 +- sqrt(100 + 120 *(2 * stiffness / ( gravity force * bar1 length^2) - 1))
     
             we don't want x^2 > 20 so,
     
-            x^2 = 20 - sqrt(100 + 120 *(2 * stiffness / (wolrd scale * gravity * bar1 length^2) - 1))
+            x^2 = 20 - sqrt(100 + 120 *(2 * stiffness / (wolrd scale *  gravity force * bar1 length^2) - 1))
     
             In order to make |x| < 0.5 PI, you should limit the bar length to
             
@@ -48,11 +48,19 @@ float findEquilibriumAngle(float yScale, float barLength, float stiffness)
 
 }
 
-//  above function inverse on angle and bar length
-float findEquilibriumLength(float yScale, float angle, float stiffness)
+
+// 0 < baseAngle + additionalAngle < pi
+float findEquilibriumBarLength(float yScale, float additionalAngle, float baseAngle, float stiffness)
 {
-    float angleSquare = angle * angle;
-    return 120.0f / (yScale * GRAVITY * (45 * 16 * angleSquare * angleSquare - 40 * angleSquare)) * 0.05;
+    
+    /*
+    solve bar 1 length for 
+    
+        GRAVITY * yScale * (bar1 length)^2/2 * sin(angle + additional angle) = stiffness * additionalAngle
+    */
+    
+    return sqrt(2 * stiffness * additionalAngle / (sin(additionalAngle + baseAngle) * GRAVITY * yScale));
+
 }
 
 
@@ -94,7 +102,7 @@ void GetGrassttributes(
     uint positionSeed = ComputeSeedFromPosition(position);
     
     float growth = pow(FRand(positionSeed), 0.25);
-    float relativeClumpStifness = FRand(clumpSeed);
+    float relativeClumpStifness = lerp(0.05f, 1.0f, FRand(clumpSeed));
     stiffness = lerp(stiffnessMin, stiffnessMax, clamp(relativeClumpStifness * GetNoiseMultiplier(positionSeed, positionNoiseRatio), 0.0, 1.0f));
     
     
@@ -108,66 +116,44 @@ void GetGrassttributes(
     // high angle diffrences with grass clump with high stiffness
     float p0Angle = lerp(-PI_VALUE * 0.48, -max(MIN_GRASS_PITCH, 0.4 * PI_VALUE * relativeClumpStifness), FRand(positionSeed));
     
-    float p0AngleSquare = p0Angle * p0Angle;
-    
     float yScale = (yScaleMax - yScaleMin) * relativeClumpStifness * min(growth + 0.5 + FRand(positionSeed) * 0.05, 1.0) + yScaleMin;
-    float grassLength = findEquilibriumLength(yScale, p0Angle, stiffness);
-    
+    float bar1Length = findEquilibriumBarLength(yScale, p0Angle, 0.0f, stiffness);   
+    float bar2Length = bar1Length * lerp(0.35, 0.95, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
     
     scale = float3(
-        grassLength * (1.0f + 0.1 * (FRand(positionSeed) - 0.5)),
-        yScale * (1.0f + 0.1 * (FRand(positionSeed) - 0.5)),
+        (bar1Length + bar2Length),
+        yScale,
         1.0f
     );
     
-    float bar1LengthRatio = lerp(0.4f, 0.7f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));   
-    float p1StiffnessRatio = lerp(p1StiffnessRatioMin, p1StiffnessRatioMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
-    float p2StiffnessRatio = lerp(p2StiffnessRatioMin, p1StiffnessRatio, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
-    
-    
-    
-    float bendingScale = lerp(0.1, 1.0, FRand(clumpSeed)) / xScale;
- 
     /*
-        Begin with a small base pitch, which would form neally straight grass upwarding the sky.
-        Then calculate plausible bending that would be caused by gravity.
-        This is just a rough calculation, to make some natural static bendings.
+        given v = bar1 + bar2
+        
+        we want dot(bar1, v) / |v| < |v|, 
+    
+        Otherwise the projected vector of bar1 on v is longer than v, make grass bending look unnatural.
+        Above equation is equlivalent to
+    
+            -|bar1| / |bar2| <= cos(angle btween bar1 and bar2)
+    
     */
-    float basePitch = lerp(-PI_VALUE * 0.48, -PI_VALUE * 0.4, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
+    float p1AngleMax = acos(-bar2Length / bar1Length);
+    p1AngleMax *= relativeClumpStifness;
     
-    float3 gravity = float3(0, 0, -9.81f);
-    float bar1Length = bar1LengthRatio * xScale;
-    basePitch +=  0.5 * bar1Length * bar1Length * yScale / stiffness * length(
-        cross(float3(cos(basePitch), 0, sin(-basePitch)), gravity)
-    );
+    // p0Angle + p1Angle should not exceed 0.5 PI which is direction toward ground
+    p1AngleMax = min(PI_VALUE * 0.48 - p0Angle, p1AngleMax);
     
-    basePitch = min(-MIN_GRASS_PITCH, basePitch);
+    float p1Angle = lerp(0.0f, p1AngleMax, FRand(positionSeed));    
+    float p1Stiffness = p1Angle <= 0.01 ? stiffness : GRAVITY * bar2Length * sin(p0Angle + p1Angle) / p1Angle;
     
-    float bar2Length = (1.0f - bar1LengthRatio) * xScale;
-    float p1Angle = 0.5 * bar2Length * bar2Length * yScale / (p2StiffnessRatio * stiffness * bendingScale) * length(
-        cross(float3(cos(basePitch), 0, sin(-basePitch)), gravity)
-    );
-    
-    //p1Angle = 0.25 * PI_VALUE;
-    
+    float p2StiffnessRatio = lerp(p2StiffnessRatioMin, p1Stiffness / stiffness, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
+
     // bar1 and bar2 not scaled
-    float3 bar1 = float3(bar1LengthRatio, 0, 0);
-    float3 bar2 = (1.0f - bar1LengthRatio) * float3(cos(p1Angle), 0, sin(-p1Angle));
+    float3 bar1 = float3(bar1Length, 0, 0);
+    float3 bar2 = bar2Length * float3(cos(p1Angle), 0, sin(-p1Angle));
     float3 p0p2 = bar1 + bar2;
     float p0P2Length = length(p0p2);
     
-    
-    /*
-        Here, I am changing the scale of bar1 and bar2.
-    
-        The bending was clculated with the assumption that the two bar length sum is equal to xScale,
-        but I am changing the sum legnth to (xScale / length(p2 after applying the bending at above step)).
-        
-        This is because p0 sould be at (0, 0, 0) and p2 should be at (1, 0, 0).
-        
-        The changed length would not accord with the gravity bending calculation from above,
-        but I am just making a rough estimate of P1 position to make some plausible form of grass.
-    */
     
     bar1 = bar1 /  p0P2Length;
     bar2 = bar2 /  p0P2Length;
@@ -182,7 +168,7 @@ void GetGrassttributes(
     );
     
     // by projecting p2 to (0 ,0, 1), bar1 is rotated with the angle of p0p2 vector.
-    basePitch += acos(p0p2.x);
+    float pitch = p0Angle + acos(p0p2.x);
     
     colorNoise = float3(
         lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)),
@@ -191,7 +177,7 @@ void GetGrassttributes(
     );
     
     pivotStiffnessRatio = float2(
-        p1StiffnessRatio,
+        p1Stiffness / stiffness,
         p2StiffnessRatio
     );
     
@@ -203,7 +189,7 @@ void GetGrassttributes(
         ),
         QuatFromAxisAngle(
             float3(0, 1, 0),
-            p0Angle
+            pitch
         )
     );
     staticOrientation = QuatMultiply(quatRotation, landLocalOrientation);

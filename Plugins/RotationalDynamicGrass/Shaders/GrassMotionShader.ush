@@ -235,7 +235,7 @@ void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDis
     f(x) =  a * sin(x) - b * cos(x) + c
     df/dx(x) = a * cos(x) + b * sin(x)
     
-     we want to increase x from 0 to the point where df/dx is not positive anymore.
+    we want to increase x from 0 to the point where df/dx is not positive anymore.
     
     if df/dx(0) < 0
     return zero vector
@@ -362,6 +362,110 @@ float GetLimitedDeltaAngleScale(in float3 angularDisp, in float3 angleDelta)
     scale = max(scale, max(max(inverseScales.x, inverseScales.y), inverseScales.z));
     
     return 1.0f / scale;
+}
+
+/*
+   Scale down angulr displacement delta so that
+    |current angular displacement + angular displacement delta| < 2 PI
+*/
+
+void LimitedDeltaAngleScale(in float3 angularDisp, inout float3 angularDispDelta, inout float3 angularVelocity)
+{
+    
+    float deltaAngle = length(angularDispDelta.xyz);
+    if (deltaAngle < 0.02)
+    {
+        return;
+    }
+    
+    float leftMarginSquare = 4 * PI_VALUE * PI_VALUE - dot(angularDisp, angularDisp);
+    // already exceeded the limit
+    if (leftMarginSquare < 0.01f)
+    {
+        angularDispDelta = 0.0f;
+        angularVelocity = 0.0f;
+        return;
+    }
+        
+    float3 axis = angularDispDelta.xyz / deltaAngle;
+    
+     /*
+        f(x) = |disp + x * axis|^2, disp = square of current angular displacement
+        = x^2 + 2 * dot(axis, disp) * x + |disp|^2
+    
+        we want to solve x for where f(x) < (2 PI)^ 2
+    
+        f(x) - (2 PI)^ 2 == 0, if 
+            
+            -dot(axis, disp) +- sqrt(dot(axis, disp)^2 + 4 * PI^2 - |disp|^2)
+    
+        but, 4 * PI^2 - |disp|^2 > 0 by above left marchin check,
+        Hence,
+            
+            sqrt(dot(axis, disp)^2 + 4 * PI^2 - |disp|^2) > |dot(axis, disp)|
+    
+        and x must not be negative. Therefore when f(x) = 0 x is equal to
+    
+            -dot(axis, disp) + sqrt(dot(axis, disp)^2 + 4 * PI^2 - |disp|^2)
+    
+    */
+    
+    float axisDotDisp = dot(axis, angularDisp); 
+    float discriminant = axisDotDisp * axisDotDisp + leftMarginSquare;
+    
+    float sqrtDiscriminant = sqrt(discriminant);
+        
+    float scaledAngle = -axisDotDisp + sqrtDiscriminant;
+    if (scaledAngle > deltaAngle)
+    {
+        return;
+    }
+    
+    angularDispDelta = scaledAngle * axis;
+    angularVelocity = 0.0f;
+}
+
+
+void LimitDeltaAngleScaleToDecreaseAngualrDisplacment(in float3 angularDisp, inout float3 angularDispDelta, inout float3 angularVelocity)
+{
+    
+    float deltaAngle = length(angularDispDelta.xyz);
+    if (deltaAngle < 0.02)
+    {
+        return;
+    }
+        
+    float3 axis = angularDispDelta.xyz / deltaAngle;
+    
+    
+     /*
+        f(x) = |disp + x * axis|^2, disp = square of current angular displacement
+        = x^2 + 2 * dot(axis, disp) * x + |disp|^2
+    
+        df/dx(x) = 2 * x  + 2 * dot(axis, disp)
+        
+        we want to increase x from 0 to the point where df/dx is not negative anymore.
+    
+    */
+    
+    float axisDotDisp = dot(axis, angularDisp);
+    
+    // df/dx is alreayd positive at 0
+    if (axisDotDisp >= 0)
+    {
+        angularDispDelta = 0.0f;
+        angularVelocity = 0.0f;
+        return;
+    }
+    
+    if (deltaAngle < -axisDotDisp)
+    {
+        return;
+    }
+    
+    angularDispDelta = axis * (-axisDotDisp);
+    angularVelocity = 0.0f;
+
 }
 
 void GetComponentWiseLimitedDeltaAngleScale(in float3 angularDisp, inout float3 angleDelta, inout float3 velocity)
@@ -602,11 +706,13 @@ void GrassUpdate(
     minP2AngleDelta = minP2AngleDelta > 0 ? 0 : minP2AngleDelta;
     
     
-    float deltaScale = GetLimitedDeltaAngleScale(angularDisp.xyz, dispDelta.xyz);
-    if (deltaScale < 1.0f)
+    if (length(angularDisp.xyz) < 2 * PI_VALUE)
     {
-        angularVelocity.xyz = 0.0f;
-        dispDelta.xyz *= deltaScale;
+        LimitedDeltaAngleScale(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
+    }
+    else
+    {
+        LimitDeltaAngleScaleToDecreaseAngualrDisplacment(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }
 
     if (maxP2AngleDelta < dispDelta.w || dispDelta.w > minP2AngleDelta)

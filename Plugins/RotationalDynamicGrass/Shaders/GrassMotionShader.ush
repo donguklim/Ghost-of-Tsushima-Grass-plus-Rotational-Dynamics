@@ -390,12 +390,63 @@ float Get2DAngle(float2 vec)
     return angle;
 }
 
+
+float GetLimitedDeltaAngleScale(in float3 angleMin, in float3 angleMax, in float3 angleDelta)
+{
+    float3 isOffMaxLimit = step(angleMax, angleDelta);
+    float3 isOffMinLimit = step(angleDelta, angleMin);
+    
+    float isOffMaxLimitAny = length(isOffMaxLimit);
+    float isOffMinLimitAny = length(isOffMinLimit);
+    
+    if (isOffMaxLimitAny == 0.1f && isOffMinLimitAny == 0.1f)
+    {
+        return 1.0f;
+    }
+    
+    
+    float3 isZeroMax = step(angleMax, 0.01);
+    if (isOffMaxLimitAny > 0.0f)
+    {
+        
+        float3 isZeroOffLimit = isOffMaxLimit * isZeroMax;
+        if (length(isZeroOffLimit) > 0)
+        {
+            return 0.0f;
+        }
+    }
+    
+    float3 isZeroMin = step(-0.01, angleMin);
+    if (isOffMinLimitAny > 0.0f)
+    {
+        float3 isZeroOffLimit = isOffMinLimit * isZeroMin;
+    
+        if (length(isZeroOffLimit) > 0)
+        {
+            return 0.0f;
+        }
+    }
+    
+
+    angleMax += isZeroMax * 0.1;
+    angleMin -= isZeroMin * 0.1;
+    
+    float3 scales = isOffMaxLimit * (angleDelta / angleMax);
+    
+    float scale = max(max(scales.x, scales.y), scales.z);
+    
+    scales = isOffMinLimit * (angleDelta / angleMin);
+    scale = max(scale, -min(min(scales.x, scales.y), scales.z));
+    
+    return 1.0f / scale;
+}
+
  
 void GrassUpdate(
     float dampingCoff,
     in float massDensity,
     float stiffness,
-    float p2Stiffness,
+    float p1Stiffness,
     in float timeDelta,
     in float3 wind,
     in FQuat initialOrientation,
@@ -412,8 +463,8 @@ void GrassUpdate(
     
     wind *= scale.y;
     dampingCoff *= scale.y;
-    stiffness *= scale.y * scale.x;
-    p2Stiffness *= scale.y * scale.x;
+    stiffness *= scale.y;
+    p1Stiffness *= scale.y;
     
     float3 staticP1 = float3(p1Position.x, 0, p1Position.y) * scale.x;
     float3 staticP2 = float3(1, 0, 0) * scale.x;
@@ -473,7 +524,7 @@ void GrassUpdate(
         
     float3 p1Torque = p1InertiaForceTorque + GetPivotBarTorque(
         dampingCoff,
-        p2Stiffness,
+        p1Stiffness,
         wind,
         bar2,
         angularVelocity.w * bar2RotationalAxis,
@@ -509,18 +560,25 @@ void GrassUpdate(
     float3 p0AccFromP1Torque = 1.5 * cross(p1, cross(bar2, bar2RotationalAxis)) * p1TorqueMagnitude / (bar2LengthSquare * bar1Mass * bar1Length * bar1Length);
     
     float3 p0Acc = p1SeizedP0AngularAcc + p0AccFromP1Torque;
+    //p0Acc = p1SeizedP0AngularAcc;
            
     float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
     
     angularVelocity += velocityDelta;
         
     float4 dispDelta = angularVelocity * timeDelta; 
-
     
-    // Limit each x, y, z angular displacement of P0 within [-2 PI, 2 PI]
-    // Limit P1 angular displacement such that bar1 does not pass through bar1 
+    /*
+        Limit the P0 angle displacement whenever any of x, y, z component exceeds 2 PI.
+        If any one of them exceeds 2 Pi after adding the delta value, 
+        scale down the delta value so that adding the delta angle does not make any of the component to exceed the limit.
+    
+        Also, Limit P1 angle displacement so that bar1 does not touch bar2.
+    */
+    
     float maxP2AngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
     float minP2AngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
+    
     float3 maxP0AngleDispDelta = -angularDisp.xyz + 2 * PI_VALUE;
     float3 minP0AngleDispDelta = -angularDisp.xyz - 2 * PI_VALUE;
     
@@ -530,10 +588,20 @@ void GrassUpdate(
     maxAngleDispDelta = maxAngleDispDelta < 0 ? 0 : maxAngleDispDelta;
     minAngleDispDelta = minAngleDispDelta > 0 ? 0 : minAngleDispDelta;
     
-    float4 isOffLimit = step(dispDelta, maxAngleDispDelta) * step(minAngleDispDelta, dispDelta);
-    
-    dispDelta = clamp(dispDelta, minAngleDispDelta, maxAngleDispDelta);
-    angularVelocity *= isOffLimit;
+    /*
+    float deltaScale = GetLimitedDeltaAngleScale(minAngleDispDelta.xyz, maxAngleDispDelta.xyz, dispDelta.xyz);
+    if (deltaScale < 1.0f)
+    {
+        angularVelocity.xyz = 0.0f;
+        dispDelta.xyz *= deltaScale;
+    }
+    */
+
+    if (maxAngleDispDelta.w < dispDelta.w || dispDelta.w > minAngleDispDelta.w)
+    {
+        dispDelta.w = clamp(dispDelta.w, minAngleDispDelta.w, maxAngleDispDelta.w);
+        angularVelocity.w = 0;
+    }
     
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {
@@ -701,8 +769,17 @@ void VerletGrassUpdate(
         
     float4 dispDelta = angularVelocity * timeDelta;
     
+    /*
+        Limit the P0 angle displacement whenever any of x, y, z component exceeds 2 PI.
+        If any one of them exceeds 2 Pi after adding the delta value, 
+        scale down the delta value so that adding the delta angle does not make any of the component to exceed the limit.
+    
+        Also, Limit P1 angle displacement so that bar1 does not touch bar2.
+    */
+    
     float maxP2AngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
     float minP2AngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
+    
     float3 maxP0AngleDispDelta = -angularDisp.xyz + 2 * PI_VALUE;
     float3 minP0AngleDispDelta = -angularDisp.xyz - 2 * PI_VALUE;
     
@@ -712,10 +789,18 @@ void VerletGrassUpdate(
     maxAngleDispDelta = maxAngleDispDelta < 0 ? 0 : maxAngleDispDelta;
     minAngleDispDelta = minAngleDispDelta > 0 ? 0 : minAngleDispDelta;
     
-    float4 isOffLimit = step(dispDelta, maxAngleDispDelta) * step(minAngleDispDelta, dispDelta);
-    
-    dispDelta.w = clamp(dispDelta.w, minAngleDispDelta.w, maxAngleDispDelta.w);
-    angularVelocity.w *= isOffLimit.w;
+    float deltaScale = GetLimitedDeltaAngleScale(minAngleDispDelta.xyz, maxAngleDispDelta.xyz, dispDelta.xyz);
+    if (deltaScale < 1.0f)
+    {
+        angularVelocity.xyz = 0.0f;
+        dispDelta.xyz *= deltaScale;
+    }
+
+    if (maxAngleDispDelta.w > dispDelta.w || dispDelta.w < minAngleDispDelta.w)
+    {
+        dispDelta.w = clamp(dispDelta.w, minAngleDispDelta.w, maxAngleDispDelta.w);
+        angularVelocity.w = 0;
+    }
     
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {

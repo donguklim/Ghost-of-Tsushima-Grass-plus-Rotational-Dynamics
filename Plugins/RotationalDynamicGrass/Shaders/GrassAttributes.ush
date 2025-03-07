@@ -148,7 +148,7 @@ void GetGrassttributes(
     p1AngleMax = min(PI_VALUE * 0.48 - p0Angle, p1AngleMax);
     p1AngleMax *= pow((1.0f - relativeClumpStifness), 0.1);
     
-    float p1Angle = lerp(0, p1AngleMax, pow(getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed), relativeStiffness));
+    float p1Angle = lerp(min(0.3, p1AngleMax), p1AngleMax, pow(getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed), relativeStiffness));
     
     //p1Angle = p1AngleMax;
     float p1RelativeStiffness = p1Angle <= 0.01 ? relativeStiffness : GRAVITY * bar2Length * sin(p0Angle + p1Angle) / p1Angle;
@@ -188,9 +188,15 @@ void GetGrassttributes(
         lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
     );
     
+    p1StiffnessRatio = clamp(p1StiffnessRatio, p1StiffnessRatioMin, p1StiffnessRatioMax);
     pivotStiffnessRatio = float2(
-        p1StiffnessRatio,
-        p2StiffnessRatio
+        clamp(p1StiffnessRatio, p1StiffnessRatioMin, p1StiffnessRatioMax),
+        clamp(p2StiffnessRatio, p2StiffnessRatioMin, p1StiffnessRatio)
+    );
+    
+    pivotStiffnessRatio = float2(
+        1.0f,
+        1.0f
     );
     
     landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));

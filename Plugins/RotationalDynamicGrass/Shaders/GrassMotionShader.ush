@@ -303,72 +303,11 @@ void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDis
 
 }
 
-/*
-    Real life grass would have some limit on angular displacement
-    Scale down angel deta so that none of the angular displacement componenent exceed 2 PI.
-*/
-float GetLimitedDeltaAngleScale(in float3 angularDisp, in float3 angleDelta)
-{
-    float3 angleDeltaMax = 4 * PI_VALUE - angularDisp.xyz;
-    float3 angleDeltaMin = -4 * PI_VALUE - angularDisp.xyz;
-    
-    // delta value maximum must be 0 or positive
-    // delta vlaue minimum must be 0 or negative
-    angleDeltaMax = angleDeltaMax < 0 ? 0 : angleDeltaMax;
-    angleDeltaMin = angularDisp > 0 ? 0 : angleDeltaMin;
-    
-    
-    float3 isZeroMax = step(angleDeltaMax, 0.01);
-    float3 isZeroMin = step(-0.01, angleDeltaMin);
-    
-    /*
-        if any of maximum and minimum is zero
-        and any of element of angle delta is breaking the zero limit, scale down the delta to zero.
-    */
-    
-    if (dot(isZeroMax, clamp(angleDelta, 0.0f, 10.0f)) > 0.01f)
-    {
-        return 0.0f;
-    }
-    
-    if (dot(isZeroMin, -clamp(angleDelta, -10.0f, 0.0f)) > 0.01f)
-    {
-        return 0.0f;
-    }
-    
-    
-    float3 isOffMaxLimit = step(angleDeltaMax + 0.01, angleDelta);
-    float3 isOffMinLimit = step(angleDelta, angleDeltaMin - 0.01);
-    
-    float isOffMaxLimitAny = length(isOffMaxLimit);
-    float isOffMinLimitAny = length(isOffMinLimit);
-    
-    // if delta is within the minimum and maximum do not scale down the delta
-    if (isOffMaxLimitAny < 0.1f && isOffMinLimitAny < 0.1f)
-    {
-        return 1.0f;
-    }
-    
-
-    // add some value to zero value elements to prevent zero division
-    angleDeltaMax += isZeroMax * 0.1;
-    angleDeltaMin -= isZeroMin * 0.1;
-    
-    float3 inverseScales = isOffMaxLimit / angleDeltaMax * angleDelta;
-    
-    float scale = 1.0f / max(max(inverseScales.x, inverseScales.y), inverseScales.z);
-    
-    inverseScales = isOffMinLimit / angleDeltaMin * angleDelta;
-    scale = max(scale, max(max(inverseScales.x, inverseScales.y), inverseScales.z));
-    
-    return 1.0f / scale;
-}
 
 /*
    Scale down angulr displacement delta so that
     |current angular displacement + angular displacement delta| < 2 PI
 */
-
 void LimitedDeltaAngleScale(in float3 angularDisp, inout float3 angularDispDelta, inout float3 angularVelocity)
 {
     
@@ -466,21 +405,6 @@ void LimitDeltaAngleScaleToDecreaseAngualrDisplacment(in float3 angularDisp, ino
     angularDispDelta = axis * (-axisDotDisp);
     angularVelocity = 0.0f;
 
-}
-
-void GetComponentWiseLimitedDeltaAngleScale(in float3 angularDisp, inout float3 angleDelta, inout float3 velocity)
-{
-    float3 angleDeltaMax = 4 * PI_VALUE - angularDisp.xyz;
-    float3 angleDeltaMin = -4 * PI_VALUE - angularDisp.xyz;
-    
-    // delta value maximum must be 0 or positive
-    // delta vlaue minimum must be 0 or negative
-    angleDeltaMax = angleDeltaMax < 0 ? 0 : angleDeltaMax;
-    angleDeltaMin = angularDisp > 0 ? 0 : angleDeltaMin;
-    
-    
-    velocity *= step(angleDelta, angleDeltaMax + 0.01) * step(angleDeltaMin - 0.01, angleDelta);
-    angleDelta = clamp(angleDelta, angleDeltaMin, angleDeltaMax);
 }
 
 

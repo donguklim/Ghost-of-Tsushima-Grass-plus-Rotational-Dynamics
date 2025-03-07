@@ -117,14 +117,15 @@ void GetGrassttributes(
         lerp(-PI_VALUE * 0.9, PI_VALUE * 0.9, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
     );
     
-    float3 landLocalUpDirection = QuatRotateVector(QuatConjugate(quatRotation), float3(0, 0, 1));
     
-    // upAngle is right hand orientation
-    float upAngle = acos(landLocalUpDirection.x); 
-    float maxPitch = MIN_GRASS_PITCH < upAngle ? upAngle : MIN_GRASS_PITCH;
+    float3 minPitchDirection = QuatRotateVector(yawQaut, float3(cos(MIN_GRASS_PITCH), 0, sin(MIN_GRASS_PITCH)));
+    
+    float upDirectionPitch = acos(dot(float3(0, 0, 1), minPitchDirection)) - MIN_GRASS_PITCH;
+    float maxPitch = upDirectionPitch * 0.98;
+    maxPitch = MIN_GRASS_PITCH < maxPitch ? maxPitch : MIN_GRASS_PITCH;
     float p0Angle;
     
-    // somehow ground up face is facing downward, in this case bar 1 pointing direction should be near to the gravity.
+    // somehow ground up face is facing downward, in this case bar 1 pointing direction should be near to the gravity direction.
     if (landNormal.z < 0)
     {
         maxPitch = maxPitch < 0.5 * PI_VALUE ? PI_VALUE - maxPitch : maxPitch + PI_VALUE;
@@ -139,7 +140,7 @@ void GetGrassttributes(
         // while low stiffness grass pointing direction has more variaances.
         p0Angle = -lerp(
             max(MIN_GRASS_PITCH, 0.8 * maxPitch * relativeStiffness),
-            maxPitch,
+            max(MIN_GRASS_PITCH, maxPitch),
             getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
         );
     }
@@ -148,13 +149,11 @@ void GetGrassttributes(
         growth + 0.5 + getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed) * 0.05, 
         1.0
     ) + yScaleMin;
-    float bar1Length = findEquilibriumBarLength(yScale, p0Angle, 0.0f, relativeStiffness);
     
-    float upAndPitchAngleDiff = abs(upAngle - pitch);
+    float upAndPitchAngleDiff = abs(upDirectionPitch + p0Angle);
     float angleBySinVal = upAndPitchAngleDiff < 0.02f ? 1.0f : upAndPitchAngleDiff / sin(upAndPitchAngleDiff);
     
-    bar1Length = sqrt(2 * relativeStiffness * angleBySinVal / (GRAVITY * yScale));
-    
+    float bar1Length = sqrt(2 * relativeStiffness * angleBySinVal / (GRAVITY * yScale));
     float bar2Length = bar1Length * lerp(0.7, 0.98, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
     
     scale = float3(
@@ -176,12 +175,16 @@ void GetGrassttributes(
     */
     float p1AngleMax = acos(-bar2Length / bar1Length);    
     // p0Angle + p1Angle should not exceed 0.5 PI which is direction toward ground
-    p1AngleMax = min(upAngle * 0.95 + pitch, p1AngleMax);
+    p1AngleMax = min(maxPitch - p0Angle, p1AngleMax);
     p1AngleMax *= pow((1.0f - relativeClumpStifness), 0.1);
     
-    float p1Angle = lerp(min(0.3, p1AngleMax), p1AngleMax, pow(getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed), relativeStiffness));
+    float p1Angle = lerp(
+        min(0.3, p1AngleMax), 
+        p1AngleMax, 
+        pow(getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed), relativeStiffness)
+    );
     
-    float p1RelativeStiffness = p1Angle <= 0.01 ? relativeStiffness : GRAVITY * bar2Length * sin(-upAngle - p0Angle + p1Angle) / p1Angle;
+    float p1RelativeStiffness = p1Angle <= 0.01 ? relativeStiffness : GRAVITY * bar2Length * bar2Length * sin(p0Angle + p1Angle) / p1Angle;
     
     float p1StiffnessRatio = clamp(p1RelativeStiffness / relativeStiffness, p1StiffnessRatioMin, p1StiffnessRatioMax);
     float p2StiffnessRatio = lerp(
@@ -210,7 +213,16 @@ void GetGrassttributes(
     );
     
     // by projecting p2 to (0 ,0, 1), bar1 is rotated with the angle of p0p2 vector.
-    float pitch = p0Angle + acos(p0p2.x);
+    p0Angle += + acos(p0p2.x);
+    float3 p0BendingAxis = QuatRotateVector(yawQaut, float3(0, 1, 0));
+    
+    staticOrientation = QuatMultiply(
+        QuatFromAxisAngle(
+            p0BendingAxis,
+            p0Angle
+        ),
+        yawQaut
+    );
     
     colorNoise = float3(
         lerp(0.0f, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)),
@@ -221,14 +233,6 @@ void GetGrassttributes(
     p1StiffnessRatio = clamp(p1StiffnessRatio, p1StiffnessRatioMin, p1StiffnessRatioMax);
     pivotStiffnessRatio = float2(p1StiffnessRatio, p2StiffnessRatio);
     
-    FQuat landLocalOrientation = QuatMultiply(
-        yawQaut,
-        QuatFromAxisAngle(
-            float3(0, 1, 0),
-            pitch
-        )
-    );
-    staticOrientation = QuatMultiply(quatRotation, landLocalOrientation);
 }
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_GRASS_ATTRIBUTES_HLSL__

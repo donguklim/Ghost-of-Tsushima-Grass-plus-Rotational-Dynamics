@@ -8,15 +8,15 @@
 #define COLLISION_COEFFICENT_TRHESHOLD 0.01
 
 
-void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 angularDispDelta, inout float4 angularVelocity)
+void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angularDispDelta, inout float3 angularVelocity)
 {
-    float deltaAngle = length(angularDispDelta.xyz);
+    float deltaAngle = length(angularDispDelta);
     if (deltaAngle < 0.05)
     {
         return;
     }
         
-    float3 axis = angularDispDelta.xyz / deltaAngle;
+    float3 axis = angularDispDelta / deltaAngle;
     float3 axisXBar = cross(axis, barDir);
         
     float aVal = dot(axisXBar, normal);
@@ -49,8 +49,8 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
     // already has collided at x = 0
     if (cVal + bVal < COLLISION_COEFFICENT_TRHESHOLD)
     {
-        angularVelocity.xyz = float3(0, 0, 0);
-        angularDispDelta.xyz = float3(0, 0, 0);
+        angularVelocity = float3(0, 0, 0);
+        angularDispDelta = float3(0, 0, 0);
         return;
     }
     
@@ -73,8 +73,8 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
         {
             return;
         }
-        angularVelocity.xyz = float3(0, 0, 0);
-        angularDispDelta.xyz = axis * angleMax;
+        angularVelocity = float3(0, 0, 0);
+        angularDispDelta = axis * angleMax;
         return;
     }
     
@@ -87,8 +87,8 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
         {
             return;
         }
-        angularVelocity.xyz = float3(0, 0, 0);
-        angularDispDelta.xyz = axis * angleMax;
+        angularVelocity = float3(0, 0, 0);
+        angularDispDelta = axis * angleMax;
         return;
     }
     
@@ -104,8 +104,8 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
             return;
         }
         
-        angularVelocity.xyz = float3(0, 0, 0);
-        angularDispDelta.xyz = zeroX * axis;
+        angularVelocity = float3(0, 0, 0);
+        angularDispDelta = zeroX * axis;
         return;
     }
     
@@ -133,8 +133,8 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
             return;
         }
         
-        angularVelocity.xyz = float3(0, 0, 0);
-        angularDispDelta.xyz = allowedAngleMax * axis;
+        angularVelocity = float3(0, 0, 0);
+        angularDispDelta = allowedAngleMax * axis;
         return;
     }
     
@@ -156,8 +156,8 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
             return;
         }
         
-        angularVelocity.xyz = float3(0, 0, 0);
-        angularDispDelta.xyz = allowedAngleMax * axis;
+        angularVelocity = float3(0, 0, 0);
+        angularDispDelta = allowedAngleMax * axis;
         return;
     }
     
@@ -206,20 +206,20 @@ void GetCollidingAngleDelta(in float3 barDir, in float3 normal, inout float4 ang
         return;
     }
     
-    angularVelocity.xyz = float3(0, 0, 0);
-    angularDispDelta.xyz = zeroX * axis;
+    angularVelocity = float3(0, 0, 0);
+    angularDispDelta = zeroX * axis;
 
 }
 
-void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDispDelta, inout float4 angularVelocity)
+void getMaximumUpwardDelta(float3 barDir, float3 normal, inout float3 angularDispDelta, inout float3 angularVelocity)
 {
-    float deltaAngle = length(angularDispDelta.xyz);
+    float deltaAngle = length(angularDispDelta);
     if (deltaAngle < 0.05)
     {
         return;
     }
         
-    float3 axis = angularDispDelta.xyz / deltaAngle;
+    float3 axis = angularDispDelta / deltaAngle;
     float3 axisXBar = cross(axis, barDir);
         
     float aVal = dot(axisXBar, normal);
@@ -253,8 +253,8 @@ void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDis
     // already negative derievative
     if (aVal < 0.0f)
     {
-        angularVelocity.xyz = float3(0, 0, 0);
-        angularDispDelta.xyz = float3(0, 0, 0);
+        angularVelocity = float3(0, 0, 0);
+        angularDispDelta = float3(0, 0, 0);
         return;
     }
             
@@ -263,8 +263,8 @@ void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDis
     {
         if (bVal < 0.0f)
         {
-            angularVelocity.xyz = float3(0, 0, 0);
-            angularDispDelta.xyz = float3(0, 0, 0);
+            angularVelocity = float3(0, 0, 0);
+            angularDispDelta = float3(0, 0, 0);
             return;
         }
         
@@ -273,8 +273,8 @@ void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDis
             return;
         }
         
-        angularVelocity.xyz = float3(0, 0, 0);
-        angularDispDelta.xyz = axis * PI_VALUE;
+        angularVelocity = float3(0, 0, 0);
+        angularDispDelta = axis * PI_VALUE;
         return;
     }
     
@@ -287,8 +287,8 @@ void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDis
             return;
         }
         
-        angularVelocity.xyz = float3(0, 0, 0);
-        angularDispDelta.xyz = axis * 0.5 * PI_VALUE;
+        angularVelocity = float3(0, 0, 0);
+        angularDispDelta = axis * 0.5 * PI_VALUE;
         return;
     }
         
@@ -297,8 +297,8 @@ void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDis
     
     if (xVal < deltaAngle)
     {
-        angularVelocity.xyz = float3(0, 0, 0);
-        angularDispDelta.xyz = xVal * axis;
+        angularVelocity = float3(0, 0, 0);
+        angularDispDelta = xVal * axis;
     }
 
 }
@@ -308,7 +308,7 @@ void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDis
    Scale down angulr displacement delta so that
     |current angular displacement + angular displacement delta| < 2 PI
 */
-void LimitedDeltaAngleScale(in float3 angularDisp, inout float3 angularDispDelta, inout float3 angularVelocity)
+void limiAngleDispScale(in float3 angularDisp, inout float3 angularDispDelta, inout float3 angularVelocity)
 {
     
     float deltaAngle = length(angularDispDelta.xyz);
@@ -365,16 +365,16 @@ void LimitedDeltaAngleScale(in float3 angularDisp, inout float3 angularDispDelta
 }
 
 
-void LimitDeltaAngleScaleToDecreaseAngualrDisplacment(in float3 angularDisp, inout float3 angularDispDelta, inout float3 angularVelocity)
+void getAngleDispScaleDecreasingDelta(in float3 angularDisp, inout float3 angularDispDelta, inout float3 angularVelocity)
 {
     
-    float deltaAngle = length(angularDispDelta.xyz);
+    float deltaAngle = length(angularDispDelta);
     if (deltaAngle < 0.02)
     {
         return;
     }
         
-    float3 axis = angularDispDelta.xyz / deltaAngle;
+    float3 axis = angularDispDelta / deltaAngle;
     
     
      /*
@@ -632,11 +632,11 @@ void GrassUpdate(
     
     if (length(angularDisp.xyz) < 2 * PI_VALUE)
     {
-        LimitedDeltaAngleScale(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
+        limiAngleDispScale(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }
     else
     {
-        LimitDeltaAngleScaleToDecreaseAngualrDisplacment(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
+        getAngleDispScaleDecreasingDelta(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }
 
     if (maxP2AngleDelta < dispDelta.w || dispDelta.w > minP2AngleDelta)
@@ -647,11 +647,11 @@ void GrassUpdate(
     
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {
-        GetMaximumUpwardDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);
+        getMaximumUpwardDelta(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
     }
     else
     {
-        GetCollidingAngleDelta(bar1Dir, groundNormal, dispDelta, angularVelocity);
+        applyGroundCollision(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
     }
     
     angularDisp += dispDelta;

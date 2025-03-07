@@ -364,6 +364,21 @@ float GetLimitedDeltaAngleScale(in float3 angularDisp, in float3 angleDelta)
     return 1.0f / scale;
 }
 
+void GetComponentWiseLimitedDeltaAngleScale(in float3 angularDisp, inout float3 angleDelta, inout float3 velocity)
+{
+    float3 angleDeltaMax = 4 * PI_VALUE - angularDisp.xyz;
+    float3 angleDeltaMin = -4 * PI_VALUE - angularDisp.xyz;
+    
+    // delta value maximum must be 0 or positive
+    // delta vlaue minimum must be 0 or negative
+    angleDeltaMax = angleDeltaMax < 0 ? 0 : angleDeltaMax;
+    angleDeltaMin = angularDisp > 0 ? 0 : angleDeltaMin;
+    
+    
+    velocity *= step(angleDelta, angleDeltaMax + 0.01) * step(angleDeltaMin - 0.01, angleDelta);
+    angleDelta = clamp(angleDelta, angleDeltaMin, angleDeltaMax);
+}
+
 
 float3 GetBar2TorqueOnP0(
     float dampingCoeff,
@@ -786,12 +801,16 @@ void VerletGrassUpdate(
     maxAngleDispDelta = maxAngleDispDelta < 0 ? 0 : maxAngleDispDelta;
     minAngleDispDelta = minAngleDispDelta > 0 ? 0 : minAngleDispDelta;
     
+    /*
     float deltaScale = GetLimitedDeltaAngleScale(minAngleDispDelta.xyz, maxAngleDispDelta.xyz, dispDelta.xyz);
     if (deltaScale < 1.0f)
     {
         angularVelocity.xyz = 0.0f;
         dispDelta.xyz *= deltaScale;
     }
+    */
+    
+    GetComponentWiseLimitedDeltaAngleScale(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
 
     if (maxAngleDispDelta.w > dispDelta.w || dispDelta.w < minAngleDispDelta.w)
     {

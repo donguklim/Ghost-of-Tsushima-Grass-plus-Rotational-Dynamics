@@ -74,45 +74,6 @@ float getClumpPositionRandVal(
 
 }
 
-void getPitch(
-    in FQuat quatRotation,
-    in FQuat yawQaut,
-    in float relativeStiffness,
-    in uint positionSeed,
-    out float pitchAngle
-)
-{   
-    float3 pointingDirection = QuatRotateVector(quatRotation, QuatRotateVector(yawQuat, float3(1, 0, 0)));
-    
-    float3 upDirection = QuatRotateVector(QuatConjugate(quatRotation), float3(0, 0, 1));
-    float upAngle = -acos(dot(pointingDirection, -upDirection));
-   
-    
-    // somehow land is is facing downward
-    // In this case try to make grass direction near to the gravity direction.
-    if (upDirection.z < 0)
-    {
-        pitchAngle = upAngle + 0.2 * (FRand(positionSeed) - 0.5);
-        
-        pitchAngle = pitchAngle < MIN_GRASS_PITCH ? MIN_GRASS_PITCH : pitchAngle;
-        return;
-    }
-    
-}
-
-
-float getlandLocalUpDirection(
-    in FQuat quatRotation,
-    in FQuat yawQaut
-)
-{
-    float3 upDirection = QuatRotateVector(QuatConjugate(quatRotation), float3(0, 0, 1));
-    float maxPitch = acos(upDirection.x);
-    
-    return maxPitch > MIN_GRASS_PITCH ? maxPitch : MIN_GRASS_PITCH;
-   
-    
-}
 
 void GetGrassttributes(
     uint clumpSeed,
@@ -161,31 +122,27 @@ void GetGrassttributes(
     // upAngle is right hand orientation
     float upAngle = acos(landLocalUpDirection.x); 
     float maxPitch = MIN_GRASS_PITCH < upAngle ? upAngle : MIN_GRASS_PITCH;
-    float pitch;
+    float p0Angle;
     
     // somehow ground up face is facing downward, in this case bar 1 pointing direction should be near to the gravity.
     if (landNormal.z < 0)
     {
         maxPitch = maxPitch < 0.5 * PI_VALUE ? PI_VALUE - maxPitch : maxPitch + PI_VALUE;
         
-        pitch = maxPitch + 0.2 * getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
-        pitch = max(pitch, MIN_GRASS_PITCH);
+        p0Angle = -maxPitch + 0.2 * getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
+        p0Angle = min(p0Angle, -MIN_GRASS_PITCH);
 
     }
     else
     {
         // high stiffness grass should mostly pointing upward
         // while low stiffness grass pointing direction has more variaances.
-        pitch = lerp(
+        p0Angle = -lerp(
             max(MIN_GRASS_PITCH, 0.8 * maxPitch * relativeStiffness),
             maxPitch,
             getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
         );
     }
-    
-    
-    // p0Angle is left hand orientation
-    float p0Angle = -pitch;
     
     float yScale = (yScaleMax - yScaleMin) * relativeClumpStifness * min(
         growth + 0.5 + getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed) * 0.05, 

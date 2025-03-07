@@ -303,6 +303,67 @@ void GetMaximumUpwardDelta(float3 barDir, float3 normal, inout float4 angularDis
 
 }
 
+/*
+    Real life grass would have some limit on angular displacement
+    Scale down angel deta so that none of the angular displacement componenent exceed 2 PI.
+*/
+float GetLimitedDeltaAngleScale(in float3 angularDisp, in float3 angleDelta)
+{
+    float3 angleDeltaMax = 4 * PI_VALUE - angularDisp.xyz;
+    float3 angleDeltaMin = -4 * PI_VALUE - angularDisp.xyz;
+    
+    // delta value maximum must be 0 or positive
+    // delta vlaue minimum must be 0 or negative
+    angleDeltaMax = angleDeltaMax < 0 ? 0 : angleDeltaMax;
+    angleDeltaMin = angularDisp > 0 ? 0 : angleDeltaMin;
+    
+    
+    float3 isZeroMax = step(angleDeltaMax, 0.01);
+    float3 isZeroMin = step(-0.01, angleDeltaMin);
+    
+    /*
+        if any of maximum and minimum is zero
+        and any of element of angle delta is breaking the zero limit, scale down the delta to zero.
+    */
+    
+    if (dot(isZeroMax, clamp(angleDelta, 0.0f, 10.0f)) > 0.01f)
+    {
+        return 0.0f;
+    }
+    
+    if (dot(isZeroMin, -clamp(angleDelta, -10.0f, 0.0f)) > 0.01f)
+    {
+        return 0.0f;
+    }
+    
+    
+    float3 isOffMaxLimit = step(angleDeltaMax + 0.01, angleDelta);
+    float3 isOffMinLimit = step(angleDelta, angleDeltaMin - 0.01);
+    
+    float isOffMaxLimitAny = length(isOffMaxLimit);
+    float isOffMinLimitAny = length(isOffMinLimit);
+    
+    // if delta is within the minimum and maximum do not scale down the delta
+    if (isOffMaxLimitAny < 0.1f && isOffMinLimitAny < 0.1f)
+    {
+        return 1.0f;
+    }
+    
+
+    // add some value to zero value elements to prevent zero division
+    angleDeltaMax += isZeroMax * 0.1;
+    angleDeltaMin -= isZeroMin * 0.1;
+    
+    float3 inverseScales = isOffMaxLimit / angleDeltaMax * angleDelta;
+    
+    float scale = 1.0f / max(max(inverseScales.x, inverseScales.y), inverseScales.z);
+    
+    inverseScales = isOffMinLimit / angleDeltaMin * angleDelta;
+    scale = max(scale, max(max(inverseScales.x, inverseScales.y), inverseScales.z));
+    
+    return 1.0f / scale;
+}
+
 
 float3 GetBar2TorqueOnP0(
     float dampingCoeff,
@@ -388,57 +449,6 @@ float Get2DAngle(float2 vec)
     }
     
     return angle;
-}
-
-
-float GetLimitedDeltaAngleScale(in float3 angleMin, in float3 angleMax, in float3 angleDelta)
-{
-    float3 isOffMaxLimit = step(angleMax, angleDelta);
-    float3 isOffMinLimit = step(angleDelta, angleMin);
-    
-    float isOffMaxLimitAny = length(isOffMaxLimit);
-    float isOffMinLimitAny = length(isOffMinLimit);
-    
-    if (isOffMaxLimitAny == 0.1f && isOffMinLimitAny == 0.1f)
-    {
-        return 1.0f;
-    }
-    
-    
-    float3 isZeroMax = step(angleMax, 0.01);
-    if (isOffMaxLimitAny > 0.0f)
-    {
-        
-        float3 isZeroOffLimit = isOffMaxLimit * isZeroMax;
-        if (length(isZeroOffLimit) > 0)
-        {
-            return 0.0f;
-        }
-    }
-    
-    float3 isZeroMin = step(-0.01, angleMin);
-    if (isOffMinLimitAny > 0.0f)
-    {
-        float3 isZeroOffLimit = isOffMinLimit * isZeroMin;
-    
-        if (length(isZeroOffLimit) > 0)
-        {
-            return 0.0f;
-        }
-    }
-    
-
-    angleMax += isZeroMax * 0.1;
-    angleMin -= isZeroMin * 0.1;
-    
-    float3 scales = isOffMaxLimit * (angleDelta / angleMax);
-    
-    float scale = max(max(scales.x, scales.y), scales.z);
-    
-    scales = isOffMinLimit * (angleDelta / angleMin);
-    scale = max(scale, -min(min(scales.x, scales.y), scales.z));
-    
-    return 1.0f / scale;
 }
 
  
@@ -568,39 +578,26 @@ void GrassUpdate(
         
     float4 dispDelta = angularVelocity * timeDelta; 
     
-    /*
-        Limit the P0 angle displacement whenever any of x, y, z component exceeds 2 PI.
-        If any one of them exceeds 2 Pi after adding the delta value, 
-        scale down the delta value so that adding the delta angle does not make any of the component to exceed the limit.
-    
-        Also, Limit P1 angle displacement so that bar1 does not touch bar2.
-    */
-    
+
+    // Limit P1 angle displacement so that bar1 does not touch bar2.
     float maxP2AngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
     float minP2AngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
     
-    float3 maxP0AngleDispDelta = -angularDisp.xyz + 2 * PI_VALUE;
-    float3 minP0AngleDispDelta = -angularDisp.xyz - 2 * PI_VALUE;
+    maxP2AngleDelta = maxP2AngleDelta < 0 ? 0 : maxP2AngleDelta;
+    minP2AngleDelta = minP2AngleDelta > 0 ? 0 : minP2AngleDelta;
     
-    float4 minAngleDispDelta = float4(minP0AngleDispDelta, minP2AngleDelta);
-    float4 maxAngleDispDelta = float4(maxP0AngleDispDelta, maxP2AngleDelta);
     
-    maxAngleDispDelta = maxAngleDispDelta < 0 ? 0 : maxAngleDispDelta;
-    minAngleDispDelta = minAngleDispDelta > 0 ? 0 : minAngleDispDelta;
-    
-    /*
-    float deltaScale = GetLimitedDeltaAngleScale(minAngleDispDelta.xyz, maxAngleDispDelta.xyz, dispDelta.xyz);
+    float deltaScale = GetLimitedDeltaAngleScale(angularDisp.xyz, dispDelta.xyz);
     if (deltaScale < 1.0f)
     {
         angularVelocity.xyz = 0.0f;
         dispDelta.xyz *= deltaScale;
     }
-    */
 
-    if (maxAngleDispDelta.w < dispDelta.w || dispDelta.w > minAngleDispDelta.w)
+    if (maxP2AngleDelta < dispDelta.w || dispDelta.w > minP2AngleDelta)
     {
-        dispDelta.w = clamp(dispDelta.w, minAngleDispDelta.w, maxAngleDispDelta.w);
         angularVelocity.w = 0;
+        dispDelta.w = clamp(dispDelta.w, minP2AngleDelta, maxP2AngleDelta);
     }
     
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)

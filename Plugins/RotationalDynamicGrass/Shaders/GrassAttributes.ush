@@ -194,11 +194,6 @@ void GetGrassttributes(
         clamp(p2StiffnessRatio, p2StiffnessRatioMin, p1StiffnessRatio)
     );
     
-    pivotStiffnessRatio = float2(
-        1.0f,
-        1.0f
-    );
-    
     landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));
     FQuat landLocalOrientation = QuatMultiply(
         QuatFromAxisAngle(

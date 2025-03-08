@@ -159,7 +159,21 @@ void GetGrassttributes(
         relativeStiffness * p1StiffnessRatio
     );
     
-    //p1Angle = clamp(p1Angle, 0.0, upDirectionPitch + p0Angle);
+    FQuat bar1Orientation = QuatMultiply(
+        quatRotation,
+        QuatMultiply(
+            yawQaut,
+            QuatFromAxisAngle(
+                float3(0, 1, 0),
+                p0Angle
+            )
+        )
+    );
+    
+    float3 bar1Direction = QuatRotateVector(bar1Orientation, float3(1, 0, 0));
+    float p1AngleMax = PI_VALUE - acos(bar1Direction.z);
+    
+    p1Angle = clamp(p1Angle, P1_ANGLE_THRESHOLD, p1AngleMax);
     p1Angle = min(p1Angle, acos(-bar2LengthRatio));
     
     /*
@@ -177,7 +191,7 @@ void GetGrassttributes(
     
     
     
-    // somehow ground up face is facing downward, in this case bar 1 pointing direction should be near to the gravity direction.
+    // If somehow ground up face is facing downward, in this case bar 1 pointing direction should be near to the gravity direction.
     if (landNormal.z < 0)
     {
         

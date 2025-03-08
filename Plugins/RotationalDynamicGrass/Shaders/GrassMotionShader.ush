@@ -4,7 +4,7 @@
 #include "Common/Constants.ush"
 #include "Common/BezierCurve.ush"
 
-#define P1_ANGLE_THRESHOLD 0.2
+
 #define COLLISION_COEFFICENT_TRHESHOLD 0.01
 
 

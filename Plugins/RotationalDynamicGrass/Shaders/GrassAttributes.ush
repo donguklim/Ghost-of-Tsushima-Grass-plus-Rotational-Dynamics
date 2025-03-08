@@ -49,21 +49,6 @@ float findEquilibriumAngle(float yScale, float barLength, float stiffness)
 }
 
 
-// 0 < baseAngle + additionalAngle < pi
-float findEquilibriumBarLength(float yScale, float additionalAngle, float baseAngle, float stiffness)
-{
-    
-    /*
-    solve bar 1 length for 
-    
-        GRAVITY * yScale * (bar1 length)^2/2 * sin(angle + additional angle) = stiffness * additionalAngle
-    */
-    
-    return sqrt(2 * stiffness * additionalAngle / (sin(additionalAngle + baseAngle) * GRAVITY * yScale));
-
-}
-
-
 float getClumpPositionRandVal(
     float positionNoiseRatio, 
     inout uint clumpSeed, 
@@ -174,7 +159,6 @@ void GetGrassttributes(
     float p1AngleMax = PI_VALUE - acos(bar1Direction.z);
     
     p1Angle = clamp(p1Angle, P1_ANGLE_THRESHOLD, p1AngleMax);
-    p1Angle = min(p1Angle, acos(-bar2LengthRatio));
     
     /*
         given v = bar1 + bar2
@@ -187,14 +171,14 @@ void GetGrassttributes(
             -|bar1| / |bar2| <= cos(angle btween bar1 and bar2)
     
     */
+    p1Angle = min(p1Angle, acos(-bar2LengthRatio));
+    
 
-    
-    
     
     // If somehow ground up face is facing downward, in this case bar 1 pointing direction should be near to the gravity direction.
     if (landNormal.z < 0)
     {
-        
+        /// To do handle this case
 
     }
 

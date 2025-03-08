@@ -733,30 +733,6 @@ float4 GetApproximateEquilibriumAngularDisplacement(
     float dispAngle = length(angularDisp.xyz);
     FQuat rotation = dispAngle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1) : QuatFromAxisAngle(angularDisp.xyz / dispAngle, dispAngle);
     float3 newP1Dir = QuatRotateVector(rotation, p1Dir);
-        
-    // If the new p1 angle from normal direction is beynond threshold, 
-    // and current direction is also within some threshold range
-    // Don't move p1, and make velocity zero
-    //
-    // Else if the new p1 angle will go beyond the threshold
-    // but current direction is not within the threhsold range
-    // adjust the new angular displacement so that it reaches to the threshold 
-    // and make velcity zero.
-        
-    
-    if (dot(newP1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
-    {
-        if (abs(dot(p1Dir, groundNormal) - BAR_DOT_GROUND_THRESHOLD) < 0.1)
-        {
-            angularDisp.xyz = float3(0, 0, 0);
-        }
-        else
-        {
-            angularDisp.xyz = GetCollidingAngleDelta(p1Dir, angularDisp.xyz, groundNormal);
-        }
-
-    }
-    
     
     float maxAngle = PI_VALUE - P1_ANGLE_THRESHOLD - p1StaticAngle;
     float minAngle = P1_ANGLE_THRESHOLD - PI_VALUE - p1StaticAngle;
@@ -772,6 +748,21 @@ float4 GetApproximateEquilibriumAngularDisplacement(
     
     angularDisp.w = angularDisp.w > maxAngle ? maxAngle : angularDisp.w;
     angularDisp.w = angularDisp.w < minAngle ? minAngle : angularDisp.w;
+    
+    
+    float3 zero = float3(0, 0, 0);
+    limiAngleDispScale(zero, angularDisp.xyz, zero);
+
+    
+    if (dot(p1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
+    {
+        getMaximumUpwardDelta(p1Dir, groundNormal, angularDisp.xyz, zero);
+    }
+    else
+    {
+        applyGroundCollision(p1Dir, groundNormal, angularDisp.xyz, zero);
+    }
+    
     
     return angularDisp;
     

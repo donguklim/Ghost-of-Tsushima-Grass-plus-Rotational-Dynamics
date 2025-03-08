@@ -7,6 +7,7 @@
 #include "Common/QuaternionRotation.ush"
 
 #define GRAVITY 0.981
+#define RELATIVE_STIFFNESS_MIN 0.1
 
 
 float findEquilibriumAngle(float yScale, float barLength, float stiffness)
@@ -104,9 +105,10 @@ void GetGrassttributes(
     
     float growth = pow(FRand(positionSeed), 0.25);
     float relativeClumpStifness = lerp(0.05f, 0.98f, FRand(clumpSeed));
-    float relativeStiffness = clamp(relativeClumpStifness * GetNoiseMultiplier(positionSeed, positionNoiseRatio), 0.0, 1.0f);
-    stiffness = lerp(stiffnessMin, stiffnessMax, relativeStiffness);
+    float relativeStiffness = clamp(relativeClumpStifness * GetNoiseMultiplier(positionSeed, positionNoiseRatio), RELATIVE_STIFFNESS_MIN, 1.0f);
+    stiffness = lerp(stiffnessMin, stiffnessMax, relativeStiffness - RELATIVE_STIFFNESS_MIN);
     
+    relativeStiffness = 0.1;
     // growth is only applied for grass attributes
     relativeStiffness *= growth;
     
@@ -123,7 +125,11 @@ void GetGrassttributes(
     float upDirectionPitch = acos(dot(float3(0, 0, 1), minPitchDirection)) - MIN_GRASS_PITCH;
     float maxPitch = upDirectionPitch * 0.98;
     maxPitch = MIN_GRASS_PITCH < maxPitch ? maxPitch : MIN_GRASS_PITCH;
+    
+    float bar2LengthRatio = lerp(0.7, 0.98, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
+    
     float p0Angle;
+    float p1Angle;
     
     // somehow ground up face is facing downward, in this case bar 1 pointing direction should be near to the gravity direction.
     if (landNormal.z < 0)
@@ -132,6 +138,8 @@ void GetGrassttributes(
         
         p0Angle = -maxPitch + 0.2 * getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
         p0Angle = min(p0Angle, -MIN_GRASS_PITCH);
+        
+        p1Angle = 0.3 * getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed) + 0.05;
 
     }
     else
@@ -139,9 +147,24 @@ void GetGrassttributes(
         // high stiffness grass should mostly pointing upward
         // while low stiffness grass pointing direction has more variaances.
         p0Angle = -lerp(
-            max(MIN_GRASS_PITCH, 0.8 * maxPitch * relativeStiffness),
-            max(MIN_GRASS_PITCH, maxPitch),
+            max(MIN_GRASS_PITCH, 0.98 * maxPitch * relativeStiffness),
+            maxPitch,
             getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
+        );
+        
+        
+        float p1AngleMax = acos(-bar2LengthRatio);
+        // p0Angle + p1Angle should not exceed 0.5 PI which is direction toward ground
+        p1AngleMax = min(maxPitch - p0Angle, p1AngleMax);
+        p1AngleMax *= pow((1.0f - relativeClumpStifness), 0.1);
+        
+        float p1AngleMin = -p0Angle * (1.0 - relativeStiffness);
+        p1AngleMin = min(p1AngleMin, p1AngleMax);
+        
+        p1Angle = lerp(
+            p1AngleMin,
+            p1AngleMax,
+            pow(getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed), 0.25)
         );
     }
     
@@ -150,11 +173,11 @@ void GetGrassttributes(
         1.0
     ) + yScaleMin;
     
-    float upAndPitchAngleDiff = abs(upDirectionPitch + p0Angle);
+    float upAndPitchAngleDiff = abs(PI_VALUE * 0.5 + p0Angle);
     float angleBySinVal = upAndPitchAngleDiff < 0.02f ? 1.0f : upAndPitchAngleDiff / sin(upAndPitchAngleDiff);
     
     float bar1Length = sqrt(2 * relativeStiffness * angleBySinVal / (GRAVITY * yScale));
-    float bar2Length = bar1Length * lerp(0.7, 0.98, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
+    float bar2Length = bar1Length * bar2LengthRatio;
     
     scale = float3(
         (bar1Length + bar2Length),
@@ -173,16 +196,8 @@ void GetGrassttributes(
             -|bar1| / |bar2| <= cos(angle btween bar1 and bar2)
     
     */
-    float p1AngleMax = acos(-bar2Length / bar1Length);    
-    // p0Angle + p1Angle should not exceed 0.5 PI which is direction toward ground
-    p1AngleMax = min(maxPitch - p0Angle, p1AngleMax);
-    p1AngleMax *= pow((1.0f - relativeClumpStifness), 0.1);
     
-    float p1Angle = lerp(
-        min(0.3, p1AngleMax), 
-        p1AngleMax, 
-        pow(getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed), relativeStiffness)
-    );
+
     
     float p1RelativeStiffness = p1Angle <= 0.01 ? relativeStiffness : GRAVITY * bar2Length * bar2Length * sin(p0Angle + p1Angle) / p1Angle;
     

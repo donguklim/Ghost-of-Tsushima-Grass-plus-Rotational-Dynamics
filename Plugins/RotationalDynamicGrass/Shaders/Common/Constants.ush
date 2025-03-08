@@ -8,6 +8,6 @@
     MIN_BAR1_PITCH should be higher than (0.5*PI - acos(BAR_DOT_GROUND_THRESHOLD))
     Otherwise, the grass cannot go back to its static orientation because it is blocked by ground collision.
 */
-#define MIN_GRASS_PITCH 0.23
+#define MIN_GRASS_PITCH 0.4
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_CONSTANTS_HLSL__

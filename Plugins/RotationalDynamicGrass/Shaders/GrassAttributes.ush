@@ -62,10 +62,9 @@ float getClumpPositionRandVal(
 
 void GetGrassttributes(
     uint clumpSeed,
+    in float xScale,
     in float yScaleMin,
     in float yScaleMax,
-    in float xScaleMin,
-    in float xScaleMax,
     in float stiffnessMin,
     in float stiffnessMax,
     in float p1StiffnessRatioMin,
@@ -89,7 +88,7 @@ void GetGrassttributes(
     
     float growth = 0.2f + 0.8f * pow(FRand(positionSeed), 0.25);
     float stiffnessAdjustParam = getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
-    float relativeStiffness = 0.1 + 0.9 * stiffnessAdjustParam;
+    float relativeStiffness = RELATIVE_STIFFNESS_MIN + 0.9 * stiffnessAdjustParam;
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
     
     // growth is only applied for grass attributes
@@ -181,9 +180,23 @@ void GetGrassttributes(
         /// To do handle this case
 
     }
+    
+    /*
+        The length of a grass when it is straight toward up, and when |bar1| == |bar2|,
+        Let L be the length then,
+    
+        L^2 = 4|bar1|^2 = 8 * (relative stiffness) / gravity * (lim x->0 (sin(x)/x))
+            = 8 * (relative stiffness) / gravity
+    
+        maximum length is achieved when (relative stiffness) == 1,
+    
+        max L^2 = 8 / gravity
+        
+    */
+    
 
     scale = float3(
-        (bar1Length + bar2Length),
+        (bar1Length + bar2Length) * xScale,
         yScale,
         1.0f
     );

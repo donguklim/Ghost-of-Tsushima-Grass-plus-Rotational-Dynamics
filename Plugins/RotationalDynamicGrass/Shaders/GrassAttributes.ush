@@ -89,8 +89,8 @@ void GetGrassttributes(
     
     float growth = 0.2f + 0.8f * pow(FRand(positionSeed), 0.25);
     float stiffnessAdjustParam = getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
-    float relativeStiffness = lerp(stiffnessMin / stiffnessMax, 1.0f, stiffnessAdjustParam);
-    stiffness = relativeStiffness * stiffnessMax;
+    float relativeStiffness = 0.1 + 0.9 * stiffnessAdjustParam;
+    stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
     
     // growth is only applied for grass attributes
     relativeStiffness *= growth;

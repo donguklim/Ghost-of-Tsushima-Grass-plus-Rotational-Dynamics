@@ -6,6 +6,7 @@
 
 
 #define COLLISION_COEFFICENT_TRHESHOLD 0.01
+#define ALLOW_P1_FEEDBACK_TO_P0 0
 
 
 void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angularDispDelta, inout float3 angularVelocity)
@@ -591,6 +592,8 @@ void GrassUpdate(
     
     float p1Acc = 3 * p1TorqueMagnitude / (bar2Mass * bar2LengthSquare);
     
+    float3 p0Acc = p1SeizedP0AngularAcc;
+    
     /*
         The force that would yield the same amount of torque if the force is applied at P2
         
@@ -609,11 +612,12 @@ void GrassUpdate(
         = 1.5 * cross(bar1, cross(bar2, bar2RotationalAxis)) * p1TorqueMagnitude / (bar2Length^2 * bar1Mass * bar1Length * bar1Length)
         
     */
+
+#if ALLOW_P1_FEEDBACK_TO_P0
+    p0Acc = p1SeizedP0AngularAcc + p0AccFromP1Torque;
+#endif
   
     float3 p0AccFromP1Torque = 1.5 * cross(p1, cross(bar2, bar2RotationalAxis)) * p1TorqueMagnitude / (bar2LengthSquare * bar1Mass * bar1Length * bar1Length);
-    
-    float3 p0Acc = p1SeizedP0AngularAcc + p0AccFromP1Torque;
-    //p0Acc = p1SeizedP0AngularAcc;
            
     float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
     

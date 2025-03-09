@@ -202,6 +202,7 @@ float3 GetGrassPosOffset(
     in float3 p2,
     in float3 curvePoint,
     in float3 sideDir,
+    in float opacity,
     float baseSquareMeshSize, 
     float width, 
     float base
@@ -217,7 +218,7 @@ float3 GetGrassPosOffset(
     /* get position offset */
     // scale the curve and subtract the x, y value of the original rectangle rectangle mesh 
         
-    return baseSquareMeshSize * (curvePoint / curveLength + g_axis_val * s * (t + base) * width * sideDir - float3(t, g_axis_val, 0));
+    return baseSquareMeshSize * (curvePoint / curveLength * opacity + g_axis_val * s * (t + base) * width * sideDir * opacity - float3(t, g_axis_val, 0));
 }
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_POS_NORMAL_HLSL__

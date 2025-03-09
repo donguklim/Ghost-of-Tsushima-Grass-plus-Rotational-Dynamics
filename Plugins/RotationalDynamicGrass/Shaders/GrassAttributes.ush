@@ -9,8 +9,6 @@
 #define GRAVITY 0.981
 #define RELATIVE_STIFFNESS_MIN 0.1
 
-#define USE_INDEPENDENT_STIFFNESS 0
-
 
 // get equlilibrium angle between up direction and the bent direciton
 float findEquilibriumAngle(float gravityScale, float yScale, float barLength, float stiffness)
@@ -108,13 +106,8 @@ void GetGrassttributes(
     float stiffnessAdjustParam = getClumpPositionRandVal(0.05, clumpSeed, positionSeed);
     // stiffnessAdjustParam *= stiffnessAdjustParam;
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
-    
-#if USE_INDEPENDENT_STIFFNESS
-    float relativeStiffness = RELATIVE_STIFFNESS_MIN + (1.0 - RELATIVE_STIFFNESS_MIN) * stiffnessAdjustParam;
-#else
+ 
     float relativeStiffness = stiffness / stiffnessMax;
-#endif
-    
     landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));
     
     FQuat yawQaut = QuatFromAxisAngle(
@@ -148,10 +141,10 @@ void GetGrassttributes(
     
     float upAndPitchAngleDiff = abs(upDirectionPitch + p0Angle);
     float angleBySinVal = upAndPitchAngleDiff < 0.02f ? 1.0f : upAndPitchAngleDiff / sin(upAndPitchAngleDiff);
-    float bar1Length = growth * sqrt(2 * relativeStiffness * angleBySinVal / (gravityScale * GRAVITY * yScale));
+    float bar1Length = sqrt(2 * relativeStiffness * angleBySinVal / (gravityScale * GRAVITY * yScale));
     float bar2Length = bar1Length * bar2LengthRatio;
     
-    float p1StiffnessRatioAdjustParam = getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
+    float p1StiffnessRatioAdjustParam = FRand(clumpSeed);
     
     float p1StiffnessRatio = lerp(
         p1StiffnessRatioMin,
@@ -159,11 +152,6 @@ void GetGrassttributes(
         p1StiffnessRatioAdjustParam
     );
     
-#if USE_INDEPENDENT_STIFFNESS
-    float p1StiffnessMultiplier = 0.2 + 0.8 * p1StiffnessRatioAdjustParam;
-#else
-    float p1StiffnessMultiplier = p1StiffnessRatio;
-#endif
     
     /*
             
@@ -177,7 +165,7 @@ void GetGrassttributes(
         gravityScale * 2.5f,
         yScale,
         bar2Length,
-        relativeStiffness * p1StiffnessMultiplier
+        relativeStiffness * p1StiffnessRatio
     );
     
     FQuat bar1Orientation = QuatMultiply(

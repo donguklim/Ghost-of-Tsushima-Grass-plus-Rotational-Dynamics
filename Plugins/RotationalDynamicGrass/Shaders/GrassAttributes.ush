@@ -11,7 +11,7 @@
 
 
 // get equlilibrium angle between up direction and the bent direciton
-float findEquilibriumAngle(float yScale, float barLength, float stiffness)
+float findEquilibriumAngle(float gravityScale, float yScale, float barLength, float stiffness)
 {
     /*
         we want to find angle of the bar from the gravity force direction where 
@@ -26,7 +26,7 @@ float findEquilibriumAngle(float yScale, float barLength, float stiffness)
     
     */
     
-    float discriminant = 100.0f + 120.0f * (2.0f * stiffness / (GRAVITY * yScale * barLength * barLength) - 1.0f);
+    float discriminant = 100.0f + 120.0f * (2.0f * stiffness / (gravityScale * GRAVITY * yScale * barLength * barLength) - 1.0f);
     
     // this case means stiffness is not enough to withstand gravity, so grass should just lie down on the ground
     if (discriminant < 0.0f)
@@ -62,7 +62,7 @@ float getClumpPositionRandVal(
 
 void GetGrassttributes(
     uint clumpSeed,
-    in float xScale,
+    in float gravityScale,
     in float yScaleMin,
     in float yScaleMax,
     in float stiffnessMin,
@@ -88,7 +88,7 @@ void GetGrassttributes(
     
     float growth = 0.2f + 0.8f * pow(FRand(positionSeed), 0.25);
     float stiffnessAdjustParam = getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
-    float relativeStiffness = RELATIVE_STIFFNESS_MIN + 0.9 * stiffnessAdjustParam;
+    float relativeStiffness = RELATIVE_STIFFNESS_MIN + (1.0 - RELATIVE_STIFFNESS_MIN) * stiffnessAdjustParam;
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
     
     // growth is only applied for grass attributes
@@ -128,7 +128,7 @@ void GetGrassttributes(
     
     float upAndPitchAngleDiff = abs(upDirectionPitch + p0Angle);
     float angleBySinVal = upAndPitchAngleDiff < 0.02f ? 1.0f : upAndPitchAngleDiff / sin(upAndPitchAngleDiff);
-    float bar1Length = sqrt(2 * relativeStiffness * angleBySinVal / (GRAVITY * yScale));
+    float bar1Length = sqrt(2 * relativeStiffness * angleBySinVal / (gravityScale * GRAVITY * yScale));
     float bar2Length = bar1Length * bar2LengthRatio;
     
     float p1StiffnessRatio = lerp(
@@ -138,6 +138,7 @@ void GetGrassttributes(
     );
     
     float p1Angle = findEquilibriumAngle(
+        gravityScale,
         yScale,
         bar2Length,
         relativeStiffness * p1StiffnessRatio
@@ -196,7 +197,7 @@ void GetGrassttributes(
     
 
     scale = float3(
-        (bar1Length + bar2Length) * xScale,
+        (bar1Length + bar2Length),
         yScale,
         1.0f
     );

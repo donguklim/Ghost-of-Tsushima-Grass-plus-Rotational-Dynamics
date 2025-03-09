@@ -9,26 +9,51 @@
 #define GRAVITY 0.981
 #define RELATIVE_STIFFNESS_MIN 0.1
 
+#define USE_INDEPENDENT_STIFFNESS 0
+
 
 // get equlilibrium angle between up direction and the bent direciton
 float findEquilibriumAngle(float gravityScale, float yScale, float barLength, float stiffness)
 {
+    float barLengthSquare = barLength * barLength;
+    
+     /*
+        sin(x) / x -> 1 as x ->0
+        
+        L^2 * gravity / 2 * sin(x)/x = S
+            
+        An equilibrium state is reached at x = 0 if L^2 * gravity / 2 = S
+        
+        Hence, if S > L^2 * gravity / 2, gravity won't move the bar due to strong stiffness.
+            
+    */
+    
+    // case stiffness is strong
+    if (2 * stiffness > gravityScale * GRAVITY * yScale * barLengthSquare)
+    {
+        return 0;
+    }
+
     /*
         we want to find angle of the bar from the gravity force direction where 
             
             gravity force torque = sitffness * angle
             gravity force * (bar length)^2/2 * sin(x) = stiffness * x
     
-            use tylor series approximation sin(x) = x - x^3/3! + x^5/5!
+        use tylor series approximation sin(x) = x - x^3/3! + x^5/5!
             (This sin approximation works bad with |x| > 0.5 PI)
     
-            then x^2 = 10 +- sqrt(100 + 120 *(2 * stiffness / ( gravity force * bar1 length^2) - 1))
+        then x^2 = 10 +- sqrt(100 + 120 *(2 * stiffness / ( gravity force * bar1 length^2) - 1))
+    
+        find the smallest solution within range of [0, PI]
+         
     
     */
+
+    float discriminant = 100.0f + 120.0f * (2.0f * stiffness / (gravityScale * GRAVITY * yScale * barLengthSquare) - 1.0f);
     
-    float discriminant = 100.0f + 120.0f * (2.0f * stiffness / (gravityScale * GRAVITY * yScale * barLength * barLength) - 1.0f);
-    
-    // this case means stiffness is not enough to withstand gravity, so grass should just lie down on the ground
+    // Either gravity is not strong enough to make equilibrium bending, or resotoration force cannot be strong enough to resist gravity
+    // Weaker gravity case is handled above, so this is stonger gravity case
     if (discriminant < 0.0f)
     {
         return PI_VALUE;
@@ -37,13 +62,6 @@ float findEquilibriumAngle(float gravityScale, float yScale, float barLength, fl
     float sqrtDiscriminant = sqrt(discriminant);
     
     float angleSquare = sqrtDiscriminant > 10.0f ? 10 + sqrtDiscriminant : 10 - sqrtDiscriminant;
-    
-    // stiffness is too much that the gravity cannot bend it to make an equilibrium
-    if (angleSquare < 0.001f)
-    {
-        return 0.0f;
-    }
-    
     return sqrt(angleSquare);
 
 }
@@ -82,17 +100,19 @@ void GetGrassttributes(
     out float2 pivotStiffnessRatio
 )
 {
-    float clampGrowthDistributionPower = 1.0f / lerp(0.2f, 5.0f, FRand(clumpSeed));
+    float clampLengthScale = 1.0f / lerp(0.2f, 1.0f, FRand(clumpSeed));
     
     uint positionSeed = ComputeSeedFromPosition(position);
     
-    float growth = 0.2f + 0.8f * pow(FRand(positionSeed), 0.25);
+    float growth = 0.1f + 0.9f * pow(FRand(positionSeed), 0.25);
     float stiffnessAdjustParam = getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
-    float relativeStiffness = RELATIVE_STIFFNESS_MIN + (1.0 - RELATIVE_STIFFNESS_MIN) * stiffnessAdjustParam;
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
     
-    // growth is only applied for grass attributes
-    relativeStiffness *= growth;
+#if USE_INDEPENDENT_STIFFNESS
+    float relativeStiffness = RELATIVE_STIFFNESS_MIN + (1.0 - RELATIVE_STIFFNESS_MIN) * stiffnessAdjustParam;
+#else
+    float relativeStiffness = stiffness / stiffnessMax;
+#endif
     
     landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));
     
@@ -124,24 +144,39 @@ void GetGrassttributes(
     ) + yScaleMin;
     
     float bar2LengthRatio = lerp(0.7, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
-    bar2LengthRatio = 1.0f;
     
     float upAndPitchAngleDiff = abs(upDirectionPitch + p0Angle);
     float angleBySinVal = upAndPitchAngleDiff < 0.02f ? 1.0f : upAndPitchAngleDiff / sin(upAndPitchAngleDiff);
-    float bar1Length = sqrt(2 * relativeStiffness * angleBySinVal / (gravityScale * GRAVITY * yScale));
+    float bar1Length = growth * sqrt(2 * relativeStiffness * angleBySinVal / (gravityScale * GRAVITY * yScale));
     float bar2Length = bar1Length * bar2LengthRatio;
+    
+    float p1StiffnessRatioAdjustParam = getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
     
     float p1StiffnessRatio = lerp(
         p1StiffnessRatioMin,
         p1StiffnessRatioMax,
-        getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
+        p1StiffnessRatioAdjustParam
     );
     
+#if USE_INDEPENDENT_STIFFNESS
+    float p1StiffnessMultiplier = 0.2 + 0.8 * p1StiffnessRatioAdjustParam;
+#else
+    float p1StiffnessMultiplier = p1StiffnessRatio;
+#endif
+    
+    /*
+            
+        make gravity stronger on  p1Angle
+        because in reality static bendage of grass would still exsit in absense of gravity.
+        which means the static bendage of grass is not equal to the bandage of a straight grass with the same stiffness due to gravitiy.
+    
+    */
+
     float p1Angle = findEquilibriumAngle(
-        gravityScale,
+        gravityScale * 2.5f,
         yScale,
         bar2Length,
-        relativeStiffness * p1StiffnessRatio
+        relativeStiffness * (p1StiffnessMultiplier)
     );
     
     FQuat bar1Orientation = QuatMultiply(
@@ -201,7 +236,6 @@ void GetGrassttributes(
         yScale,
         1.0f
     );
-    
     
     float p2StiffnessRatio = lerp(
         min(p1StiffnessRatio, p2StiffnessRatioMin), 

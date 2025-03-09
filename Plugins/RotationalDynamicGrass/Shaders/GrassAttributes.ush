@@ -100,12 +100,13 @@ void GetGrassttributes(
     out float2 pivotStiffnessRatio
 )
 {
-    float clampLengthScale = 1.0f / lerp(0.2f, 1.0f, FRand(clumpSeed));
-    
     uint positionSeed = ComputeSeedFromPosition(position);
     
+    float clampLengthScale = lerp(0.2f, 1.0f, FRand(clumpSeed));
+    
     float growth = 0.1f + 0.9f * pow(FRand(positionSeed), 0.25);
-    float stiffnessAdjustParam = getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
+    float stiffnessAdjustParam = getClumpPositionRandVal(0.05, clumpSeed, positionSeed);
+    // stiffnessAdjustParam *= stiffnessAdjustParam;
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
     
 #if USE_INDEPENDENT_STIFFNESS
@@ -176,7 +177,7 @@ void GetGrassttributes(
         gravityScale * 2.5f,
         yScale,
         bar2Length,
-        relativeStiffness * (p1StiffnessMultiplier)
+        relativeStiffness * p1StiffnessMultiplier
     );
     
     FQuat bar1Orientation = QuatMultiply(

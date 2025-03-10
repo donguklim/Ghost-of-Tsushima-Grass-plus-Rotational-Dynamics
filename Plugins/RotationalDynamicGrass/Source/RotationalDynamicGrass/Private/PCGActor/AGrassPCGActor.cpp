@@ -27,15 +27,10 @@ AAGrassPCGActor::AAGrassPCGActor()
     PCGComponent->GenerationTrigger = EPCGComponentGenerationTrigger::GenerateAtRuntime;
 
     VoronoiPointNoiseThreshold = 0.2f;
-    GrassYScaleMin = 0.8f;
-    GrassYScaleMax = 2.0f;
-    GrassXScaleMin = 0.4f;
-    GrassXScaleMax = 3.0f;
-    GrassStiffnessMin = 0.5f;
-    GrassStiffnessMax = 4.0f;
-    P1StiffnessRatioMin = 0.7f;
-    P1StiffnessRatioMax = 0.9f;
-    P2StiffnessRatioMin = 0.5f;
+    ZeroGrassVoronoiPointThreshold = 0.1f;
+    MinClumpDensity = 0.8f;
+    GrassLengthScaleMin = 0.5f;
+    GrassLengthScaleMax = 2.0f;
 }
 
 // Called when the game starts or when spawned

@@ -34,31 +34,16 @@ public:
     float VoronoiPointNoiseThreshold;
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    float GrassYScaleMin;
+    float ZeroGrassVoronoiPointThreshold;
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    float GrassYScaleMax;
+    float MinClumpDensity;
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    float GrassXScaleMin;
+    float GrassLengthScaleMin;
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    float GrassXScaleMax;
-
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    float GrassStiffnessMin;
-
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    float GrassStiffnessMax;
-
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    float P1StiffnessRatioMin;
-
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    float P1StiffnessRatioMax;
-
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
-    float P2StiffnessRatioMin;
+    float GrassLengthScaleMax;
 
 protected:
     USceneComponent* RootSceneComponent;

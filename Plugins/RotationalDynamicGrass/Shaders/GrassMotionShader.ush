@@ -513,15 +513,15 @@ void GrassUpdate(
 {
     float2 p1p2XZ = float2(1, 0) - p1Position;
     float bar2StaticAngle = Get2DAngle(p1p2XZ) - Get2DAngle(p1Position);
-    float mass = scale.x * scale.y * massDensity < 0.01f ? 1.0f : massDensity;
+    float mass = scale.x * scale.y * scale.z * massDensity < 0.01f ? 1.0f : massDensity;
     
     wind *= scale.y;
     dampingCoff *= scale.y;
     stiffness *= scale.y;
     p1Stiffness *= scale.y;
     
-    float3 staticP1 = float3(p1Position.x, 0, p1Position.y) * scale.x;
-    float3 staticP2 = float3(1, 0, 0) * scale.x;
+    float3 staticP1 = float3(p1Position.x, 0, p1Position.y) * scale;
+    float3 staticP2 = float3(1, 0, 0) * scale;
     staticP1 = QuatRotateVector(initialOrientation, staticP1);
     staticP2 = QuatRotateVector(initialOrientation, staticP2);
     float3 bar2RotationalAxis = QuatRotateVector(initialOrientation, float3(0, 1, 0));
@@ -628,11 +628,11 @@ void GrassUpdate(
     
 
     // Limit P1 angle displacement so that bar1 does not touch bar2.
-    float maxP2AngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
-    float minP2AngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
+    float maxP1AngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (bar2StaticAngle + angularDisp.w);
+    float minP1AngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (bar2StaticAngle + angularDisp.w);
     
-    maxP2AngleDelta = maxP2AngleDelta < 0 ? 0 : maxP2AngleDelta;
-    minP2AngleDelta = minP2AngleDelta > 0 ? 0 : minP2AngleDelta;
+    maxP1AngleDelta = maxP1AngleDelta < 0 ? 0 : maxP1AngleDelta;
+    minP1AngleDelta = minP1AngleDelta > 0 ? 0 : minP1AngleDelta;
     
     
     if (length(angularDisp.xyz) < 2 * PI_VALUE)
@@ -644,10 +644,10 @@ void GrassUpdate(
         getAngleDispScaleDecreasingDelta(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }
 
-    if (maxP2AngleDelta < dispDelta.w || dispDelta.w > minP2AngleDelta)
+    if (maxP1AngleDelta < dispDelta.w || dispDelta.w > minP1AngleDelta)
     {
         angularVelocity.w = 0;
-        dispDelta.w = clamp(dispDelta.w, minP2AngleDelta, maxP2AngleDelta);
+        dispDelta.w = clamp(dispDelta.w, minP1AngleDelta, maxP1AngleDelta);
     }
     
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)

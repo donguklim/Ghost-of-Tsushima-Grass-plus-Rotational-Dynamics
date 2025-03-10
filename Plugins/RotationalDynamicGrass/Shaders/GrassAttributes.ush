@@ -100,18 +100,23 @@ void GetGrassttributes(
 {
     uint positionSeed = ComputeSeedFromPosition(position);
     
-    float clampLengthScale = lerp(0.2f, 1.0f, FRand(clumpSeed));
+    //float clampLengthScale = (clamp(-3.8f, 4.0f, StandardNormal(clumpSeed)) + 4.0f) / 4.0;
+    
+    float clumpLengthScale = clamp(0.2, 1.0f, FRand(clumpSeed));
     
     float growth = 0.1f + 0.9f * pow(FRand(positionSeed), 0.25);
     float stiffnessAdjustParam = getClumpPositionRandVal(0.05, clumpSeed, positionSeed);
     // stiffnessAdjustParam *= stiffnessAdjustParam;
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
+    
+    stiffness *= clumpLengthScale * clumpLengthScale;
  
     float relativeStiffness = stiffness / stiffnessMax;
     landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));
     
     FQuat yawQaut = QuatFromAxisAngle(
         float3(0, 0, 1),
+        //lerp(-PI_VALUE * 0.9, PI_VALUE * 0.9, fmod(FRand(clumpSeed) + 0.1 * FRand(positionSeed) / clampLengthScale, 1.0))
         lerp(-PI_VALUE * 0.9, PI_VALUE * 0.9, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
     );
     
@@ -132,7 +137,7 @@ void GetGrassttributes(
         getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
     );
     
-    float yScale = (yScaleMax - yScaleMin) * stiffnessAdjustParam * min(
+    float yScale = (yScaleMax - yScaleMin) * relativeStiffness * min(
         growth + 0.5 + getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed) * 0.05,
         1.0
     ) + yScaleMin;
@@ -153,12 +158,10 @@ void GetGrassttributes(
     );
     
     
-    /*
-            
+    /* 
         make gravity stronger on  p1Angle
         because in reality static bendage of grass would still exsit in absense of gravity.
         which means the static bendage of grass is not equal to the bandage of a straight grass with the same stiffness due to gravitiy.
-    
     */
 
     float p1Angle = findEquilibriumAngle(
@@ -180,10 +183,6 @@ void GetGrassttributes(
     );
     
     float3 bar1Direction = QuatRotateVector(bar1Orientation, float3(1, 0, 0));
-    float p1AngleMax = PI_VALUE - acos(bar1Direction.z);
-    
-    p1Angle = clamp(p1Angle, P1_ANGLE_THRESHOLD, p1AngleMax);
-    
     /*
         given v = bar1 + bar2
         
@@ -192,17 +191,24 @@ void GetGrassttributes(
         Otherwise the projected vector of bar1 on v is longer than v, make grass bending look unnatural.
         Above equation is equlivalent to
     
-            -|bar1| / |bar2| <= cos(angle btween bar1 and bar2)
+            -|bar2| / |bar1| <= cos(angle btween bar1 and bar2)
     
     */
-    p1Angle = min(p1Angle, acos(-bar2LengthRatio));
+    float p1AngleMax = min(
+        acos(-bar2LengthRatio), 
+        min(
+            PI_VALUE - acos(bar1Direction.z), 
+            PI_VALUE - P1_ANGLE_THRESHOLD
+        )
+    );
     
-
+    p1Angle = clamp(p1Angle, 0.0f, p1AngleMax);
+   
     
     // If somehow ground up face is facing downward, in this case bar 1 pointing direction should be near to the gravity direction.
     if (landNormal.z < 0)
     {
-        /// To do handle this case
+        //To do
 
     }
     
@@ -219,13 +225,6 @@ void GetGrassttributes(
         
     */
     
-
-    scale = float3(
-        (bar1Length + bar2Length),
-        yScale,
-        1.0f
-    );
-    
     float p2StiffnessRatio = lerp(
         min(p1StiffnessRatio, p2StiffnessRatioMin), 
         p1StiffnessRatio, 
@@ -236,23 +235,25 @@ void GetGrassttributes(
     float3 bar1 = float3(bar1Length, 0, 0);
     float3 bar2 = bar2Length * float3(cos(p1Angle), 0, sin(-p1Angle));
     float3 p0p2 = bar1 + bar2;
-    float p0P2Length = length(p0p2);
     
-    
-    bar1 = bar1 /  p0P2Length;
-    bar2 = bar2 /  p0P2Length;
-    p0p2 = p0p2 / p0P2Length;
-    float3 p1Xvec = p0p2 * dot(bar1, p0p2);
+    float p0p2Length = length(p0p2);
+    float3 p1Xvec = dot(bar1, p0p2) / p0p2Length;
     float p1Ypos = length(bar1 - p1Xvec);
     float p1Xpos = length(p1Xvec);
+    
+    scale = float3(
+        p0p2Length,
+        yScale,
+        p1Ypos
+    );
     
     p1Position = float2(
         p1Xpos,
         p1Ypos
-    );
-    
+    ) / p0p2Length;
+
     // by projecting p2 to (0 ,0, 1), bar1 is rotated with the angle of p0p2 vector.
-    p0Angle += + acos(p0p2.x);
+    p0Angle += acos(p0p2.x);
     float3 p0BendingAxis = QuatRotateVector(yawQaut, float3(0, 1, 0));
     
     FQuat landLocalOrientation = QuatMultiply(

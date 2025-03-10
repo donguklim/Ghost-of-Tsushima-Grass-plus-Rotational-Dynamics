@@ -33,4 +33,21 @@ float GetNoiseMultiplier(
     return 1.0f + noiseRatio * (FRand(seed) - 0.5f) * 2.0f;
 }
 
+
+float StandardNormal(inout uint seed)
+{
+    // Get two uniform random values between 0 and 1
+    // Use different seed modifications to get independent values
+    float u1 = FRand(seed);
+    float u2 = FRand(seed);
+    
+    // Ensure u1 is never exactly 0 (would cause log(0) = -infinity)
+    u1 = max(u1, 0.0001);
+    
+    // Box-Muller transform
+    float z = sqrt(-2.0 * log(u1)) * cos(2.0 * 3.14159265 * u2);
+    
+    return z;
+}
+
 #endif // __ROTATIONAL_DYNAMIC_GRASS_RANDOM_HLSL__

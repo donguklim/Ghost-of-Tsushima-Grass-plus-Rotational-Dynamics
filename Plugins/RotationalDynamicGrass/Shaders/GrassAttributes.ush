@@ -59,7 +59,7 @@ float findEquilibriumAngle(float gravityScale, float yScale, float barLength, fl
     
     float sqrtDiscriminant = sqrt(discriminant);
     
-    float angleSquare = sqrtDiscriminant > 10.0f ? 10 + sqrtDiscriminant : 10 - sqrtDiscriminant;
+    float angleSquare = sqrtDiscriminant > 10.0f ? 10.0f + sqrtDiscriminant : 10.0f - sqrtDiscriminant;
     return sqrt(angleSquare);
 
 }
@@ -102,14 +102,14 @@ void GetGrassttributes(
     
     //float clampLengthScale = (clamp(-3.8f, 4.0f, StandardNormal(clumpSeed)) + 4.0f) / 4.0;
     
-    float clumpLengthScale = clamp(0.2, 1.0f, FRand(clumpSeed));
+    //float clumpLengthScale = clamp(0.2, 1.0f, FRand(clumpSeed));
     
     float growth = 0.1f + 0.9f * pow(FRand(positionSeed), 0.25);
     float stiffnessAdjustParam = getClumpPositionRandVal(0.05, clumpSeed, positionSeed);
     // stiffnessAdjustParam *= stiffnessAdjustParam;
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
     
-    stiffness *= clumpLengthScale * clumpLengthScale;
+    //stiffness *= clumpLengthScale * clumpLengthScale;
  
     float relativeStiffness = stiffness / stiffnessMax;
     landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));
@@ -165,7 +165,7 @@ void GetGrassttributes(
     */
 
     float p1Angle = findEquilibriumAngle(
-        gravityScale * 2.5f,
+        gravityScale * 2.0f,
         yScale,
         bar2Length,
         relativeStiffness * p1StiffnessRatio
@@ -181,7 +181,7 @@ void GetGrassttributes(
             )
         )
     );
-    
+
     float3 bar1Direction = QuatRotateVector(bar1Orientation, float3(1, 0, 0));
     /*
         given v = bar1 + bar2
@@ -237,7 +237,12 @@ void GetGrassttributes(
     float3 p0p2 = bar1 + bar2;
     
     float p0p2Length = length(p0p2);
-    float3 p1Xvec = dot(bar1, p0p2) / p0p2Length;
+    
+    bar1 /= p0p2Length;
+    bar2 /= p0p2Length;
+    p0p2 /= p0p2Length;
+    
+    float3 p1Xvec = dot(bar1, p0p2) * p0p2;
     float p1Ypos = length(bar1 - p1Xvec);
     float p1Xpos = length(p1Xvec);
     
@@ -250,11 +255,10 @@ void GetGrassttributes(
     p1Position = float2(
         p1Xpos,
         p1Ypos
-    ) / p0p2Length;
+    );
 
     // by projecting p2 to (0 ,0, 1), bar1 is rotated with the angle of p0p2 vector.
     p0Angle += acos(p0p2.x);
-    float3 p0BendingAxis = QuatRotateVector(yawQaut, float3(0, 1, 0));
     
     FQuat landLocalOrientation = QuatMultiply(
         yawQaut,

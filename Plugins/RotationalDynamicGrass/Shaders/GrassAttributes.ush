@@ -107,7 +107,7 @@ void GetGrassttributes(
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
     
     
-    float clumpLengthScale = (clamp(-0.5f, 1.0f, StandardNormal(clumpSeed)) + 1.0f) / 2.0;
+    float clumpLengthScale = clamp(StandardNormal(clumpSeed), - 0.5f, 1.0f) + 1.0f;
     //float clumpLengthScale = lerp(0.5, 2.0f, FRand(clumpSeed));
     stiffness *= clumpLengthScale * clumpLengthScale * growth * growth;
   
@@ -116,7 +116,7 @@ void GetGrassttributes(
 
     FQuat yawQaut = QuatFromAxisAngle(
         float3(0, 0, 1),
-        //lerp(-PI_VALUE * 0.9, PI_VALUE * 0.9, fmod(FRand(clumpSeed) + 0.1 * FRand(positionSeed) / clampLengthScale, 1.0))
+        //lerp(-PI_VALUE * 0.9, PI_VALUE * 0.9, fmod(FRand(clumpSeed) + 0.1 * FRand(positionSeed) / clumpLengthScale, 1.0))
         lerp(-PI_VALUE * 0.9, PI_VALUE * 0.9, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed))
     );
     

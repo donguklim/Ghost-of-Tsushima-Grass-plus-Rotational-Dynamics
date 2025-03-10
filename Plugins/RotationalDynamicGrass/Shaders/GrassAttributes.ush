@@ -244,7 +244,7 @@ void GetGrassttributes(
     scale = float3(
         p0p2Length,
         yScale,
-        p1Ypos
+        p0p2Length
     );
     
     p1Position = float2(

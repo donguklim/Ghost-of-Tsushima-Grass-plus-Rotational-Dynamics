@@ -100,16 +100,15 @@ void GetGrassttributes(
 {
     uint positionSeed = ComputeSeedFromPosition(position);
     
-    //float clampLengthScale = (clamp(-3.8f, 4.0f, StandardNormal(clumpSeed)) + 4.0f) / 4.0;
+    float clumpLengthScale = (clamp(-3.8f, 4.0f, StandardNormal(clumpSeed)) + 4.0f) / 4.0;
     
     //float clumpLengthScale = clamp(0.2, 1.0f, FRand(clumpSeed));
     
-    float growth = 0.1f + 0.9f * pow(FRand(positionSeed), 0.25);
+    float growth = 0.1f + 0.9f * pow(FRand(positionSeed), 0.1);
     float stiffnessAdjustParam = getClumpPositionRandVal(0.05, clumpSeed, positionSeed);
-    // stiffnessAdjustParam *= stiffnessAdjustParam;
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
+    //stiffness *= growth;
     
-    //stiffness *= clumpLengthScale * clumpLengthScale;
  
     float relativeStiffness = stiffness / stiffnessMax;
     landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));
@@ -132,7 +131,7 @@ void GetGrassttributes(
     maxPitch = MIN_GRASS_PITCH < maxPitch ? maxPitch : MIN_GRASS_PITCH;
     
     float p0Angle = -lerp(
-        max(MIN_GRASS_PITCH, 0.9f * maxPitch),
+        max(MIN_GRASS_PITCH, 0.8f * maxPitch),
         maxPitch,
         getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
     );
@@ -142,14 +141,14 @@ void GetGrassttributes(
         1.0
     ) + yScaleMin;
     
-    float bar2LengthRatio = lerp(0.7, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
+    float bar2LengthRatio = lerp(0.5, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
     
     float upAndPitchAngleDiff = abs(upDirectionPitch + p0Angle);
     float angleBySinVal = upAndPitchAngleDiff < 0.02f ? 1.0f : upAndPitchAngleDiff / sin(upAndPitchAngleDiff);
     float bar1Length = sqrt(2 * relativeStiffness * angleBySinVal / (gravityScale * GRAVITY * yScale));
     float bar2Length = bar1Length * bar2LengthRatio;
     
-    float p1StiffnessRatioAdjustParam = FRand(clumpSeed);
+    float p1StiffnessRatioAdjustParam = getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed);
     
     float p1StiffnessRatio = lerp(
         p1StiffnessRatioMin,
@@ -165,7 +164,7 @@ void GetGrassttributes(
     */
 
     float p1Angle = findEquilibriumAngle(
-        gravityScale * 2.0f,
+        gravityScale * 3.5f,
         yScale,
         bar2Length,
         relativeStiffness * p1StiffnessRatio

@@ -102,15 +102,14 @@ void GetGrassttributes(
     landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));
     uint positionSeed = ComputeSeedFromPosition(position);
 
-    float growth = 0.1f + 0.9f * pow(FRand(positionSeed), 0.1);
+    float growth = 0.2f + 0.8f * pow(FRand(positionSeed), 0.25);
     float stiffnessAdjustParam = getClumpPositionRandVal(0.05, clumpSeed, positionSeed);
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
-    //stiffness *= growth;
     
     
     float clumpLengthScale = (clamp(-0.5f, 1.0f, StandardNormal(clumpSeed)) + 1.0f) / 2.0;
     //float clumpLengthScale = lerp(0.5, 2.0f, FRand(clumpSeed));
-    stiffness *= clumpLengthScale * clumpLengthScale;
+    stiffness *= clumpLengthScale * clumpLengthScale * growth * growth;
   
      
     float relativeStiffness = stiffness / stiffnessMax;
@@ -138,7 +137,7 @@ void GetGrassttributes(
         getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
     );
     
-    float yScale = lerp(yScaleMin, yScaleMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)) * clumpLengthScale;
+    float yScale = lerp(yScaleMin, yScaleMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)) * clumpLengthScale * growth;
     
     
     float bar2LengthRatio = lerp(0.5, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));

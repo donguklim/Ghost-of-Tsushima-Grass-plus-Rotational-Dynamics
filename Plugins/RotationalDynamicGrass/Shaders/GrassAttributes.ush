@@ -98,21 +98,23 @@ void GetGrassttributes(
     out float2 pivotStiffnessRatio
 )
 {
+        
+    landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));
     uint positionSeed = ComputeSeedFromPosition(position);
-    
-    float clumpLengthScale = (clamp(-3.8f, 4.0f, StandardNormal(clumpSeed)) + 4.0f) / 4.0;
-    
-    //float clumpLengthScale = clamp(0.2, 1.0f, FRand(clumpSeed));
-    
+
     float growth = 0.1f + 0.9f * pow(FRand(positionSeed), 0.1);
     float stiffnessAdjustParam = getClumpPositionRandVal(0.05, clumpSeed, positionSeed);
     stiffness = lerp(stiffnessMin, stiffnessMax, stiffnessAdjustParam);
     //stiffness *= growth;
     
- 
-    float relativeStiffness = stiffness / stiffnessMax;
-    landNormal = QuatRotateVector(quatRotation, float3(0, 0, 1));
     
+    //float clumpLengthScale = (clamp(-3.8f, 4.0f, StandardNormal(clumpSeed)) + 4.0f) / 4.0;
+    //float clumpLengthScale = clamp(0.5, 2.0f, FRand(clumpSeed));
+    //stiffness *= clumpLengthScale * clumpLengthScale;
+  
+     
+    float relativeStiffness = stiffness / stiffnessMax;
+
     FQuat yawQaut = QuatFromAxisAngle(
         float3(0, 0, 1),
         //lerp(-PI_VALUE * 0.9, PI_VALUE * 0.9, fmod(FRand(clumpSeed) + 0.1 * FRand(positionSeed) / clampLengthScale, 1.0))
@@ -136,10 +138,8 @@ void GetGrassttributes(
         getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
     );
     
-    float yScale = (yScaleMax - yScaleMin) * relativeStiffness * min(
-        growth + 0.5 + getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed) * 0.05,
-        1.0
-    ) + yScaleMin;
+    float yScale = lerp(yScaleMin, yScaleMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
+    
     
     float bar2LengthRatio = lerp(0.5, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
     
@@ -164,7 +164,7 @@ void GetGrassttributes(
     */
 
     float p1Angle = findEquilibriumAngle(
-        gravityScale * 3.5f,
+        gravityScale * 2.0f,
         yScale,
         bar2Length,
         relativeStiffness * p1StiffnessRatio

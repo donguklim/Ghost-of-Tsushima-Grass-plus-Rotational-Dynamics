@@ -108,9 +108,9 @@ void GetGrassttributes(
     //stiffness *= growth;
     
     
-    //float clumpLengthScale = (clamp(-3.8f, 4.0f, StandardNormal(clumpSeed)) + 4.0f) / 4.0;
-    //float clumpLengthScale = clamp(0.5, 2.0f, FRand(clumpSeed));
-    //stiffness *= clumpLengthScale * clumpLengthScale;
+    float clumpLengthScale = (clamp(-0.5f, 1.0f, StandardNormal(clumpSeed)) + 1.0f) / 2.0;
+    //float clumpLengthScale = lerp(0.5, 2.0f, FRand(clumpSeed));
+    stiffness *= clumpLengthScale * clumpLengthScale;
   
      
     float relativeStiffness = stiffness / stiffnessMax;
@@ -138,7 +138,7 @@ void GetGrassttributes(
         getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
     );
     
-    float yScale = lerp(yScaleMin, yScaleMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
+    float yScale = lerp(yScaleMin, yScaleMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)) * clumpLengthScale;
     
     
     float bar2LengthRatio = lerp(0.5, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));
@@ -164,7 +164,7 @@ void GetGrassttributes(
     */
 
     float p1Angle = findEquilibriumAngle(
-        gravityScale * 2.0f,
+        gravityScale * 3.5f,
         yScale,
         bar2Length,
         relativeStiffness * p1StiffnessRatio

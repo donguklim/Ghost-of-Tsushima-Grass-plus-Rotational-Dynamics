@@ -10,7 +10,7 @@
 // Sets default values
 AAGrassPCGActor::AAGrassPCGActor()
 {
-    PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = true;
     RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
     SetRootComponent(RootSceneComponent);
 
@@ -43,4 +43,6 @@ void AAGrassPCGActor::BeginPlay()
 void AAGrassPCGActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+    GenId = (GenId + 1) % 250000;
 }

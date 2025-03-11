@@ -45,9 +45,6 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = NiagaraGrass)
     float GrassLengthScaleMax;
 
-    UPROPERTY(BlueprintReadOnly, Category = NiagaraGrass)
-    int GenId;
-
 protected:
     USceneComponent* RootSceneComponent;
 	// Called when the game starts or when spawned

@@ -308,7 +308,7 @@ void getMaximumUpwardDelta(float3 barDir, float3 normal, inout float3 angularDis
    Scale down angulr displacement delta so that
     |current angular displacement + angular displacement delta| < 2 PI
 */
-void limiAngleDispScale(in float3 angularDisp, inout float3 angularDispDelta, inout float3 angularVelocity)
+void limitAngleDispScale(in float3 angularDisp, inout float3 angularDispDelta, inout float3 angularVelocity)
 {
     
     float deltaAngle = length(angularDispDelta.xyz);
@@ -625,7 +625,7 @@ void GrassUpdate(
             / (bar2LengthSquare) 
             / geometricSumDivisor;
         
-        float3 P1TorqueFromP0Feedback = p1TorqueMagnitude / geometricSumDivisor;
+        float P1TorqueFromP0Feedback = p1TorqueMagnitude / geometricSumDivisor;
         
         p0Acc += P0TorqueFromP1Feedback / momentOfIntertia;
         p1Acc += P1TorqueFromP0Feedback / bar2MomentOfInertia;
@@ -768,7 +768,7 @@ float4 GetApproximateEquilibriumAngularDisplacement(
     
     
     float3 zero = float3(0, 0, 0);
-    limiAngleDispScale(zero, angularDisp.xyz, zero);
+    limitAngleDispScale(zero, angularDisp.xyz, zero);
 
     
     if (dot(p1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)

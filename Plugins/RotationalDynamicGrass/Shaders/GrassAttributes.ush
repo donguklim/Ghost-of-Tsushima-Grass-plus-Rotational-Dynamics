@@ -161,7 +161,7 @@ void GetGrassttributes(
     */
 
     float p1Angle = findEquilibriumAngle(
-        gravityScale * 3.5f,
+        gravityScale * 3.0f,
         yScale,
         bar2Length,
         relativeStiffness * p1StiffnessRatio

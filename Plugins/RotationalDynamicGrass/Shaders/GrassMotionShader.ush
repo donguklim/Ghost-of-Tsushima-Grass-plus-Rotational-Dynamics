@@ -495,7 +495,7 @@ float Get2DAngle(float2 vec)
 
  
 void GrassUpdate(
-    bool allowP1FeedBackOnP0,
+    bool allowFullFeedBack,
     float dampingCoff,
     in float massDensity,
     float stiffness,
@@ -587,36 +587,49 @@ void GrassUpdate(
     float p1TorqueMagnitude = dot(bar2RotationalAxis, p1Torque);
         
     // The total torque to P1 required to make P1 seized is -p1BendingTorque.
-    // Now payback the torque
+    // Now payback the torque to P1
     
-    float p1Acc = 3 * p1TorqueMagnitude / (bar2Mass * bar2LengthSquare);
+    float bar2MomentOfInertia = (bar2Mass * bar2LengthSquare);
+    float p1Acc = 3 * p1TorqueMagnitude / bar2MomentOfInertia;
     
     float3 p0Acc = p1SeizedP0AngularAcc;
     
     /*
-        The force that would yield the same amount of torque if the force is applied at P2
-        
-        F = cross(bar2RotationalAxis, bar2 / bar2Length) * p1TorqueMagnitude / bar2Length
-          = cross(bar2RotationalAxis, bar2) * p1TorqueMagnitude / bar2Length^2
-       
-        If P1 is not stationary, this would be equivalent to 0.5 F acting on P2 and 0.5 F actiong on P1
-        with bar2 center of mass point(middle point of P1 and P2) as pivot.
+        The payback should not just happen once to bar2 on P1.
+        Bar2 make another payback torque to bar1 on P1 and vice versa infinitely.
+        This forms an infinite series sum for both P0 and P1.
     
-        Convert the 0.5 F acting on P1 to -0.5 F acting on P1 with P0 as pivot.
-       
+        The sereis is a geometric sereis with multiplier r equal to 
+            
+            r = 0.5 * bar2 mass * dot(bar1, bar2)^2 / (moment of inertia)
     
-        Angualr acceleration on P0 would be
+        let K1 = p1TorqueMagnitude
+        then T1 = -bar1DotBar2 * p1TorqueMagnitude * bar2RotationalAxis
     
-        (-0.5 * F) * bar1 / (bar1Mass * bar1Length * bar1Length / 3)
-        = 1.5 * cross(bar1, cross(bar2, bar2RotationalAxis)) * p1TorqueMagnitude / (bar2Length^2 * bar1Mass * bar1Length * bar1Length)
+        K[i + 1] = Ki * r
+        T[i + 1] = Ti * r
+    
+        sum T = T1 / (1 - r)
+        sum K = K1 / (1 - r)
         
     */
-    
+    if (allowFullFeedBack)
+    {        
+        float bar1DotBar2 = dot(p1, bar2);
+        
+        float feedbackMultiplier = 0.5 * bar2Mass * bar1DotBar2 * bar1DotBar2 / (momentOfIntertia * bar2LengthSquare);
+        float geometricSumDivisor = (1.0 - feedbackMultiplier);
+        
+        float3 P0TorqueFromP1Feedback = 
+            -bar1DotBar2 * p1TorqueMagnitude * bar2RotationalAxis 
+            / (bar2LengthSquare * bar2LengthSquare) 
+            / geometricSumDivisor;
+        
+        float3 P1TorqueFromP0Feedback = p1TorqueMagnitude / geometricSumDivisor;
+        
+        p0Acc += P0TorqueFromP1Feedback / momentOfIntertia;
+        p1Acc += P1TorqueFromP0Feedback / bar2MomentOfInertia;
 
-    if (allowP1FeedBackOnP0)
-    {
-        float3 p0AccFromP1Torque = 1.5 * cross(p1, cross(bar2, bar2RotationalAxis)) * p1TorqueMagnitude / (bar2LengthSquare * bar1Mass * bar1Length * bar1Length);
-        p0Acc = p1SeizedP0AngularAcc + p0AccFromP1Torque;
     }
            
     float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;

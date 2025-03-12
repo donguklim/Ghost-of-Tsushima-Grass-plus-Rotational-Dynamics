@@ -148,7 +148,7 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     {
         float tiltAngle = dot(sideDir, viewingDir) * viewDependentTiltScale * t;
         
-        if (tiltAngle > ANGLE_THRESHOLD && tangentLength > GRASS_NORMAL_LENGTH_THRESHOLD)
+        if (abs(tiltAngle) > ANGLE_THRESHOLD && tangentLength > GRASS_NORMAL_LENGTH_THRESHOLD)
         {
             sideDir = QuatRotateVector(
                 QuatFromAxisAngle(unitTangent, tiltAngle),

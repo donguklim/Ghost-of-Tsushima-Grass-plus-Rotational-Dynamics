@@ -135,7 +135,7 @@ void GetGrassttributes(
         getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)
     );
     
-    float yScale = lerp(yScaleMin, yScaleMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)) * clumpLengthScale * growth;
+    float yScale = lerp(yScaleMin, yScaleMax, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed)) * growth;
     
     
     float bar2LengthRatio = lerp(0.5, 1.0f, getClumpPositionRandVal(positionNoiseRatio, clumpSeed, positionSeed));

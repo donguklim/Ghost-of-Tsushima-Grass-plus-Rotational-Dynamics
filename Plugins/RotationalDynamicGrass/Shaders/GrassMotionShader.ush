@@ -69,7 +69,7 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
     {
         float angleMax = bVal < 0.0f ? 0.0f : 0.5 * PI_VALUE;
         
-        if (deltaAngle < angleMax)
+        if (deltaAngle <= angleMax)
         {
             return;
         }
@@ -83,7 +83,7 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
     {
         float angleMax = aVal < 0.0f ? 0.0f : PI_VALUE;
         
-        if (deltaAngle < angleMax)
+        if (deltaAngle <= angleMax)
         {
             return;
         }
@@ -99,7 +99,7 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
         float zeroX = atan(-bVal / aVal);
         zeroX = zeroX < 0.0f ? zeroX + PI_VALUE : zeroX;
         
-        if (zeroX < deltaAngle)
+        if (zeroX <= deltaAngle)
         {
             return;
         }
@@ -116,18 +116,20 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
     aVal /= cVal;
     bVal /= cVal;
     
+    absA = abs(aVal);
+    absB = abs(bVal);
+    
      // f(x) = 1 + b * cos(x), 
     if (absA < COLLISION_COEFFICENT_TRHESHOLD)
     {
-        float cosVal = -1.0 / bVal;
+
         // no colliding at any angle
-        if (1.0 - abs(cosVal) < COLLISION_COEFFICENT_TRHESHOLD)
+        if (absB < 1.0f)
         {
             return;
         }
-       
         
-        float allowedAngleMax = acos(cosVal);
+        float allowedAngleMax = acos(-1.0 / bVal);
         if (deltaAngle <= allowedAngleMax)
         {
             return;
@@ -141,13 +143,12 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
     //  f(x) = 1 + a * sin(x)
     if (absB < COLLISION_COEFFICENT_TRHESHOLD)
     {
-        float sinVal = -1.0f / aVal;
-        if (1.0 - abs(sinVal) < COLLISION_COEFFICENT_TRHESHOLD)
+        if (absA < 1.0f)
         {
             return;
         }
         
-        float allowedAngleMax = asin(sinVal);
+        float allowedAngleMax = asin(-1.0f / aVal);
         
         allowedAngleMax = allowedAngleMax < 0.0f ? PI_VALUE - allowedAngleMax : allowedAngleMax;
         
@@ -164,7 +165,7 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
     float maginitude = sqrt(aVal * aVal + bVal * bVal);
     
     // no colliding at any angle
-    if (maginitude - 1.0 < COLLISION_COEFFICENT_TRHESHOLD)
+    if (maginitude < 1.0f)
     {
         return;
     }
@@ -201,7 +202,7 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
     
     float zeroX = min(min(angleDiff, angleSum), min(angleSumPlusPi, angleDiffPlusPi));
     
-    if (deltaAngle < zeroX)
+    if (deltaAngle <= zeroX)
     {
         return;
     }
@@ -319,7 +320,7 @@ void limitAngleDispScale(in float3 angularDisp, inout float3 angularDispDelta, i
     
     float leftMarginSquare = 4 * PI_VALUE * PI_VALUE - dot(angularDisp, angularDisp);
     // already exceeded the limit
-    if (leftMarginSquare < 0.01f)
+    if (leftMarginSquare < 0.0001f)
     {
         angularDispDelta = 0.0f;
         angularVelocity = 0.0f;
@@ -389,7 +390,7 @@ void getAngleDispScaleDecreasingDelta(in float3 angularDisp, inout float3 angula
     
     float axisDotDisp = dot(axis, angularDisp);
     
-    // df/dx is alreayd positive at 0
+    // df/dx is alreaydy positive at 0
     if (axisDotDisp >= 0)
     {
         angularDispDelta = 0.0f;
@@ -649,7 +650,7 @@ void GrassUpdate(
     
     if (length(angularDisp.xyz) < 2 * PI_VALUE)
     {
-        limiAngleDispScale(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
+        limitAngleDispScale(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }
     else
     {
@@ -668,7 +669,7 @@ void GrassUpdate(
     }
     else
     {
-        applyGroundCollision(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
+        //applyGroundCollision(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
     }
     
     angularDisp += dispDelta;

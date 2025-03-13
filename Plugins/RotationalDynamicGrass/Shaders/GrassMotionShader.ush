@@ -615,6 +615,8 @@ void GrassUpdate(
         Hence, this way of calculating the torques is not accurate.
     
         Just make the payback one more time in bellow if statment.
+    
+        In conclusion, the statemts within the bellow if statement does not work well and gives weird motion.
     */
     if (allowP1FeedbackOnP0)
     {        

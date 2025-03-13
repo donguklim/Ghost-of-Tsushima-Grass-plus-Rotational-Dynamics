@@ -28,7 +28,7 @@ AAGrassPCGActor::AAGrassPCGActor()
 
     VoronoiPointNoiseThreshold = 0.2f;
     ZeroGrassVoronoiPointThreshold = 0.1f;
-    MinClumpDensity = 0.8f;
+    MinClumpDensity = 0.4f;
     GrassLengthScaleMin = 0.5f;
     GrassLengthScaleMax = 2.0f;
 }

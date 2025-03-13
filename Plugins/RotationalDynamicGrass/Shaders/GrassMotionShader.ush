@@ -618,7 +618,8 @@ void GrassUpdate(
     */
     if (allowP1FeedbackOnP0)
     {        
-        p0Acc -= dot(p1, bar2) / bar2LengthSquare / momentOfIntertia * p1TorqueMagnitude * bar2RotationalAxis;
+        float bar1DotBar2 = dot(p1, bar2);
+        p0Acc -= bar1DotBar2 / bar2LengthSquare / momentOfIntertia * p1TorqueMagnitude * bar2RotationalAxis;
 
     }
            

@@ -47,7 +47,7 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
 */
     // f(0) = c + a * sin(0) + b * cos(0) = c + b
     // already has collided at x = 0
-    if (cVal + bVal < COLLISION_COEFFICENT_TRHESHOLD)
+    if (cVal + bVal < 0.0f)
     {
         angularVelocity = float3(0, 0, 0);
         angularDispDelta = float3(0, 0, 0);

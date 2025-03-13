@@ -115,7 +115,7 @@ void GetGrassttributes(
 
     FQuat yawQaut = QuatFromAxisAngle(
         float3(0, 0, 1),
-        clumpYaw + positionNoiseRatio / clumpLengthScale * PI_VALUE * FRand(positionSeed)
+        clumpYaw + positionNoiseRatio / (clumpLengthScale * clumpLengthScale) * PI_VALUE * FRand(positionSeed)
     );
     
     FQuat minPitchQuat = QuatMultiply(

@@ -496,7 +496,7 @@ float Get2DAngle(float2 vec)
 
  
 void GrassUpdate(
-    bool allowFullFeedBack,
+    bool allowP1FeedbackOnP0,
     float dampingCoff,
     in float massDensity,
     float stiffness,
@@ -590,17 +590,15 @@ void GrassUpdate(
     // The total torque to P1 required to make P1 seized is -p1BendingTorque.
     // Now payback the torque to P1
     
-    float bar2MomentOfInertia = (bar2Mass * bar2LengthSquare);
-    float p1Acc = 3 * p1TorqueMagnitude / bar2MomentOfInertia;
+    float p1Acc = p1TorqueMagnitude / (bar2Mass * bar2LengthSquare) * 3.0f;
     
     float3 p0Acc = p1SeizedP0AngularAcc;
     
     /*
         The payback should not just happen once to bar2 on P1.
-        Bar2 make another payback torque to bar1 on P1 and vice versa infinitely.
-        This forms an infinite series sum for both P0 and P1.
-    
-        The sereis is a geometric sereis with multiplier r equal to 
+        Bar2 make another payback torque to bar1 on P0.
+        This should happen infinitley and form two infinite serieses.
+        The sereises are a geometric sereis with multiplier r equal to 
             
             r = 0.5 * bar2 mass * dot(bar1, bar2)^2 / (moment of inertia)
     
@@ -612,24 +610,15 @@ void GrassUpdate(
     
         sum T = T1 / (1 - r)
         sum K = K1 / (1 - r)
-        
+    
+        However, this series may diverge because it is not gurantteed that r < 1.
+        Hence, this way of calculating the torques is not accurate.
+    
+        Just make the payback one more time in bellow if statment.
     */
-    if (allowFullFeedBack)
+    if (allowP1FeedbackOnP0)
     {        
-        float bar1DotBar2 = dot(p1, bar2);
-        
-        float feedbackMultiplier = 0.5 * bar2Mass * bar1DotBar2 * bar1DotBar2 / (momentOfIntertia * bar2LengthSquare);
-        float geometricSumDivisor = (1.0 - feedbackMultiplier);
-        
-        float3 P0TorqueFromP1Feedback = 
-            -bar1DotBar2 * p1TorqueMagnitude * bar2RotationalAxis 
-            / (bar2LengthSquare) 
-            / geometricSumDivisor;
-        
-        float P1TorqueFromP0Feedback = p1TorqueMagnitude / geometricSumDivisor;
-        
-        p0Acc += P0TorqueFromP1Feedback / momentOfIntertia;
-        p1Acc += P1TorqueFromP0Feedback / bar2MomentOfInertia;
+        p0Acc -= dot(p1, bar2) / bar2LengthSquare / momentOfIntertia * p1TorqueMagnitude * bar2RotationalAxis;
 
     }
            

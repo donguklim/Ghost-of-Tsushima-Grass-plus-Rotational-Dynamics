@@ -10,14 +10,17 @@
 */
 
 
-float2 GradientNoiseHash(float2 p)
+float2 GradientNoiseHash(float seed, float2 p)
 {
     p = float2(dot(p, float2(127.1, 311.7)),
                   dot(p, float2(269.5, 183.3)));
+    
+    p += float2(seed * 43758.5453123, seed * 23421.631);
+    
     return -1.0 + 2.0 * frac(sin(p) * 43758.5453123);
 }
 
-float GradientNoise(float2 uv)
+float GradientNoise(in float seed, in float2 uv)
 {
     // Grid cell coordinates
     float2 i = floor(uv);
@@ -30,10 +33,10 @@ float GradientNoise(float2 uv)
 
     
     // Get gradient vectors at grid corners
-    float2 g00 = GradientNoiseHash(i + float2(0.0, 0.0));
-    float2 g10 = GradientNoiseHash(i + float2(1.0, 0.0));
-    float2 g01 = GradientNoiseHash(i + float2(0.0, 1.0));
-    float2 g11 = GradientNoiseHash(i + float2(1.0, 1.0));
+    float2 g00 = GradientNoiseHash(seed, i + float2(0.0, 0.0));
+    float2 g10 = GradientNoiseHash(seed, i + float2(1.0, 0.0));
+    float2 g01 = GradientNoiseHash(seed, i + float2(0.0, 1.0));
+    float2 g11 = GradientNoiseHash(seed, i + float2(1.0, 1.0));
     
     // Calculate dot products between gradients and distance vectors
     float n00 = dot(g00, f - float2(0.0, 0.0));
@@ -50,7 +53,7 @@ float GradientNoise(float2 uv)
     return n;
 }
 
-float LeveledGradientNoise(float2 UV, float Scale, int NumLevels, float OutputMin, float OutputMax)
+float LeveledGradientNoise(float seed, float2 UV, float Scale, int NumLevels, float OutputMin, float OutputMax)
 {
     UV *= Scale;
     float LevelScale = 2.0;
@@ -61,7 +64,7 @@ float LeveledGradientNoise(float2 UV, float Scale, int NumLevels, float OutputMi
 	
     for (uint i = 0; i <NumLevels; ++i)
     {
-        Out += abs(GradientNoise(UV)) * OutScale;
+        Out += abs(GradientNoise(seed, UV)) * OutScale;
         
         UV *= LevelScale;
         OutScaleSum += OutScale;

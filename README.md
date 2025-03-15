@@ -139,7 +139,11 @@ Hence,
 MI = MI_{L/2} = mL^{2}/12  + m(L/2)^{2} = mL^{2}/3
 ```
 
-If the rotating object is consists of two line segment bars(as drawn on above Torque example 2) and the bars both have uniform mass density, then the MI of the object is
+##### MI of objects consists of multiple line segments.
+If the rotating object is consists of multiple line segment bars(as drawn on above Torque example 2) and the bars both have uniform mass density, 
+then the MI of the object is sum of the each bar MI.
+
+For example, if the object consists of the two line segment bars.
 ```math
 \displaylines{
     m_1 = \text{bar1 mass}
@@ -154,7 +158,6 @@ If the rotating object is consists of two line segment bars(as drawn on above To
     MI = MI_{bar1} + MI_{bar2} = \frac{m_1|\overrightarrow{bar1}|^{2}}{3} + m2(\frac{|\overrightarrow{bar2}|^{2}}{12} + |\overrightarrow{bar1} + \frac{1}{2}\overrightarrow{bar2}|^{2})
 }
 ```
-
 
 
 ### Dynamics method

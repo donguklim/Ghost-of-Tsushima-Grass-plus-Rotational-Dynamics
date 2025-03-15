@@ -155,7 +155,6 @@ If the rotating object is consists of two line segment bars(as drawn on above To
     \\
     MI = MI_{bar1} + MI_{bar2} = \frac{m_1|\overrightarrow{bar1}|^{2}}{3} + m2(\frac{|\overrightarrow{bar2}|^{2}}{12} + |bar1 + \frac{1}{2}bar2|^{2}
 }
-}
 ```
 
 

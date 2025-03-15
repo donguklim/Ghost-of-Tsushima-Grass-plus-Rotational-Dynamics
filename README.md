@@ -28,11 +28,9 @@ In order to combine PCG with Niagara, I am using a beta status plugin made by Ep
 1. Spawn grass instances as data is received from Niagara Data Channel
 2. Calculate and update the motion of grass instances.
 3. Clean up a grass instance if it needs to be cleaned up.
+1. 
 
-## Rotational Dynamics Based Motion.
-
----
-**NOTE**
+## Note on Unreal Engine HLSL left-hand rule!
 ![Left-hand rule rotation](./Resources/left_hand_rule_rotation.jpeg "Left-hand rule rotation")
 
 Unreal Engine 5 is using the **left-hand rule** in its HLSL code and built in quaternion functions.\
@@ -48,8 +46,9 @@ This README file is also wrttien in assumption of the using left-hand rule.
 
 (I had spent several hours to figure the problem I had because I didn't know UE was using left-hand rule.)
 
----
 
+
+## Basics Physics of Rotational System
 
 The grass is modeled as a bezier curve controlled by bezier points. 
 
@@ -58,6 +57,7 @@ The grass is modeled as a bezier curve controlled by bezier points.
 ***Quadratic Bezier curve Example drawn from [Demos](https://www.desmos.com/)***
 
 Instead of directly making motion on the bezier curve, the motions are made to the bars(the green line segments in above example) of the bezier curves.
+
 
 ### Forces acting on the bars
 
@@ -104,7 +104,7 @@ Let T be the torque, the angular acceleration created by the torque is equalt to
 
 Where MI is **moment of inertia** of the rotating object.
 
-#### Moment of Inertia
+### Moment of Inertia
 
 ![Pivot examples](./Resources/pivot_location_examples.jpeg "Pivot examples")
 
@@ -139,7 +139,7 @@ Hence,
 MI = MI_{L/2} = mL^{2}/12  + m(L/2)^{2} = mL^{2}/3
 ```
 
-##### MI of objects consists of multiple line segments.
+#### MI of objects consists of multiple line segments.
 If the rotating object is consists of multiple line segment bars(as drawn on above Torque example 2) and the bars both have uniform mass density, 
 then the MI of the object is sum of the each bar MI.
 
@@ -160,7 +160,7 @@ For example, if the object consists of the two line segment bars.
 ```
 
 
-### Dynamics method
+## Rotational Dynamics on Bars-Linkage System Research
 Dynamics is used to numerically update the angular velocity and and angular displacement at each time interval between frames.
 
 ```math
@@ -174,25 +174,43 @@ Dynamics is used to numerically update the angular velocity and and angular disp
     t\Delta = \text{time delta}
     \\
     \\
-    v_{new} = v_{old} + acc * t\Delta
+    v_{new} = v_{old} + acc \times  t\Delta
     \\
-    d_{new} = d_{old} + v_{new} * t\Delta
+    d_{new} = d_{old} + v_{new} \times t\Delta
 }
 ```
 
+So the problem is accurately calculating the acceleration from the wind force, air friction damping force and grass's restoration force.
 
-### At the Beginning
-Because Sucker Punch Studio did not tell how they calculated the grass motion, so I have searched if there is any work already done to make physics based grass motion.
+### The Reference Study
+Because Sucker Punch Studio did not tell how they calculated the grass motion, I have searched if there is any work already done to make physics based grass motion.
 
 Then, I found this article: [A simulation on grass swaying with dynamic wind force](https://link.springer.com/article/10.1007/s00371-016-1263-7)
 
-The article also used Bezier curve modelled grass, and the idea of using rotational physics sounded great, so I decided to make an UE5 implementation of the article. 
+The study of the article also used Bezier curve modelled grass, and the idea of using rotational physics sounded great, so I decided to make an UE5 implementation of the article. 
 At first, my intention was just make an UE5 implementation of the article, without really understanding the physcis theory the dynamics is based on. 
 
 I simply thought I would just copy and paste the equations written in the article.
 
-### But the equations have flaws I couldn't overlook.
+### Basic equation of the reference study
 
-1. Equations have errors of mixing scalra variables and vector variables.
-    - some set of variables in the quation must be all either vector variables or scalar variables, but the authors seemd to mixed both by mistake.
-    - It is a simple error, but this hides how to actually calculate the damping force value.
+In the reference study, The wind force, damping force, restoration force and the net torque T acting on the bar are calculated as bellow.
+
+```math
+W = S \delta \overrightarrow{v} 
+\\
+D = -c\overrightarrow{w} 
+\\
+R = -k |\overrightarrow{\Delta\theta}|(\overrightarrow{b}_{current} - \overrightarrow{b}_{static})
+\\
+T = \overrightarrow{bar} \times (W + R + D)
+```
+
+Where v is the velocity of the wind, S is the area of contact of wind, c and k are damping coefficient and resotration coefficient respectively.
+
+$\overrightarrow{b}_{current}$ and $\overrightarrow{b}_{static}$ are the static position of the end of the bar that is not connected to the pivot.
+
+### Errors and Physical Considerations Omitted in the Baseline Study
+
+#### Errors
+The reference study has some minor notation errors and calculation errors.

@@ -243,12 +243,12 @@ The correct damping force is $-c (\overrightarrow{\omega} \times \overrightarrow
 
 ##### Restoration force direction error
 The author makes unconventional restoration force vector. 
-$ -k |\overrightarrow{\Delta\theta}|\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|} $
+$-k|\overrightarrow{\Delta\theta}|\frac{\overrightarrow{b}_{current}-\overrightarrow{b}_{static}}{|\overrightarrow{b}_{current}-\overrightarrow{b}_{static}|}$
 
 Generally you just write restoration torque equal to $-k \overrightarrow{\Delta\theta}$ and resotration torque are assumed to increase linearly with the angular displacement.
 
 Using 
-$ \frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|} $
+$\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}$
 as a direction of the restoration force,
 does not make restoration torque grows linearly with the angular displacement.
 

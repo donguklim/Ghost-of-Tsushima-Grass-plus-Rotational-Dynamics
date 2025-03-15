@@ -192,9 +192,12 @@ At first, my intention was just make an UE5 implementation of the article, witho
 
 I simply thought I would just copy and paste the equations written in the article.
 
+Note: The study uses the term "edge" to refer the bars in the bars-linkage rotational system, but in physics studies that involves a rotational system "bar" is a term more often used. 
+Hence, I am also going to use this term.
+
 ### Basic equation of the reference study
 
-In the reference study, The wind force, damping force, restoration force and the net torque T acting on the bar are calculated as bellow.
+In the reference study, The wind force, damping force, restoration force and the net torque T acting on a bar are calculated as bellow.
 
 ```math
 \displaylines{
@@ -221,9 +224,16 @@ These are the static position of the end of the bar that is not connected to the
 
 ![Wrong Restoration Force](./Resources/wrong_restoration_force_1.jpeg "Wrong Restoration Force")
 
-The study uses additional methods such as limiting rotation only about z axis or vertical direction, 
-dividing bars into two groups and calculate the bending acceleeration per group instead of per bar.
-However, these additional methods are not handled in this project.
+
+The reference study claims that applying above calculation to each individual bar gives inconsistent motions between adjacent bars.
+So it uses additional methods such as 
+- limiting the rotation of the pivot at the ground to only about z-axis(referred as swinging) and local y-axis to make vertical rotation(referred as bending).
+- calculate swinging only from the force at the tip end of the grass
+- instead of calculating vertical bending for each bar, divide the bars into two groups and calculate one bending for each group and apply the bending with some ratios to each bars in each group.
+- limiting the rotation of the all other non-ground pivots to vertical bending.
+
+This project only uses the last method(limiting non-ground pivot rotation to local y-axis), and does not use other additional methods used in the reference study.
+You may read the original paper if you want to know more details of these additional methods.
 
 ### Errors and Physical Considerations Omitted in the Reference Study
 
@@ -244,13 +254,13 @@ The correct damping force is $-c (\overrightarrow{\omega} \times \overrightarrow
 ##### Restoration force direction error
 The author makes unconventional restoration force vector. 
 ```math
--k |\overrightarrow{\Delta\theta}| \frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}$
+-k |\overrightarrow{\Delta\theta}| \frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}
 ```
 Generally you just write restoration torque equal to $-k \overrightarrow{\Delta\theta}$ and resotration torque are assumed to increase linearly with the angular displacement.
 
 Using 
 ```math
-$\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}$
+\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}
 ```
 as a direction of the restoration force,
 does not make restoration torque grows linearly with the angular displacement.
@@ -328,7 +338,7 @@ If the rotating object is consists of two line segments(noted as bar1 and bar2),
 \end{align} 
 }
 ```
-(I am not solving the integral term here since the solution have too many terms, but solution is implemented as function `GetBar2TorqueOnP0` in the [GrassMotionShader.ush](Plugins/RotationalDynamicGrass/Shaders/GrassMotionShader.ush)
+(I am not solving the integral term here since the solution have too many terms, but solution is implemented as function `GetBar2TorqueOnP0` in the shader file [Plugins/RotationalDynamicGrass/Shaders/GrassMotionShader.ush](Plugins/RotationalDynamicGrass/Shaders/GrassMotionShader.ush)
 
 Above torque calculation is not for two-bars linkage system where two bars are connected by a rotational pivot. 
 It is only for a system without a linkage but jst an object with the form of two line segments with fixed connection between those.
@@ -349,4 +359,8 @@ A force acting on a bar is not guranteed to make a torque on a single pivot.
 
 The reference study omits this physical consideration and calculate each pivot torque independently with each bar. 
 
+
+### Payback Method
+
+I wanted to create an agular acceleration calculation method that allows forces on one bar to influence possibly all pivots of the system.
 

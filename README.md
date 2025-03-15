@@ -54,23 +54,11 @@ Dynamics is used to numerically update the angular velocity and and angular disp
 
 ```math
 v = \text{angular velocity}
-<br>
-\\
 d = \text{angular displacement}
-<br>
-\\
-
 acc = \text {current angualr acceleration}
-<br>
-\\
 t\Delta = \text{time delta}
-<br>
-<br>
-\\
-\\
+
 v_{new} = v_{old} + acc * t\Delta
-<br>
-\\
 d_{new} = d_{old} + v_{new} * t\Delta
 ```
 

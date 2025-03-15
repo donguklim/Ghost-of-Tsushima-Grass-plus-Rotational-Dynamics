@@ -82,7 +82,7 @@ The combined net force makes angular acceleration and updates angular velocity a
 
 Given a pivot and an objects that rotates about the pivot, the force acting on the object creates torque.
 
-In above examples the torque $\overrightarrow{T}$ is equal to  $\overrightarrow{F} * \overrightarrow{B}$ where
+In above examples the torque $\overrightarrow{T}$ is equal to  $\overrightarrow{F} \times \overrightarrow{B}$ where
 
 ```math
 \displaylines{
@@ -197,13 +197,15 @@ I simply thought I would just copy and paste the equations written in the articl
 In the reference study, The wind force, damping force, restoration force and the net torque T acting on the bar are calculated as bellow.
 
 ```math
-W = S \delta \overrightarrow{v} 
-\\
-D = -c\overrightarrow{w} 
-\\
-R = -k |\overrightarrow{\Delta\theta}|(\overrightarrow{b}_{current} - \overrightarrow{b}_{static})
-\\
-T = \overrightarrow{bar} \times (W + R + D)
+\displaylines{
+    W = S \delta \overrightarrow{v} 
+    \\
+    D = -c\overrightarrow{w} 
+    \\
+    R = -k |\overrightarrow{\Delta\theta}|(\overrightarrow{b}_{current} - \overrightarrow{b}_{static})
+    \\
+    T = \overrightarrow{bar} \times (W + R + D)
+}
 ```
 
 Where v is the velocity of the wind, S is the area of contact of wind, c and k are damping coefficient and resotration coefficient respectively.

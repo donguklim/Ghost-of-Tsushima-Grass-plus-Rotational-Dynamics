@@ -196,7 +196,7 @@ I simply thought I would just copy and paste the equations written in the articl
 
 In the reference study, The wind force, damping force, restoration force and the net torque T acting on the bar are calculated as bellow.
 
-```math
+$$
 \displaylines{
     W = S \delta \overrightarrow{v} 
     \\
@@ -206,20 +206,35 @@ In the reference study, The wind force, damping force, restoration force and the
     \\
     T = \overrightarrow{bar} \times (W + R + D)
 }
-```
+$$
 
 Where v is the velocity of the wind, S is the area of contact of wind, c and k are damping coefficient and resotration coefficient respectively.
 
-```math
+$$
 \displaylines{
     \overrightarrow{b}_{current}
     \\
     \overrightarrow{b}_{static}
 }
-```
-These are the static position of the end of the bar that is not connected to the pivot.
+$$
+$\overrightarrow{b}_{current}$ and $\overrightarrow{b}_{static}$ are the static position of the end of the bar that is not connected to the pivot.
 
 ### Errors and Physical Considerations Omitted in the Baseline Study
 
 #### Errors
 The reference study has some minor notation errors and calculation errors.
+
+- Some set of variables should be either vectors or scalars, but the authors mix those together. Confusing the readers and does not tell how to correctly calculate some values.
+-
+
+- some set of variables in the quation must be all either vector variables or scalar variables, but the authors seemd to mixed both by mistake.
+- It is a simple error, but this hides how to actually calculate the damping force value.
+- It was a simple error, but I had to study some physics to fix the error.
+
+#### Treating wind and damping forces as point force
+
+The authors of made calculation as if the wind and air damping 
+
+#### Incorrect Damping Force and Restoration Force Calculation
+
+#### Ignoring influence between the pivots

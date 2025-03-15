@@ -278,18 +278,19 @@ You can just set the restoration torque as $-k \overrightarrow{\Delta\theta}$ an
 }
 ```
 
-It was clear for me that the authors are not mathematically accurate.
-
 Even this corrected equation is ignoring an important physical consideration.
 
 
 #### Wind and Air friction are not Point Forces
 
-Wind does not push the bar at the end of the bar. 
-Wind is pushing the bar along its line segment. 
+Wind does not push a pivoted bar only at the open end point of the bar.
+
+Wind is pushing the bar along its whole line segment. 
 This is same for the air friction.
 
-More physically accurate torque calculation on a straight bar is
+More physically accurate torque calculation on a straight bar is calculated by itegrating the point torque along the line segment.
+
+If there is a straight bar, and the wind is uniform along the bar's line segment, the torque T is 
 ```math
 \displaylines{
     \overrightarrow{u}_{bar} = \overrightarrow{bar}/|\overrightarrow{bar}|
@@ -297,8 +298,48 @@ More physically accurate torque calculation on a straight bar is
     \overrightarrow{W} = S \delta \overrightarrow{v} 
     \\
     \begin{align}
-    T & =\int_{0}^{|\overrightarrow{bar}|} (\overrightarrow{W} + -c (\overrightarrow{\omega} \times t\overrightarrow{u}_{bar})) \times tu_{bar}dt - k \overrightarrow{\Delta\theta}
-    \\
-    & = \frac{|\overrightarrow{bar}|}{2}(\overrightarrow{W} \times \overrightarrow{bar}) - \frac{c|\overrightarrow{bar}|}{3}(\overrightarrow{\omega} \times \overrightarrow{bar} \times \overrightarrow{bar}) - k \overrightarrow{\Delta\theta}
+        T & =\int_{0}^{|\overrightarrow{bar}|} (\overrightarrow{W} + -c (\overrightarrow{\omega} \times t\overrightarrow{u}_{bar})) \times tu_{bar}dt - k \overrightarrow{\Delta\theta}
+        \\
+        & = \frac{|\overrightarrow{bar}|}{2}(\overrightarrow{W} \times \overrightarrow{bar}) - \frac{c|\overrightarrow{bar}|}{3}(\overrightarrow{\omega} \times \overrightarrow{bar} \times \overrightarrow{bar}) - k \overrightarrow{\Delta\theta}
     \end{align} 
 }
+```
+
+There are quadratic increase of the wind torque and cubic increase of the damping torque with the increase of the bar length. 
+
+![Non Linkage System](./Resources/non_linkage_system.jpeg "Non Linkage System")
+
+If the rotating object is consists of two line segments(noted as bar1 and bar2), the caculation becomes 
+
+```math
+\displaylines{
+\overrightarrow{u}_{bar2} = \overrightarrow{bar2}/|\overrightarrow{bar2}|
+\\
+\begin{align}
+    T & = \frac{|\overrightarrow{bar1}|}{2}(\overrightarrow{W} \times \overrightarrow{bar1}) - \frac{c|\overrightarrow{bar1}|}{3}(\overrightarrow{\omega}_{bar1} \times \overrightarrow{bar1} \times \overrightarrow{bar1}) - k \overrightarrow{\Delta\theta}_{bar1} 
+    \\
+    & + \int_{0}^{|\overrightarrow{bar2}|}[(\overrightarrow{W} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) - c (\overrightarrow{\omega_{bar1}} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2}) - c(\overrightarrow{\omega}_{bar2} \times  tu_{bar2})\times  tu_{bar2}]dt
+\end{align} 
+}
+```
+
+Above torque calculation is not for two-bars linkage system where two bars are connected by a rotational pivot. 
+It is only for a system without a linkage but jst an object with the form of two line segments with fixed connection between those.
+
+With the linkage system things become more complex.
+
+#### Torque from Force on Bars-Linkage System.
+
+If there are multiple bars connected with rotational pivots, a force acting on a bar may not just influence torque on the base of the bar. 
+Bellow image shows two example with two-bar linkage system.
+
+![Linkage System Force Examples](./Resources/linkage_system_force_examples.jpeg "Linkage System Force Examples")
+
+As shown in above image if a force actiong on a point of a bar, 
+it may create torque with opposite or the same orientation at the other bar depending on the angle between the bars and the force direction.
+
+A force acting on a bar is not guranteed to make a torque on a single pivot.
+
+The reference study omits this physical consideration and calculate each pivot torque independently with each bar. 
+
+

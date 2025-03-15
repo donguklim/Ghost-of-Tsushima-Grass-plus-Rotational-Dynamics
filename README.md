@@ -131,14 +131,12 @@ MI_{d} = MIC + md^{2}
 For a straight bar with uniform mass density with length L,
 ```math
 MIC = mL^{2}/12
-}
 ```
 
 And if the bar is rotating about one of its end point, the distance from the pivot to the center of mass is L/2.
 Hence,
 ```math
 MI = MI_{L/2} = mL^{2}/12  + m(L/2)^{2} = mL^{2}/3
-}
 ```
 
 If the rotating object is consists of two line segment bars(as drawn on above Torque example 2) and the bars both have uniform mass density, then the MI of the object is

@@ -53,9 +53,21 @@ The combined net force makes angular acceleration and updates angular velocity a
 Dynamics is used to numerically update the angular velocity and and angular displacement at each time interval between frames.
 
 ```math
-\text{angular velocity}_{new} = \text{angular velocity}_{old} + \text{current acceleration} * \text{time delta}
-\text{angular displacement}_{new} = \text{angular displacement}_{old} + \text{angular velocity}_{new} * \text{time delta}
+v = \text{angular velocity}
+\\
+d = \text{angular displacement}
+\\
+acc = \text {current angualr acceleration}
+\\
+t\Delta = \text{time delta}
+\\
+\\
+v_{new} = v_{old} + acc * t\Delta
+\\
+d_{new} = d_{old} + v_{new} * t\Delta
 ```
+
+I will explain how the angular acceleration is calculated in the later section of this readme.
 
 ### At the Beginning
 Because Sucker Punch Studio did not tell how they calculated the grass motion, so I have searched if there is any work already done to make physics based grass motion.

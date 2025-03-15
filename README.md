@@ -200,7 +200,7 @@ In the reference study, The wind force, damping force, restoration force and the
 \displaylines{
     W = S \delta \overrightarrow{v} 
     \\
-    D = -c \overrightarrow{w} 
+    D = -c \overrightarrow{\omega} 
     \\
     R = -k |\overrightarrow{\Delta\theta}|\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}
     \\
@@ -239,7 +239,7 @@ This error hides details of how to exactly. calculate some vectors or scalars.
 Damping force is air friction force.
 Air friction force linearly grows with the velocity of the object moving in the air, not its angular velocity.
 
-The correct damping force is $-c (\overrightarrow{w} \times \overrightarrow{bar})$
+The correct damping force is $-c (\overrightarrow{\omega} \times \overrightarrow{bar})$
 
 ##### Restoration force direction error
 The author makes unconventional restoration force vector. $-k |\overrightarrow{\Delta\theta}|\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}$
@@ -260,10 +260,10 @@ There is no explanation such as if this is for reflecting some physical characte
 My conclusion is that this is just a simple mistake made by authors 
 for attempting to make restoration torque derived from some force vector as wind torque and damping torques are derived from force vectors.
 
-The correct direction is same as the direction of "\overrightarrow{\Delta\theta} \times \overrightarrow{bar}", 
-but you don't even need to make this directional force vector.
+The correct direction is same as the direction of $\overrightarrow{\Delta\theta} \times \overrightarrow{bar}$, 
+but you don't even need to calculate the restoration force vector.
 
-You can just set the restoration torque as $-k \overrightarrow{\Delta\theta}$ without involving any force.
+You can just set the restoration torque as $-k \overrightarrow{\Delta\theta}$ and skip the force caculation.
 
 
 #### Corrected Torque Calculation
@@ -271,7 +271,7 @@ You can just set the restoration torque as $-k \overrightarrow{\Delta\theta}$ wi
 \displaylines{
     W = S \delta \overrightarrow{v} 
     \\
-    D = -c (\overrightarrow{w} \times \overrightarrow{bar})
+    D = -c (\overrightarrow{\omega} \times \overrightarrow{bar})
     \\
     \\
     T = \overrightarrow{bar} \times (W + D) - k \overrightarrow{\Delta\theta}
@@ -283,10 +283,22 @@ It was clear for me that the authors are not mathematically accurate.
 Even this corrected equation is ignoring an important physical consideration.
 
 
-#### Wind and Air are not Point Forces
+#### Wind and Air friction are not Point Forces
 
 Wind does not push the bar at the end of the bar. 
 Wind is pushing the bar along its line segment. 
 This is same for the air friction.
 
-Above corrected equation is only for calculating the torque at the end point of the bar.
+More physically accurate torque calculation on a straight bar is
+```math
+\displaylines{
+    \overrightarrow{u}_{bar} = \overrightarrow{bar}/|\overrightarrow{bar}|
+    \\
+    \overrightarrow{W} = S \delta \overrightarrow{v} 
+    \\
+    \begin{align}
+    T & =\int_{0}^{|\overrightarrow{bar}|} (\overrightarrow{W} + -c (\overrightarrow{\omega} \times t\overrightarrow{u}_{bar})) \times tu_{bar}dt - k \overrightarrow{\Delta\theta}
+    \\
+    & = \frac{|\overrightarrow{bar}|}{2}(\overrightarrow{W} \times \overrightarrow{bar}) - \frac{c|\overrightarrow{bar}|}{3}(\overrightarrow{\omega} \times \overrightarrow{bar} \times \overrightarrow{bar}) - k \overrightarrow{\Delta\theta}
+    \end{align} 
+}

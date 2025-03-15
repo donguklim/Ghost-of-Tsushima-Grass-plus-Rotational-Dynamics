@@ -151,7 +151,7 @@ If the rotating object is consists of two line segment bars(as drawn on above To
     \overrightarrow{bar2} = \text{vector from bar1 bar2 connection point to the other end of the bar2}
     \\
     \\
-    MI = MI_{bar1} + MI_{bar2} = \frac{m_1|\overrightarrow{bar1}|^{2}}{3} + m2(\frac{|\overrightarrow{bar2}|^{2}}{12} + |\overrightarrow{bar1} + \frac{1}{2}\overrightarrow{bar2}|^{2}
+    MI = MI_{bar1} + MI_{bar2} = \frac{m_1|\overrightarrow{bar1}|^{2}}{3} + m2(\frac{|\overrightarrow{bar2}|^{2}}{12} + |\overrightarrow{bar1} + \frac{1}{2}\overrightarrow{bar2}|^{2})
 }
 ```
 

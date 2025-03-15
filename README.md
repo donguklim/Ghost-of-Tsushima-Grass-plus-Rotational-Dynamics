@@ -31,11 +31,31 @@ In order to combine PCG with Niagara, I am using a beta status plugin made by Ep
 
 ## Rotational Dynamics Based Motion.
 
+---
+**NOTE**
+![Left-hand rule rotation](./Resources/left_hand_rule_rotation.jpeg "Left-hand rule rotation")
+
+Unreal Engine 5 is using the **left-hand rule** in its HLSL code and built in quaternion functions.\
+Not the conventional right-hand rule.
+
+So given an rotation of axis and a positive angle, the rotation while the axis vector is facing toward you is clockwise direction.
+
+**Positive angle is clockwise direction!**
+
+This is one confusing part of Unreal Engine, because pitch, yaw, roll rotations use counter-clockwise rotation as positive rotation.
+
+This README file is also wrttien in assumption of the using left-hand rule.
+
+(I had spent several hours to figure the problem I had because I didn't know UE was using left-hand rule.)
+
+---
+
+
 The grass is modeled as a bezier curve controlled by bezier points. 
 
 ![Bezier Curve example](./Resources/bezier_curve_example.png "An example of Bezier Curve")
 
-(Quadratic Bezier curve Example drawn from [Demos](https://www.desmos.com/))
+***Quadratic Bezier curve Example drawn from [Demos](https://www.desmos.com/)***
 
 Instead of directly making motion on the bezier curve, the motions are made to the bars(the green line segments in above example) of the bezier curves.
 
@@ -49,28 +69,117 @@ There are three types of forces applied to the bars
 
 The combined net force makes angular acceleration and updates angular velocity and angular displacement of the bars.
 
+### Torque and Angular Acceleration
+
+![Torque example 1](./Resources/torque_example_1.jpeg "Torque Example 1")
+
+***Torque example 1***
+
+
+![Torque example 2](./Resources/torque_example_2.jpeg "Torque Example 2")
+
+***Torque example 2***
+
+Given a pivot and an objects that rotates about the pivot, the force acting on the object creates torque.
+
+In above examples the torque $\overrightarrow{T}$ is equal to  $\overrightarrow{F} * \overrightarrow{B}$ where
+
+```math
+\displaylines{
+F = \text{Force vector}
+\\
+B = \text{Vector from pivot point to the point where the force is applied}
+\\
+}
+```
+Torque is represented by the cross product of the two vectors. \
+The direction of the torque is the axis of the rotation.\
+The length of the torque is the magnitude of the torque.
+
+Let T be the torque, the angular acceleration created by the torque is equalt to
+
+```math
+\overrightarrow{T} / MI
+```
+
+Where MI is **moment of inertia** of the rotating object.
+
+#### Moment of Inertia
+
+![Pivot examples](./Resources/pivot_location_examples.jpeg "Pivot examples")
+
+Given a straigt bar with uniform mass density, let
+```math
+\displaylines{
+m = \text{mass of the rotating object}
+\\
+d = \text{distance from pivot to the center of mass point of the rotating object}
+\\
+MI_{d} = \text {moment of Inertia with given d}
+\\
+MIC = MI_{0} = \text {moment of Inertia when the pivot is located at the center of mass of the object}
+}
+```
+
+Then, by parallel axis theorem,
+
+```math
+MI_{d} = MIC + md^{2}
+
+```
+
+For a straight bar with uniform mass density with length L,
+```math
+MIC = mL^{2}/12
+}
+```
+
+And if the bar is rotating about one of its end point, the distance from the pivot to the center of mass is L/2.
+Hence,
+```math
+MI = MI_{L/2} = mL^{2}/12  + m(L/2)^{2} = mL^{2}/3
+}
+```
+
+If the rotating object is consists of two line segment bars(as drawn on above Torque example 2) and the bars both have uniform mass density, then the MI of the object is
+```math
+\displaylines{
+    m_1 = \text{bar1 mass}
+    \\
+    m_2 = \text{bar2 mass}
+    \\
+    \overrightarrow{bar1} = \text{vector from the pivot to the bar1 and bar2 connection point}
+    \\
+    \overrightarrow{bar2} = \text{vector from bar1 bar2 connection point to the other end of the bar2}
+    \\
+    \\
+    MI = MI_{bar1} + MI_{bar2} = \frac{m_1|\overrightarrow{bar1}|^{2}}{3} + m2(\frac{|\overrightarrow{bar2}|^{2}}{12} + |bar1 + \frac{1}{2}bar2|^{2}
+}
+}
+```
+
+
+
 ### Dynamics method
 Dynamics is used to numerically update the angular velocity and and angular displacement at each time interval between frames.
 
 ```math
 \displaylines{
-v = \text{angular velocity}
-\\
-d = \text{angular displacement}
-\\
-acc = \text {current angualr acceleration}
-<br>
-\\
-t\Delta = \text{time delta}
-\\
-\\
-v_{new} = v_{old} + acc * t\Delta
-\\
-d_{new} = d_{old} + v_{new} * t\Delta
+    v = \text{angular velocity}
+    \\
+    d = \text{angular displacement}
+    \\
+    acc = \text {current angualr acceleration}
+    \\
+    t\Delta = \text{time delta}
+    \\
+    \\
+    v_{new} = v_{old} + acc * t\Delta
+    \\
+    d_{new} = d_{old} + v_{new} * t\Delta
 }
 ```
 
-I will explain how the angular acceleration is calculated in the later section of this readme.
 
 ### At the Beginning
 Because Sucker Punch Studio did not tell how they calculated the grass motion, so I have searched if there is any work already done to make physics based grass motion.

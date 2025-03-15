@@ -53,13 +53,21 @@ The combined net force makes angular acceleration and updates angular velocity a
 Dynamics is used to numerically update the angular velocity and and angular displacement at each time interval between frames.
 
 ```math
+\displaylines{
 v = \text{angular velocity}
+\\
 d = \text{angular displacement}
+\\
 acc = \text {current angualr acceleration}
+<br>
+\\
 t\Delta = \text{time delta}
-
+\\
+\\
 v_{new} = v_{old} + acc * t\Delta
+\\
 d_{new} = d_{old} + v_{new} * t\Delta
+}
 ```
 
 I will explain how the angular acceleration is calculated in the later section of this readme.

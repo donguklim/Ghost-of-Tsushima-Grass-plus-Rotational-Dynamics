@@ -210,7 +210,14 @@ In the reference study, The wind force, damping force, restoration force and the
 
 Where v is the velocity of the wind, S is the area of contact of wind, c and k are damping coefficient and resotration coefficient respectively.
 
-$$\overrightarrow{b}_{current}$$ and $\overrightarrow{b}_{static}$ are the static position of the end of the bar that is not connected to the pivot.
+```math
+\displaylines{
+    $overrightarrow{b}_{current}
+    \\
+    \overrightarrow{b}_{static}
+}
+```
+These are the static position of the end of the bar that is not connected to the pivot.
 
 ### Errors and Physical Considerations Omitted in the Baseline Study
 

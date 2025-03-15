@@ -242,11 +242,14 @@ Air friction force linearly grows with the velocity of the object moving in the 
 The correct damping force is $-c (\overrightarrow{\omega} \times \overrightarrow{bar})$
 
 ##### Restoration force direction error
-The author makes unconventional restoration force vector. $-k |\overrightarrow{\Delta\theta}|\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}$
+The author makes unconventional restoration force vector. 
+$-k |\overrightarrow{\Delta\theta}|\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}$
 
 Generally you just write restoration torque equal to $-k \overrightarrow{\Delta\theta}$ and resotration torque are assumed to increase linearly with the angular displacement.
 
-Using $\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}$ as a direction of the restoration force,
+Using 
+$\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}$ 
+as a direction of the restoration force,
 does not make restoration torque grows linearly with the angular displacement.
 
 Because restoration torque should be $\overrightarrow{bar} \times R$,  
@@ -322,6 +325,7 @@ If the rotating object is consists of two line segments(noted as bar1 and bar2),
 \end{align} 
 }
 ```
+(I am not solving the integral term here since the solution have too many terms, but solution is implemented as function `GetBar2TorqueOnP0` in the [GrassMotionShader.ush](Plugins/RotationalDynamicGrass/Shaders/GrassMotionShader.ush)
 
 Above torque calculation is not for two-bars linkage system where two bars are connected by a rotational pivot. 
 It is only for a system without a linkage but jst an object with the form of two line segments with fixed connection between those.

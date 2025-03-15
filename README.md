@@ -212,7 +212,7 @@ Where v is the velocity of the wind, S is the area of contact of wind, c and k a
 
 ```math
 \displaylines{
-    overrightarrow{b}_{current}
+    \overrightarrow{b}_{current}
     \\
     \overrightarrow{b}_{static}
 }

@@ -200,9 +200,9 @@ In the reference study, The wind force, damping force, restoration force and the
 \displaylines{
     W = S \delta \overrightarrow{v} 
     \\
-    D = -c\overrightarrow{w} 
+    D = -c \overrightarrow{w} 
     \\
-    R = -k |\overrightarrow{\Delta\theta}|(\overrightarrow{b}_{current} - \overrightarrow{b}_{static})
+    R = -k |\overrightarrow{\Delta\theta}|\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}
     \\
     T = \overrightarrow{bar} \times (W + R + D)
 }
@@ -219,7 +219,74 @@ Where v is the velocity of the wind, S is the area of contact of wind, c and k a
 ```
 These are the static position of the end of the bar that is not connected to the pivot.
 
-### Errors and Physical Considerations Omitted in the Baseline Study
+![Wrong Restoration Force](./Resources/wrong_restoration_force_1.jpeg "Wrong Restoration Force")
 
-#### Errors
-The reference study has some minor notation errors and calculation errors.
+The study uses additional methods such as limiting rotation only about z axis or vertical direction, 
+dividing bars into two groups and calculate the bending acceleeration per group instead of per bar.
+However, these additional methods are not handled in this project.
+
+### Errors and Physical Considerations Omitted in the Reference Study
+
+#### Errors in Notation
+The reference study has some minor notation errors and calculation errors. 
+A set of variables in the equation should be either all vectors or scalars, but the author made mistake of mixing both. 
+This error hides details of how to exactly. calculate some vectors or scalars.
+
+#### Error in the Torque Calculation
+
+##### Damping force calculation error
+
+Damping force is air friction force.
+Air friction force linearly grows with the velocity of the object moving in the air, not its angular velocity.
+
+The correct damping force is $-c (\overrightarrow{w} \times \overrightarrow{bar})$
+
+##### Restoration force direction error
+The author makes unconventional restoration force vector. $-k |\overrightarrow{\Delta\theta}|\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}$
+
+Generally you just write restoration torque equal to $-k \overrightarrow{\Delta\theta}$ and resotration torque are assumed to increase linearly with the angular displacement.
+
+Using $\frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}$ as a direction of the restoration force,
+does not make restoration torque grows linearly with the angular displacement.
+
+Because restoration torque should be $\overrightarrow{bar} \times R$,  
+the restoration torque will keep increassing as the angular displacment reaches some point within $[\pi/2, \pi)$ and then decrase to zero at $\pi$.
+
+![Why it is wrong](./Resources/wrong_restoration_force_2.jpeg "Why it is wrong")
+
+The author does not give any justification for this non-monotonic restoration torque. 
+There is no explanation such as if this is for reflecting some physical characterestics of grass. 
+
+My conclusion is that this is just a simple mistake made by authors 
+for attempting to make restoration torque derived from some force vector as wind torque and damping torques are derived from force vectors.
+
+The correct direction is same as the direction of "\overrightarrow{\Delta\theta} \times \overrightarrow{bar}", 
+but you don't even need to make this directional force vector.
+
+You can just set the restoration torque as $-k \overrightarrow{\Delta\theta}$ without involving any force.
+
+
+#### Corrected Torque Calculation
+```math
+\displaylines{
+    W = S \delta \overrightarrow{v} 
+    \\
+    D = -c (\overrightarrow{w} \times \overrightarrow{bar})
+    \\
+    \\
+    T = \overrightarrow{bar} \times (W + D) - k \overrightarrow{\Delta\theta}
+}
+```
+
+It was clear for me that the authors are not mathematically accurate.
+
+Even this corrected equation is ignoring an important physical consideration.
+
+
+#### Wind and Air are not Point Forces
+
+Wind does not push the bar at the end of the bar. 
+Wind is pushing the bar along its line segment. 
+This is same for the air friction.
+
+Above corrected equation is only for calculating the torque at the end point of the bar.

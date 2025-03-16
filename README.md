@@ -518,17 +518,55 @@ T1_i = \frac{\overrightarrow{bar2}}{2} \times -m_2(acc_{0fixed} \times \overrigh
 
 #### 3. Calculate acceleration on P1
 
-The acceleration $acc_{1}$ from net torque on P1.
+Calculate the acceleration $acc_{1}$ on P1 that is from the net torque on P1 so far.
 
 ```math
-T_{bar2} = T1_i +  \frac{|\overrightarrow{bar2}|}{2}(\overrightarrow{W} \times \overrightarrow{bar2}) - \frac{c|\overrightarrow{bar2}|}{3}(\overrightarrow{\omega}_{bar2} \times \overrightarrow{bar2} \times \overrightarrow{bar2}) - k_{p1} \overrightarrow{\Delta\theta}_{bar2} 
+\displaylines{
+    T_{bar2} = T1_i +  \frac{|\overrightarrow{bar2}|}{2}(\overrightarrow{W} \times \overrightarrow{bar2}) - \frac{c|\overrightarrow{bar2}|}{3}(\overrightarrow{\omega}_{bar2} \times \overrightarrow{bar2} \times \overrightarrow{bar2}) - k_{p1} \overrightarrow{\Delta\theta}_{bar2} 
 
-\\
-acc_{1} = \frac{T_{bar2}}{MI_{bar2}}
+    \\
+    acc_{1} = \frac{T_{bar2}}{MI_{bar2}}
 }
 ```
 
-This would be angualr acceleration of P1 that would occur if P1 becomes stationary. 
+However assigning this angular acceleration on P1 requires another payback. 
 
-However, P1 is not stationary. There would be another torque lending and payback.
+If bar2 was in the middle of space without any pivot, the force applying to bar2 would rotate the bar about its center of mass point.
+Making bar2 to rotate about P1 due to forces applied to bar2 is equivalent to lending force to P1, which is again equivalent to lending torque to P0.
+
+
+#### 4. Calculate P1 payback Torque on P0
+
+First calculate the force F that would give the torque equal to $T_{bar2}$ if it is applied at the opend end of bar2 with stationary pivot p1.
+
+```math
+F = T_{bar2} \times \frac{\overrightarrow{bar2}}{2|\overrightarrow{bar2}|}
+
+```
+
+F applied to P1 is an extra force lent to the system in order to make F to only make angular acceleration on P1. 
+
+![Payback example 04](./Resources/payback_example_04.jpeg "Payback example 04")
+
+
+The payback torque and angualr acceleration $acc0_{payback}$ on P0 is equal to 
+
+```math
+\displaylines{
+    T = -F \times \overrightarrow{bar1}
+    //
+    acc_{0payback} = T / MI
+}
+```
+
+
+#### 5. Update P0 Angular acceleration
+
+P0 angular acceleration $acc_{0}$ becomes 
+
+
+```math
+
+acc_{0} = acc_{0fixed} + acc_{0payback}
+```
 

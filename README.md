@@ -685,22 +685,124 @@ The two previous failures imply that Payback method is not an unbiased approxima
 
 Hence, it is only applied once for P0 and P1 in the implementation.
 
-### Angular Displacement Magnitude Limitation
+### Angular Displacement Magnitude Limitation on P0
 
 In the real world, a grass cannot rotate or twist infinitely. 
 A grass blade would have limitation, and it would be broken if it receives torque beyond its limitation.
 
 Hence, we set threshold to the magnitude of the angular displacement and make additional process of keeping the limit.
 
-In dynamics, angular displacement delta $\Delta\theta$ is calculated in each frame and updates the angualr displacement.
+In dynamics, angular displacement delta $\overrightarrow{\Delta\theta}$ is calculated in each frame and updates the angualr displacement.
 
 ```math
-d_{new} = d_{old} + \Delta\theta
+overrightarrow{d}_{new} = overrightarrow{d}_{old} + \overrightarrow{\Delta\theta}
 
 ```
-$\Delta\theta$ is scaled down if it can lead to threshold breach.
+$\overrightarrow{\Delta\theta}$ is scaled down if it can lead to threshold breach.
 
 It seems just calculating the length of $d_{old} + \Delta\theta$ is enough to check the threashold breach, but it is not.
 
 In some cases, the final updated angular displacement may not have the threshold breach, but it may have breached the threshold in the middle of the rotation.
 
+Given $\overrightarrow{\Delta\theta}$, its axis of rotation `a` is 
+
+```math
+\overrightarrow{a} = \overrightarrow{\Delta\theta} / |\overrightarrow{\Delta\theta}|
+```
+
+Changing the magnitude of $\overrightarrow{\Delta\theta}$ would result the new angualr displacement to become
+
+```math
+\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}
+```
+And the square of the magnitude is equal to 
+```math
+|\overrightarrow{d}_{new}|^2 = \overrightarrow{d}_{new} \cdot \overrightarrow{d}_{new}  = 
+|\overrightarrow{d}_{old}|^2 + t^2 + 2(a \cdot d_{old})
+```
+
+Let l be the threshold.
+
+
+#### Case $|\overrightarrow{d}_{old}| < l$
+
+We want to solve t that would make the magnitude equal to l.
+
+So solve t for, 
+
+```math
+\displaylines{
+    |\overrightarrow{d}_{new}|^2 - (l)^2 = 0 
+    \\
+    |\overrightarrow{d}_{old}|^2 + t^2 + 2t(a \cdot \overrightarrow{d}_{old}) - (l)^2 = 0
+}
+```
+This is a simple quadratic equation.
+
+Depending the value of t, different task is performed.
+
+1. No real number solution for t
+    - this case suggests the delta axis does not make the angular displacement to breach the threshold. No extra task is done.
+2. $|\overrightarrow{\Delta\theta}| <= t$
+    - the magnitude of delta is not enough to breach the threshold. No extra task is done.
+3. $|\overrightarrow{\Delta\theta}| > t$
+    - delta will make angular displacement to breach threshold in this case set the new angular displacement to
+        $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
+    - and set the angular velocity to zero because the bar has reached to its threshold and stopped.
+        $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
+
+
+#### Case $|\overrightarrow{d}_{old}| >= l$
+
+Let f be the function of the magnitude square of the new angular displacement with the delta magnitude t.
+
+```math
+f(t)  = |\overrightarrow{d}_{old}|^2 + t^2 + 2t(a \cdot d_{old})
+}
+```
+Then, 
+
+```math
+df/dt(t)  = 2t + 2(a \cdot d_{old})
+}
+```
+And we want to find value of twhere df/dt stops being positive ans is greater or equal to 0.
+
+If df/dt(0) < 0, then set t = 0; Other wise $t = -(a \cdot d_{old})$
+
+
+The angular displacement magnitude will be decreasing upto this t value. 
+The next task perfromed is also dependent to the value of t.
+
+
+1. t = 0
+    - cannot decrease the angular displacement magnitude with current delta axis.
+    - set angualr velocity to 0
+    - do not update angular displacement.
+2. $|\overrightarrow{\Delta\theta}| <= t$
+    - No extra task is done.
+3. $|\overrightarrow{\Delta\theta}| > t$
+    - change delta magnitude, $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
+    - set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
+
+
+### Angular Displacement Magnitude Limitation on non-ground Pivots
+
+The other pivots are only limited to make rotation about $\overrightarrow{E}_w$. 
+So the limitations can be handled more simply.
+
+Make minimum and maximum thersholds so that the bars do not touch each other.
+The threshold values are dependent to the static positions of the bars. 
+
+If the delta angle breaches the threshold, adjust the angle to keep threshold and set the angular velocity to zero.
+
+
+### Ground Collision
+
+Ground collision is approximated with the dot product between the direction vector of the bar connected to P0 and the ground normal vector.
+
+Given threshold value g > 0, ground normal n and let $\overrightarrow{d} = \overrightarrow{bar1}/|\overrightarrow{bar1}|$, 
+we want 
+```math
+\overrightarrow{n} \cdot \overrightarrow{d} > g
+```

@@ -27,8 +27,7 @@ In order to combine PCG with Niagara, I am using a beta status plugin made by Ep
 ### Niagara
 1. Spawn grass instances as data is received from Niagara Data Channel
 2. Calculate and update the motion of grass instances.
-3. Clean up a grass instance if it needs to be cleaned up.
-1. 
+3. Clean up a grass instance if it needs to be cleaned up. 
 
 ## Note on Unreal Engine HLSL left-hand rule!
 ![Left-hand rule rotation](./Resources/left_hand_rule_rotation.jpeg "Left-hand rule rotation")
@@ -48,7 +47,7 @@ This README file is also wrttien in assumption of the using left-hand rule.
 
 
 
-## Basics Physics of Rotational System
+## Basics Physics of Bars Rotational System
 
 The grass is modeled as a bezier curve controlled by bezier points. 
 
@@ -160,8 +159,21 @@ For example, if the object consists of the two line segment bars.
 ```
 
 
-## Rotational Dynamics on Bars-Linkage System Research
-Dynamics is used to numerically update the angular velocity and and angular displacement at each time interval between frames.
+## The Reference Study
+Because Sucker Punch Studio did not tell how they calculated the grass motion, I have searched if there is any work already done to make physics based grass motion.
+
+Then, I found this article: [A simulation on grass swaying with dynamic wind force](https://link.springer.com/article/10.1007/s00371-016-1263-7)
+
+The study of the article also used Bezier curve modelled grass, and the idea of using rotational physics sounded great, so I decided to make an UE5 implementation of the article. 
+At first, my intention was just make an UE5 implementation of the article, without really understanding the physcis theory the dynamics is based on. 
+
+I simply thought I would just copy and paste the equations written in the article.
+
+Note: The study uses the term "edge" to refer the bars in the bars-linkage rotational system, but in physics studies that involves a rotational system "bar" is a term more often used. 
+Hence, I am also going to use this term.
+
+### Use of Dynamics
+The reference study suggests to use dynamics that numerically updates the angular velocity and and angular displacement at each time interval.
 
 ```math
 \displaylines{
@@ -180,24 +192,12 @@ Dynamics is used to numerically update the angular velocity and and angular disp
 }
 ```
 
-So the problem is accurately calculating the acceleration from the wind force, air friction damping force and grass's restoration force.
+So the main problem is calculating plausible angular acceleration from the wind force, air friction damping force and grass's restoration force.
 
-### The Reference Study
-Because Sucker Punch Studio did not tell how they calculated the grass motion, I have searched if there is any work already done to make physics based grass motion.
 
-Then, I found this article: [A simulation on grass swaying with dynamic wind force](https://link.springer.com/article/10.1007/s00371-016-1263-7)
+### The Basic Equation of the Reference Study
 
-The study of the article also used Bezier curve modelled grass, and the idea of using rotational physics sounded great, so I decided to make an UE5 implementation of the article. 
-At first, my intention was just make an UE5 implementation of the article, without really understanding the physcis theory the dynamics is based on. 
-
-I simply thought I would just copy and paste the equations written in the article.
-
-Note: The study uses the term "edge" to refer the bars in the bars-linkage rotational system, but in physics studies that involves a rotational system "bar" is a term more often used. 
-Hence, I am also going to use this term.
-
-### Basic equation of the reference study
-
-In the reference study, The wind force, damping force, restoration force and the net torque T acting on a bar are calculated as bellow.
+In the reference study, The wind force, damping force, restoration force acting on a bar and the net torque T applied to the pivot are calculated as bellow.
 
 ```math
 \displaylines{
@@ -222,18 +222,47 @@ Where v is the velocity of the wind, S is the area of contact of wind, c and k a
 ```
 These are the static position of the end of the bar that is not connected to the pivot.
 
-![Wrong Restoration Force](./Resources/wrong_restoration_force_1.jpeg "Wrong Restoration Force")
+![Inconsistent Restoration Force](./Resources/inconsistent_restoration_force_1.jpeg "Inconsistent Restoration Force")
+
+### Other Methods in Reference Study.
+
+The reference study tells that applying above calculation to each individual bar and making full 3-dimensional rotation gives inconsistent motions between adjacent bars.
+So it uses additional methods.
+
+#### Limiting the Rotational Axis.
+![Grass Direction Vecotrs](./Resources/grass_direction_vectors.jpeg "Grass Direction Vecotrs")
+The pivot at ground can only roatate about the land normal and $E_w$ vector direction of the grass blase(shown in the above image).
+
+The rotation about land normal is referred as swinging and the rotation about $E_w$ is referred as bending.
+
+Other non-ground pivots that connect the bars are only limited to make bending.
 
 
-The reference study claims that applying above calculation to each individual bar gives inconsistent motions between adjacent bars.
-So it uses additional methods such as 
-- limiting the rotation of the pivot at the ground to only about z-axis(referred as swinging) and local y-axis to make vertical rotation(referred as bending).
-- calculate swinging only from the force at the tip end of the grass
-- instead of calculating vertical bending for each bar, divide the bars into two groups and calculate one bending for each group and apply the bending with some ratios to each bars in each group.
-- limiting the rotation of the all other non-ground pivots to vertical bending.
+#### Grouped Bending and Swinging
 
-This project only uses the last method(limiting non-ground pivot rotation to local y-axis), and does not use other additional methods used in the reference study.
-You may read the original paper if you want to know more details of these additional methods.
+Once the swinging angular displacement of a grass instance is calculated, all pivot points are swinged with certain ratio of the calculated angular displacement. 
+The ratio depends on the stiffness of each bars of the grass with the bar connected to the grounds have the strongest stiffness and the stiffness decreases as the bars are near to the tip of the grass.
+Force acting on the tip of the grass is used for swinging torque calculation.
+
+Bending also uses the same method, but unlike swing where there is only a single angualr displacement shared by pivots, 
+bending divides pivots into at most two groups and calculates the bending angular displacement for each group.
+The force at the furthest tip of each group is used for torque calculation of each group.
+
+This method is not used in this study, so I omit detailed explanation.
+Read the original paper for the further details. 
+
+
+#### Samping The wind force only once for each grass
+
+Wind force is sampled once for each grass instance. So the bars of one grass instance receives uniform wind force.
+
+
+#### Methods adopted in this study.
+
+Limiting non-ground pivot's rotational axis $E_w$ vector, and samping wind force once for each grass instance is used in this study.
+The wind is sampled once for each grass for faster calculation.
+The ground pivot is rendered as a full 3 dimensional pivot. 
+
 
 ### Errors and Physical Considerations Omitted in the Reference Study
 
@@ -242,44 +271,47 @@ The reference study has some minor notation errors and calculation errors.
 A set of variables in the equation should be either all vectors or scalars, but the author made mistake of mixing both. 
 This error hides details of how to exactly. calculate some vectors or scalars.
 
+The equation shown in `Basic Equation of the Reference Study` section is a notation corrected version.
+
 #### Error in the Torque Calculation
 
 ##### Damping force calculation error
 
 Damping force is air friction force.
-Air friction force linearly grows with the velocity of the object moving in the air, not its angular velocity.
+Air friction force linearly grows with the actual velocity of the object moving in the air, not its angular velocity.
 
-The correct damping force is $-c (\overrightarrow{\omega} \times \overrightarrow{bar})$
+The correct damping force vector is $-c (\overrightarrow{\omega} \times \overrightarrow{bar})$
 
-##### Restoration force direction error
-The author makes unconventional restoration force vector. 
+##### Inconsistent Restoration force direction
+The authors make unconventional restoration force vector. 
 ```math
 -k |\overrightarrow{\Delta\theta}| \frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}
 ```
-Generally you just write restoration torque equal to $-k \overrightarrow{\Delta\theta}$ and resotration torque are assumed to increase linearly with the angular displacement.
+Generally restoration torque is considered to be $-k \overrightarrow{\Delta\theta}$
+
+Resotration torque is assumed to increase linearly with the angular displacement.
 
 Using 
 ```math
 \frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}
 ```
-as a direction of the restoration force,
-does not make restoration torque grows linearly with the angular displacement.
+as a direction of the restoration force, does not make restoration torque grows linearly with the angular displacement.
 
-Because restoration torque should be $\overrightarrow{bar} \times R$,  
-the restoration torque will keep increassing as the angular displacment reaches some point within $[\pi/2, \pi)$ and then decrase to zero at $\pi$.
+With the restoration force in the reference study, the restoration torque becomes $\overrightarrow{bar} \times R$.
 
-![Why it is wrong](./Resources/wrong_restoration_force_2.jpeg "Why it is wrong")
+It becomes non-monotonic with the angular displacement. 
 
-The author does not give any justification for this non-monotonic restoration torque. 
-There is no explanation such as if this is for reflecting some physical characterestics of grass. 
+The restoration torque will keep increassing as the angular displacment reaches to some angle within $[\pi/2, \pi)$ and then decrase to zero at $\pi$.
 
-My conclusion is that this is just a simple mistake made by authors 
-for attempting to make restoration torque derived from some force vector as wind torque and damping torques are derived from force vectors.
+![Why it is inconsistent](./Resources/inconsistent_restoration_force_2.jpeg "Why it is inconsistent")
 
-The correct direction is same as the direction of $\overrightarrow{\Delta\theta} \times \overrightarrow{bar}$, 
-but you don't even need to calculate the restoration force vector.
+The author does not give any justification for this unconventional non-monotonic behavior restoration torque. 
+The authors does not explain if this is for reflecting some physical characterestics of grass. 
 
-You can just set the restoration torque as $-k \overrightarrow{\Delta\theta}$ and skip the force caculation.
+It seems the authors simply made mistake for attempting to make restoration torque derived from some force vector as wind torque and damping torques are derived from force vectors.
+
+The correct direction of the restoration force should be same as the direction of $\overrightarrow{\Delta\theta} \times \overrightarrow{bar}$, 
+but this force calculation is unncessary as the restoration torque can be simply calculated as $-k \overrightarrow{\Delta\theta}$.
 
 
 #### Corrected Torque Calculation
@@ -314,14 +346,32 @@ If there is a straight bar, and the wind is uniform along the bar's line segment
     \overrightarrow{W} = S \delta \overrightarrow{v} 
     \\
     \begin{align}
-        T & =\int_{0}^{|\overrightarrow{bar}|} (\overrightarrow{W} + -c (\overrightarrow{\omega} \times t\overrightarrow{u}_{bar})) \times tu_{bar}dt - k \overrightarrow{\Delta\theta}
+        T & =\int_{0}^{|\overrightarrow{bar}|} (\overrightarrow{W} - c (\overrightarrow{\omega} \times t\overrightarrow{u}_{bar})) \times tu_{bar}dt - k \overrightarrow{\Delta\theta}
         \\
         & = \frac{|\overrightarrow{bar}|}{2}(\overrightarrow{W} \times \overrightarrow{bar}) - \frac{c|\overrightarrow{bar}|}{3}(\overrightarrow{\omega} \times \overrightarrow{bar} \times \overrightarrow{bar}) - k \overrightarrow{\Delta\theta}
     \end{align} 
 }
 ```
 
-There are quadratic increase of the wind torque and cubic increase of the damping torque with the increase of the bar length. 
+There are quadratic increase of the wind torque and cubic increase of the damping torque with the increase of the bar length.
+
+This difference in the degree of the bar length in the torque equation could be considered as a type of approximation.
+
+However, treating wind and air friction as point forces gives more distortion when it is combined with the grouped torque calculation method in the reference study.
+
+![Distorted Swing](./Resources/distorted_swing.jpeg "Distorted Swing")
+
+The reference study calculates swing torque with the force applied at the tip of the grass. 
+
+In a case like above image, the torque will be the force at the tip and the red arrow, 
+which is the vector from the ground pivot to the point where the swinging force is applied.
+
+The force applied at the middle pivot point(pointed by the blue arrow) is ignored in swinging torque calculation 
+even though it is more distant from the ground pivot than the tip.
+
+Same problem also applies to the bendings.
+
+##### Torque calculation with Two line segments
 
 ![Non Linkage System](./Resources/non_linkage_system.jpeg "Non Linkage System")
 
@@ -343,7 +393,7 @@ If the rotating object is consists of two line segments(noted as bar1 and bar2),
 Above torque calculation is not for two-bars linkage system where two bars are connected by a rotational pivot. 
 It is only for a system without a linkage but jst an object with the form of two line segments with fixed connection between those.
 
-With the linkage system things become more complex.
+With the linkage system torque caculation becomes more complex.
 
 #### Torque from Force on Bars-Linkage System.
 
@@ -360,7 +410,9 @@ A force acting on a bar is not guranteed to make a torque on a single pivot.
 The reference study omits this physical consideration and calculate each pivot torque independently with each bar. 
 
 
+## Methods Used in This Study.
+
+
 ### Payback Method
 
-I wanted to create an agular acceleration calculation method that allows forces on one bar to influence possibly all pivots of the system.
 

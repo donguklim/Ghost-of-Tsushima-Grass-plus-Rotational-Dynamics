@@ -575,7 +575,9 @@ acc_{0} = acc_{0fixed} + acc_{0payback}
 
 Adding $acc_{0payback}$ again is equivalent to lending extra torque on P1 to cancel the inertia torque caused by the newly added acceleration on P0.
 
-Step 2 to 5 can be repeated several times with only the newly added acceleration on P0, but repeating the payback process is not a convergence guranteed procedure.
+Step 2 to 5 can be repeated several times with only the newly added acceleration on P0; 
+However, repeating the payback process is not a convergence guranteed procedure.
+
 Hence, current implementation of the study stops at step 5 and does not repeat the payback on p0 and p2.
 
 
@@ -626,6 +628,7 @@ Hence infinitely applying payback would result
     \sum_{i=1}^{\infty}T1_{i + 1} = T1_1/(1 - \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2})
 }
 ```
+if the multiplier is less than 1.
 
 However, the multipler $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$ 
 is not guranteed to be less than 1 for every grass instance.
@@ -635,4 +638,49 @@ some grass instances show plausible motions, but some instances shows unnatural 
 
 ### Solving Payback method as Linear Algebra
 
+Attempt to solve the payback method as linear algebra is made and failed.
 
+Let T0 be the torque applied to P0 due to wind force, air friction force and restoration force.
+Let T1 be the torque applied to P1 in the same manner.
+
+Let K0, K1 be the actual kinetic torque applied to generate the acceleration on P0 and P1 respectively.
+
+Then, the variables form a linear algebra.
+
+```math
+\displaylines{
+    T0 - K0 + \frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})}{|\overrightarrow{bar2}|^2}K1 = 0
+    \\
+
+    T1 - K1 - \frac{m_2}{2}([\overrightarrow{bar2} \times ((\omega \times(\omega \times (\overrightarrow{bar1})) + \frac{(K0 \times \overrightarrow{bar1})}{MI})] \cdot \overrightarrow{E}_w )\overrightarrow{E}_w = 0
+}
+```
+
+It seems the payback method can be solved as a linear algebra problem, but above equation does not gurantee existence of the solution either.
+
+Above linear algebra leads to the solution 
+
+```math
+\displaylines{
+    K1 = T1 + \frac{m_2}{2}|\omega^2|((\overrightarrow{bar2} \times \overrightarrow{bar1}) \cdot \overrightarrow{E}_w)\overrightarrow{E}_w - \frac{m_2}{2MI}(\overrightarrow{bar1} \cdot \overrightarrow{bar2})(K0 \cdot \overrightarrow{E}_w)\overrightarrow{E}_w
+    \\
+
+    K0 \cdot \overrightarrow{E}_w = \frac{
+        [T0 \cdot \overrightarrow{E}_w -\frac{\overrightarrow{bar1} \cdot \overrightarrow{bar2}}{|\overrightarrow{bar2}|^2}(T1 + \frac{m_2}{2}|\omega|^2(\overrightarrow{bar2} \times \overrightarrow{bar1}))\cdot \overrightarrow{E}_w]
+    }{
+        (1 - \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2})
+    }
+}
+
+```
+
+And this solution faces the same problem and the infinite series solution.
+
+It is only solvable when $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$ is less than 1.
+
+
+### Implications of the Failures of convergence of Payback Method
+
+The two previous failures imply that Payback method is not an unbiased approximation method that can lead to accurate result as the repeatance of the payback procedure increases.
+
+Hence, it is only applied once for P0 and P1 in the implementation.

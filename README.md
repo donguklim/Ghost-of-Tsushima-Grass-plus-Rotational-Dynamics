@@ -940,7 +940,7 @@ The next task done with the value of t is,
 
 Without these two methods, the motion becomes unnatural with strong wind force.
 
-Moreover, it also gives plausible result with point force torque motion used in the reference study.
+Surprisingly, applying the two methods also gives plausible result with point force torque motion used in the reference study.
 
 
 

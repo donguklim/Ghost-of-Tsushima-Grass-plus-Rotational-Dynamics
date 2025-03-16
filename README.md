@@ -169,7 +169,7 @@ At first, my intention was just make an UE5 implementation of the article, witho
 
 I simply thought I would just copy and paste the equations written in the article.
 
-Note: The study uses the term "edge" to refer the bars in the bars-linkage rotational system, but in physics studies that involves a rotational system "bar" is a term more often used. 
+Note: The study uses the term "edge" to refer the bars in the bar-linkage rotational system, but in physics studies that involves a rotational system "bar" is a term more often used. 
 Hence, I am also going to use this term.
 
 ### Use of Dynamics
@@ -230,7 +230,9 @@ The reference study tells that applying above calculation to each individual bar
 So it uses additional methods.
 
 #### Limiting the Rotational Axis.
+
 ![Grass Direction Vecotrs](./Resources/grass_direction_vectors.jpeg "Grass Direction Vecotrs")
+
 The pivot at ground can only roatate about the land normal and $E_w$ vector direction of the grass blase(shown in the above image).
 
 The rotation about land normal is referred as swinging and the rotation about $E_w$ is referred as bending.
@@ -395,7 +397,7 @@ It is only for a system without a linkage but jst an object with the form of two
 
 With the linkage system torque caculation becomes more complex.
 
-#### Torque from Force on Bars-Linkage System.
+#### Torque from Force on Bar-Linkage System.
 
 If there are multiple bars connected with rotational pivots, a force acting on a bar may not just influence torque on the base of the bar. 
 Bellow image shows two example with two-bar linkage system.
@@ -411,6 +413,21 @@ The reference study omits this physical consideration and calculate each pivot t
 
 
 ## Methods Used in This Study.
+
+The baisc idea of using rotational system dynamics is same as the reference study.
+
+Limitation of the rotation to bending on non-ground pivots and sampling single wind force samping per grass instance from the reference study are also used.
+
+Limitation of rotation to bending is used for more plausible motion. 
+Single wind sampling per grass instance is used for faster computation.
+
+
+However, the torque calculation is differs from the refernce study as wind and air friction forces are applied at line segments 
+and an approximation method is used for reflecting physical characteristics of the bar-linkage systems.
+
+Also, there are additional methods for preventing distorted motionss.
+
+The methods in this study is implemented with two-bars linkage system. Quadratic Bezier curve is used to render the grasses in the implementation.
 
 
 ### Payback Method

@@ -764,7 +764,8 @@ Depending the value of t, different task is performed.
 ```math
 \frac{df}{dt}(t)  = 2t + 2(a \cdot d_{old})
 ```
-And we want to increase t from 0 to the point where $\frac{df}{dt}$ becomes positive.
+
+We want to increase t from 0 to the point where $\frac{df}{dt}$ begins to stop being negative.
 
 If df/dt(0) > 0, then set t = 0; Other wise $t = -(a \cdot d_{old})$
 
@@ -774,7 +775,7 @@ The next task perfromed is also dependent to the value of t.
 
 
 1. t = 0
-    - cannot decrease the angular displacement magnitude with current delta axis.
+    - cannot decrease the angular displacement magnitude with the current delta axis.
     - set angualr velocity to 0
     - do not update angular displacement.
 2. $|\overrightarrow{\Delta\theta}| <= t$
@@ -892,7 +893,7 @@ The next task performed is similar to angular displacement magnitude limitation.
 
 #### Case $\overrightarrow{n} \cdot \overrightarrow{d} <= g$
 
-Similar to the angular displacement magnitude limitation, we are interested in $\frac{df}{dt}(t) $
+Similar to the angular displacement magnitude limitation, we are interested in $\frac{df}{dt}(t)$
 
 ```math
 \displaylines{
@@ -902,5 +903,53 @@ Similar to the angular displacement magnitude limitation, we are interested in $
     \\
     \frac{df}{dt}(t) = a \cos(t) + b \sin(t)
 }
-
 ```
+
+we want to increase t from 0 to the point where $\frac{df}{dt}$ stops being positive.
+
+If df/dt(0) < 0, then set t = 0; Other wise solve $\frac{df}{dt}(t) = 0$
+
+For $|a|$ or $|b|# near to zero, inverse trigonometric functions can be used to solve the problem.
+
+Otherwise,
+
+```math
+\displaylines{
+    \frac{df}{dt}(t) = 0
+    \\
+    a \cos(t) + b \sin(t) = 0
+
+    t = \arctan(-a/b)
+}
+```
+
+The next task done with the value of t is, 
+
+1. t = 0
+    - cannot increase the dot valuee with the current delta axis.
+    - set angualr velocity to 0
+    - do not update angular displacement.
+2. $|\overrightarrow{\Delta\theta}| <= t$
+    - No extra task is done.
+3. $|\overrightarrow{\Delta\theta}| > t$
+    - change delta magnitude, $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
+    - set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
+
+
+### The result of applying Ground Collision and Angular Displacement Magnitude Limitation
+
+Without these two methods, the motion becomes unnatural with strong wind force.
+
+Moreover, it also gives plausible result with point force torque motion used in the reference study.
+
+
+
+In above video, 
+- torque is calculated with the assumption that the wind and air friction form a point force, but corrected version is used.
+- same as the reference study, the feedbacks between bars in bar-linkage system is ignored 
+- Following two methods used in the reference study to decrease inconsistent motion are not used.
+  - Limiting the rotation of the ground pivot 
+  - calculating angular displacement for each group of bars instead of each bars
+- Angular displacement is calculated for each bar in two-bar linkage system. 
+- The ground pivot is rendered as a full 3 dimensional pivot. 
+

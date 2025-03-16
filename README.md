@@ -758,13 +758,11 @@ Let f be the function of the magnitude square of the new angular displacement wi
 
 ```math
 f(t)  = |\overrightarrow{d}_{old}|^2 + t^2 + 2t(a \cdot d_{old})
-}
 ```
 Then, 
 
 ```math
 df/dt(t)  = 2t + 2(a \cdot d_{old})
-}
 ```
 And we want to find value of twhere df/dt stops being positive ans is greater or equal to 0.
 

@@ -695,7 +695,7 @@ Hence, we set threshold to the magnitude of the angular displacement and make ad
 In dynamics, angular displacement delta $\overrightarrow{\Delta\theta}$ is calculated in each frame and updates the angualr displacement.
 
 ```math
-overrightarrow{d}_{new} = overrightarrow{d}_{old} + \overrightarrow{\Delta\theta}
+\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + \overrightarrow{\Delta\theta}
 
 ```
 $\overrightarrow{\Delta\theta}$ is scaled down if it can lead to threshold breach.
@@ -747,9 +747,7 @@ Depending the value of t, different task is performed.
     - the magnitude of delta is not enough to breach the threshold. No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
     - delta will make angular displacement to breach threshold in this case set the new angular displacement to
-        ```math
-            \overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}
-        ```
+        $$ \overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a} $$
     - and set the angular velocity to zero because the bar has reached to its threshold and stopped.
         $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
 

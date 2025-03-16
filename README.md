@@ -810,10 +810,10 @@ This would not accurately render the ground collision on steep landscapes.
 
 ![Inaccurate ground collision](./Resources/inaccurate_ground_collision.jpeg "Inaccurate ground collision")
 
-And the collision is only applied to the bar connected to the P0 pivot.
+And the collision is only applied to the bar connected to the P0 pivot, so collisions of other bars to the ground are ignored.
 
 
-The solutions for these problems are not handled in this implementation, but these problems are noticable only when the clump of grasses have few blades of grasses.
+The solutions for these problems are not handled in this study, but these problems are noticable only when the clump of grasses have few blades of grasses.
 
 
 #### Case $\overrightarrow{n} \cdot \overrightarrow{d} > g$

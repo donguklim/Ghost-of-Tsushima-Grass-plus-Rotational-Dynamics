@@ -674,7 +674,7 @@ Above linear algebra leads to the solution
 
 ```
 
-And this solution faces the same problem and the infinite series solution.
+And this solution faces the same problem as the infinite series solution, which seems to be natural.
 
 It is only solvable when $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$ is less than 1.
 
@@ -684,3 +684,23 @@ It is only solvable when $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \ove
 The two previous failures imply that Payback method is not an unbiased approximation method that can lead to accurate result as the repeatance of the payback procedure increases.
 
 Hence, it is only applied once for P0 and P1 in the implementation.
+
+### Angular Displacement Magnitude Limitation
+
+In the real world, a grass cannot rotate or twist infinitely. 
+A grass blade would have limitation, and it would be broken if it receives torque beyond its limitation.
+
+Hence, we set threshold to the magnitude of the angular displacement and make additional process of keeping the limit.
+
+In dynamics, angular displacement delta $\Delta\theta$ is calculated in each frame and updates the angualr displacement.
+
+```math
+d_{new} = d_{old} + \Delta\theta
+
+```
+$\Delta\theta$ is scaled down if it can lead to threshold breach.
+
+It seems just calculating the length of $d_{old} + \Delta\theta$ is enough to check the threashold breach, but it is not.
+
+In some cases, the final updated angular displacement may not have the threshold breach, but it may have breached the threshold in the middle of the rotation.
+

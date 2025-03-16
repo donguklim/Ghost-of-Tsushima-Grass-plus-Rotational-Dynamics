@@ -397,17 +397,19 @@ It is only for a system without a linkage but jst an object with the form of two
 
 With the linkage system torque caculation becomes more complex.
 
-#### Torque from Force on Bar-Linkage System.
+#### Feedbacks between bars in Bar-Linkage System
 
-If there are multiple bars connected with rotational pivots, a force acting on a bar may not just influence torque on the base of the bar. 
+If there are multiple bars connected with rotational pivots, a force acting on a bar may not just influence torque on the base pivot of the bar. 
 Bellow image shows two example with two-bar linkage system.
 
 ![Linkage System Force Examples](./Resources/linkage_system_force_examples.jpeg "Linkage System Force Examples")
 
-As shown in above image if a force actiong on a point of a bar, 
-it may create torque with opposite or the same orientation at the other bar depending on the angle between the bars and the force direction.
+As shown in above image,  a force actiong on a point of a bar may create torque with opposite or the same orientation to another bar 
+depending on the angle between the bars and the force direction.
 
-A force acting on a bar is not guranteed to make a torque on a single pivot.
+A force acting on a bar is not guranteed to make a torque on the single pivot at the base of the bar. 
+
+There are feedbacks between bars.
 
 The reference study omits this physical consideration and calculate each pivot torque independently with each bar. 
 
@@ -430,6 +432,103 @@ Also, there are additional methods for preventing distorted motionss.
 The methods in this study is implemented with two-bars linkage system. Quadratic Bezier curve is used to render the grasses in the implementation.
 
 
-### Payback Method
+### Payback Torque Calculation Method
 
+A calculation method which would be referred as 'payback method' is devised in this study to account the feedbacks between bars.
+
+The method will be explaned with two-bar linkage system example.
+
+A two-bar linkage system with bar1, bar2, stationary pivot P0 and another pivot p1 that connects the bars are given.
+
+
+![Payback example 01](./Resources/payback_example_01.jpeg "Payback example 01")
+
+#### 1. Calculate P1 seized P0 Angular Acceleration
+
+Calculate the angular acceleration $acc_{0fixed}$ that would occur at P0 if P1 did not exist and bar1 and bar2 have fixed connection.
+
+![Payback example 02](./Resources/payback_example_02.jpeg "Payback example 02")
+
+```math
+\displaylines{
+\overrightarrow{u}_{bar2} = \overrightarrow{bar2}/|\overrightarrow{bar2}|
+\\
+ m_1 = \text{bar1 mass}
+ \\
+ m_2 = \text{bar2 mass}
+ \\
+ \\
+ MI = MI_{bar1} + MI_{bar2} = \frac{m_1|\overrightarrow{bar1}|^{2}}{3} + m2(\frac{|\overrightarrow{bar2}|^{2}}{12} + |\overrightarrow{bar1} + \frac{1}{2}\overrightarrow{bar2}|^{2})
+\\
+\\
+\begin{align}
+    T & = \frac{|\overrightarrow{bar1}|}{2}(\overrightarrow{W} \times \overrightarrow{bar1}) - \frac{c|\overrightarrow{bar1}|}{3}(\overrightarrow{\omega}_{bar1} \times \overrightarrow{bar1} \times \overrightarrow{bar1}) - k_{p0} \overrightarrow{\Delta\theta}_{bar1} 
+    \\
+    & + \int_{0}^{|\overrightarrow{bar2}|}[(\overrightarrow{W} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) - c (\overrightarrow{\omega_{bar1}} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2}) - c(\overrightarrow{\omega}_{bar2} \times  tu_{bar2})\times  tu_{bar2}]dt
+\end{align} 
+
+\\
+\\
+acc_{0fixed} = \frac{T}{MI}
+}
+```
+
+$acc_{0fixed}$ is the angular acceleration that would occur on P0, if the net torque of P1 is zero.
+
+Hence, making angular acceleration equal to $acc_{0fixed}$ on P0 and make P1 seized is equivalent to lending extra torque that would cancel out the net torque on P1.
+
+Next two steps are P1 paying back the extra torque it has burrowed. 
+
+
+#### 2. Calculate intertia torque force on P1.
+
+From step1, bar 1 is assumed to make an angular acceleration, and bar1 has its own angular velocity. 
+
+The angular acceleration and angular velocity make kinetic force on P1, which results an intertia force torque on P1.
+
+The angular acceleration on P0, makes plain acceleration on P1 equal to
+
+```math
+acc_{0fixed} \times \overrightarrow{bar1}
+
+```
+
+The angualr velocity of P1 refered as $\omega$, gives centripetal acceleration on P1 equal to 
+
+```math
+\omega \times (\omega \times \overrightarrow{bar1})
+
+```
+
+![Payback example 03](./Resources/payback_example_03.jpeg "Payback example 03")
+
+
+At P2's point of view, bar2 is having acceleration at its center of mass point(this is approximated to the middle point in this implementation) with acceleration equal to
+```math
+-(acc_{0fixed} \times \overrightarrow{bar1} + \omega \times (\omega \times \overrightarrow{bar1}))
+
+```
+
+Force is equal to mass times acceleration, so the inertia torque on P1, $T1_i$ is equal to 
+
+```math
+T1_i = \frac{\overrightarrow{bar2}}{2} \times -m_2(acc_{0fixed} \times \overrightarrow{bar1} + \omega \times (\omega \times \overrightarrow{bar1}))
+
+```
+
+#### 3. Calculate acceleration on P1
+
+The acceleration $acc_{1}$ from net torque on P1.
+
+```math
+T_{bar2} = T1_i +  \frac{|\overrightarrow{bar2}|}{2}(\overrightarrow{W} \times \overrightarrow{bar2}) - \frac{c|\overrightarrow{bar2}|}{3}(\overrightarrow{\omega}_{bar2} \times \overrightarrow{bar2} \times \overrightarrow{bar2}) - k_{p1} \overrightarrow{\Delta\theta}_{bar2} 
+
+\\
+acc_{1} = \frac{T_{bar2}}{MI_{bar2}}
+}
+```
+
+This would be angualr acceleration of P1 that would occur if P1 becomes stationary. 
+
+However, P1 is not stationary. There would be another torque lending and payback.
 

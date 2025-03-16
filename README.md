@@ -796,11 +796,24 @@ If the delta angle breaches the threshold, adjust the angle to keep threshold an
 
 
 ### Ground Collision
-
+Grass should not rotate bellow the ground.
 Ground collision is approximated with the dot product between the direction vector of the bar connected to P0 and the ground normal vector.
 
 Given threshold value g > 0, ground normal n and let $\overrightarrow{d} = \overrightarrow{bar1}/|\overrightarrow{bar1}|$, 
+
 we want 
 ```math
 \overrightarrow{n} \cdot \overrightarrow{d} > g
 ```
+
+This would not accurately render the ground collision on steep landscapes. 
+
+![Inaccurate ground collision](./Resources/inaccurate_ground_collision.jpeg "Inaccurate ground collision")
+
+And the collision is only applied to the bar connected to the P0 pivot.
+
+
+The solutions for these problems are not handled in this implementation, but these problems are noticable only when the clump of grasses have few blades of grasses.
+
+
+#### Case $\overrightarrow{n} \cdot \overrightarrow{d} > g$

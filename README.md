@@ -945,8 +945,8 @@ Surprisingly, applying the two methods also gives plausible result with point fo
 
 
 In above video, 
-- torque is calculated with the assumption that the wind and air friction form a point force, but corrected version is used.
-- same as the reference study, the feedbacks between bars in bar-linkage system is ignored 
+- Torque is calculated with the assumption that the wind and air friction form a point force, but corrected version of damping and restoration torque calculation is used.
+- Same as the reference study, the feedbacks between bars in bar-linkage system is ignored 
 - Following two methods used in the reference study to decrease inconsistent motion are not used.
   - Limiting the rotation of the ground pivot 
   - calculating angular displacement for each group of bars instead of each bars

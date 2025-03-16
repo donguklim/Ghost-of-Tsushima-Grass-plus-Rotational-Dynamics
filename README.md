@@ -704,16 +704,16 @@ It seems just calculating the length of $d_{old} + \Delta\theta$ is enough to ch
 
 In some cases, the final updated angular displacement may not have the threshold breach, but it may have breached the threshold in the middle of the rotation.
 
-Given $\overrightarrow{\Delta\theta}$, its axis of rotation `a` is 
+Given $\overrightarrow{\Delta\theta}$, its axis of rotation $\overrightarrow{r}$ is 
 
 ```math
-\overrightarrow{a} = \overrightarrow{\Delta\theta} / |\overrightarrow{\Delta\theta}|
+\overrightarrow{r} = \overrightarrow{\Delta\theta} / |\overrightarrow{\Delta\theta}|
 ```
 
-Changing the magnitude of $\overrightarrow{\Delta\theta}$ would result the new angualr displacement to become
+Changing the magnitude of $\overrightarrow{\Delta\theta}$ to `t` would result the new angualr displacement to become
 
 ```math
-\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}
+\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{r}
 ```
 And the square of the magnitude is equal to 
 ```math
@@ -726,22 +726,30 @@ Let l be the threshold.
 
 #### Case $|\overrightarrow{d}_{old}| < l$
 
-We want to solve t that would make the magnitude equal to l.
+Let 
+```math
+    f(t) = |\overrightarrow{d}_{new}|^2 - (l)^2
+}
+```
 
-So solve t for, 
+$f(0) > 0$. We want to increase t from 0 to the point where $f(t)$ is no longer positive and becomes zero.
+
+Hence solve for 
 
 ```math
 \displaylines{
-    |\overrightarrow{d}_{new}|^2 - (l)^2 = 0 
-    \\
-    |\overrightarrow{d}_{old}|^2 + t^2 + 2t(a \cdot \overrightarrow{d}_{old}) - (l)^2 = 0
+   \begin{align}
+        0 & = f(t) 
+        \\
+        0 & = |\overrightarrow{d}_{old}|^2 + t^2 + 2t(a \cdot \overrightarrow{d}_{old}) - (l)^2 &
+    \end{align}
 }
 ```
 This is a simple quadratic equation.
 
 Depending the value of t, different task is performed.
 
-1. No real number solution for t
+1. Only negative real number solutions, or no real number solution for t
     - this case suggests the delta axis does not make the angular displacement to breach the threshold. No extra task is done.
 2. $|\overrightarrow{\Delta\theta}| <= t$
     - the magnitude of delta is not enough to breach the threshold. No extra task is done.
@@ -754,19 +762,12 @@ Depending the value of t, different task is performed.
 
 #### Case $|\overrightarrow{d}_{old}| >= l$
 
-Let f be the function of the magnitude square of the new angular displacement with the delta magnitude t.
-
 ```math
-f(t)  = |\overrightarrow{d}_{old}|^2 + t^2 + 2t(a \cdot d_{old})
+\frac{df}{dt}(t)  = 2t + 2(a \cdot d_{old})
 ```
-Then, 
+And we want to increase t from 0 to the point where $\frac{df}{dt}$ becomes positive.
 
-```math
-df/dt(t)  = 2t + 2(a \cdot d_{old})
-```
-And we want to find value of twhere df/dt stops being positive ans is greater or equal to 0.
-
-If df/dt(0) < 0, then set t = 0; Other wise $t = -(a \cdot d_{old})$
+If df/dt(0) > 0, then set t = 0; Other wise $t = -(a \cdot d_{old})$
 
 
 The angular displacement magnitude will be decreasing upto this t value. 
@@ -815,5 +816,34 @@ And the collision is only applied to the bar connected to the P0 pivot, so colli
 
 The solutions for these problems are not handled in this study, but these problems are noticable only when the clump of grasses have few blades of grasses.
 
+Let $\overrightarrow{r} = \overrightarrow{\Delta\theta} / |\overrightarrow{\Delta\theta}|$, then adding $t\overrightarrow{r}$ to the angular displacement 
+yields a new bar direction
+
+```math
+\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + sin(t)(r \times d) + (1 - cos(t))(r \times (r \times d))
+```
+
 
 #### Case $\overrightarrow{n} \cdot \overrightarrow{d} > g$
+
+Let
+ ``` math
+ \displaylines{
+     a = (r \times d) \cdot \overrightarrow{n}
+    \\
+    b = -(r \times (r \times d)) \cdot \overrightarrow{n}
+    \\
+    c = \overrightarrow{n} \cdot \overrightarrow{d}_{old} - b - g
+    \\
+    f(t) = \overrightarrow{n} \cdot\overrightarrow{d}_{new} - g
+}
+ ```
+
+
+Then,
+```math
+f(t) = a \sin(t) + b \cos(t) + c
+```
+
+We want to increase t from 0 to the point where $f(t)$ is not positive anymore.
+

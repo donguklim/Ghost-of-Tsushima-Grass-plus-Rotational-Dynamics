@@ -233,9 +233,9 @@ So it uses additional methods.
 
 ![Grass Direction Vecotrs](./Resources/grass_direction_vectors.jpeg "Grass Direction Vecotrs")
 
-The pivot at ground can only roatate about the land normal and $E_w$ vector direction of the grass blase(shown in the above image).
+The pivot at ground can only roatate about the land normal and $\overrightarrow{E}_w$ vector direction of the grass blase(shown in the above image).
 
-The rotation about land normal is referred as swinging and the rotation about $E_w$ is referred as bending.
+The rotation about land normal is referred as swinging and the rotation about $\overrightarrow{E}_w$ is referred as bending.
 
 Other non-ground pivots that connect the bars are only limited to make bending.
 
@@ -519,11 +519,14 @@ T1_i = \frac{\overrightarrow{bar2}}{2} \times -m_2(acc_{0fixed} \times \overrigh
 #### 3. Calculate acceleration on P1
 
 Calculate the acceleration $acc_{1}$ on P1 that is from the net torque on P1 so far.
+Calculate the net torque on P1 so far.
+You need to project the torque from the raw forces to the rotational axis, because P1's rotation is only limited to the rotational axis $E_w$
 
 ```math
 \displaylines{
-    T_{bar2} = T1_i +  \frac{|\overrightarrow{bar2}|}{2}(\overrightarrow{W} \times \overrightarrow{bar2}) - \frac{c|\overrightarrow{bar2}|}{3}(\overrightarrow{\omega}_{bar2} \times \overrightarrow{bar2} \times \overrightarrow{bar2}) - k_{p1} \overrightarrow{\Delta\theta}_{bar2} 
-
+    RawT_{bar2} = T1_i +  \frac{|\overrightarrow{bar2}|}{2}(\overrightarrow{W} \times \overrightarrow{bar2}) - \frac{c|\overrightarrow{bar2}|}{3}(\overrightarrow{\omega}_{bar2} \times \overrightarrow{bar2} \times \overrightarrow{bar2}) - k_{p1} \overrightarrow{\Delta\theta}_{bar2}
+    \\
+    T_{bar2} = (RawT_{bar2} \bullet \overrightarrow{E}_w) \overrightarrow{E}_w 
     \\
     acc_{1} = \frac{T_{bar2}}{MI_{bar2}}
 }
@@ -562,11 +565,74 @@ The payback torque and angualr acceleration $acc0_{payback}$ on P0 is equal to
 
 #### 5. Update P0 Angular acceleration
 
-P0 angular acceleration $acc_{0}$ becomes 
+Calculate the final P0 angular acceleration $acc_{0}$.
 
 
 ```math
 
 acc_{0} = acc_{0fixed} + acc_{0payback}
 ```
+
+Adding $acc_{0payback}$ again is equivalent to lending extra torque on P1 to cancel the inertia torque caused by the newly added acceleration on P0.
+
+Step 2 to 5 can be repeated several times with only the newly added acceleration on P0, but repeating the payback process is not a convergence guranteed procedure.
+Hence, current implementation of the study stops at step 5 and does not repeat the payback on p0 and p2.
+
+
+### Divergence of Infinite Payback Method
+
+Repeating the payback method infinitely on two-bar linkage system gives two infinite series(one for P1 and the other for P1).
+
+The calculation on these series doses not give convergent result to every grass instance. 
+Depending on the mass and length of the bars, it leads to divergent result.
+
+Let $T0_i$ be torque on P0 and $T1_i$ be torque on P1 from i'th payback iteration.
+
+Let $T1_1$ be the torque from step 2 of above example.
+
+Then, $T0_1$ from step 4 is
+
+```math
+\displaylines{
+    \begin{align}
+        T0_1 & = \overrightarrow{bar1} \times  (T1_1 \times \frac{\overrightarrow{bar2}}{|\overrightarrow{bar2}|^2})
+        \\
+        & = \frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})T1_1 - (\overrightarrow{bar1} \cdot T1_1)}{|\overrightarrow{bar2}|^2}
+        \\
+        & = \frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})}{|\overrightarrow{bar2}|^2}T1_1
+    \end{align}
+}
+```
+
+Given $T1_i$ and $T0_i$,
+
+```math
+\displaylines{
+    T1_{i + 1} = \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}T1_i
+
+    \\
+
+    T0_{i + 1} = \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}T0_i
+}
+```
+So both series are geometric sereis with the same multipler. 
+
+Hence infinitely applying payback would result
+
+```math
+\displaylines{
+    \sum_{i=1}^{\infty}T0_{i + 1} = T0_1/(1 - \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2})
+    \\
+    \sum_{i=1}^{\infty}T1_{i + 1} = T1_1/(1 - \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2})
+}
+```
+
+However, the multipler $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$ 
+is not guranteed to be less than 1 for every grass instance.
+
+When the infinite payback is actaully used in the implementation, 
+some grass instances show plausible motions, but some instances shows unnatural motions or disappears due to error.
+
+### Solving Payback method as Linear Algebra
+
 

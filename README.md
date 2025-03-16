@@ -729,10 +729,9 @@ Let l be the threshold.
 Let 
 ```math
     f(t) = |\overrightarrow{d}_{new}|^2 - (l)^2
-}
 ```
 
-$f(0) > 0$. We want to increase t from 0 to the point where $f(t)$ is no longer positive and becomes zero.
+We want to increase t from 0 to the point where $f(t)$ is no longer positive and becomes zero.
 
 Hence solve for 
 

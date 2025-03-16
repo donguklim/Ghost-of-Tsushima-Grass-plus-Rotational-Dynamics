@@ -749,11 +749,11 @@ This is a simple quadratic equation.
 Depending the value of t, different task is performed.
 
 1. Only negative real number solutions, or no real number solution for t
-    - this case suggests the delta axis does not make the angular displacement to breach the threshold. No extra task is done.
+    - this case suggests the delta angular displacement axis does not make the angular displacement to breach the threshold. No extra task is done.
 2. $|\overrightarrow{\Delta\theta}| <= t$
-    - the magnitude of delta is not enough to breach the threshold. No extra task is done.
+    - the magnitude of delta angular displacement is not enough to breach the threshold. No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
-    - delta will make angular displacement to breach threshold in this case set the new angular displacement to 
+    - delta angular displacement will make angular displacement to breach threshold in this case set the new angular displacement to 
       - $\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t\overrightarrow{a}$
     - and set the angular velocity to zero because the bar has reached to its threshold and stopped.
         $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
@@ -846,3 +846,61 @@ f(t) = a \sin(t) + b \cos(t) + c
 
 We want to increase t from 0 to the point where $f(t)$ is not positive anymore.
 
+Solve t for $f(t) = 0$.
+
+Using trigonometric identity $sin(i + j) = sin(i)cos(j) = cos(i)sin(j)$ to solve the problem. 
+
+Let 
+```math
+ \displaylines{
+    \tan(z) = b/a
+    \\
+    R = \sqrt{(a/c)^2 + (b/c)^2}
+ }
+```
+then
+
+```math
+ \displaylines{
+    R \sin(t + z) = 1
+    \\
+    t = \arcsin(1/R) + \arctan(b/a)
+ }
+```
+
+For case $|c|$ is near to zero, solve $f(t) = a \sin(t) + b \cos(t)$. In this case $t = \arctan(-b/a)$
+
+For case $|a|$ is near zero or $|b|$ is near zero, you can solve t with use of $\arccos$ or $\arcsin$.
+
+However, the inverse trigonometric function just gives one value from multiple candidate solutions.
+For example $sin(x) = sin(\pi - x)$.
+
+Every possible angular value of t for solving $f(t) = 0$ needs to be checked and the leat positive values must be selected.
+
+The next task performed is similar to angular displacement magnitude limitation. Different tasks are performed depending on the value of t.
+
+1. No possible solution for $f(t) = 0$
+    - this case suggests the delta angular displacement cannot make the dot value bellow g.
+2. $|\overrightarrow{\Delta\theta}| <= t$
+    - the magnitude of delta angular displacement is not enough to breach the threshold. No extra task is done.
+3. $|\overrightarrow{\Delta\theta}| > t$
+    - delta angular displacement will make the dot breach the threshold
+      - $\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t\overrightarrow{a}$
+    - and set the angular velocity to zero because the bar has reached to its threshold and stopped.
+        $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
+
+
+#### Case $\overrightarrow{n} \cdot \overrightarrow{d} <= g$
+
+Similar to the angular displacement magnitude limitation, we are interested in $\frac{df}{dt}(t) $
+
+```math
+\displaylines{
+    a = (r \times d) \cdot \overrightarrow{n}
+    \\
+    b = (r \times (r \times d)) \cdot \overrightarrow{n}
+    \\
+    \frac{df}{dt}(t) = a \cos(t) + b \sin(t)
+}
+
+```

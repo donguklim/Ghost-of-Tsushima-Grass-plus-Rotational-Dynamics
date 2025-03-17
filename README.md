@@ -2,28 +2,26 @@
 
 ## Introduction
 
-This is an implementation of the Ghost of Tushima grass + rotational physics dynamics based motion of Bezier curve grass.
+This is an implementation of the Ghost of Tsushima grass + rotational physics dynamics based motion of Bezier curve grass.
 
-The implementation of the GOT grass is based on the [GDC presentation](https://www.youtube.com/watch?v=Ibe1JBF5i5Y) of the Sucker Punch Studio.
-The presenter of the Sucker Punch Studio did not tell how they calculated the grass motion, so I have made my own rotational physics based dynamics motion.
-
+The implementation of the GOT grass is based on the [GDC presentation](https://www.youtube.com/watch?v=Ibe1JBF5i5Y) of Sucker Punch Studio.
+The presenter from Sucker Punch Studio did not explain how they calculated the grass motion, so I have created my own rotational physics based dynamics motion.
 
 ## General Structure of the Grass Generation and Motion
 
-PCG and Niagara are used to spawn the grasses and calculate the motions of each grass instances.
+PCG and Niagara are used to spawn the grasses and calculate the motions of each grass instance.
 
-In order to combine PCG with Niagara, I am using a beta status plugin made by Epic Games, which provides a PCG nodes that writes data to Niagara data channel.
+In order to combine PCG with Niagara, I am using a beta status plugin made by Epic Games, which provides PCG nodes that write data to Niagara data channels.
   
 ### PCG
-1. Partitioned PCG generates grasses with hierarchial grids.
+1. Partitioned PCG generates grasses with hierarchical grids.
     - Grasses are generated at runtime.
-    - Larger grids in higher hierarchy generates fewer grasses than smaller grids in lower hierarchy. 
-    - Larger grids have longer generation radius and clean up radius than the smaller grids. Making fewer grasses generation at distant area and more grasses in near area.
+    - Larger grids in higher hierarchy generate fewer grasses than smaller grids in lower hierarchy. 
+    - Larger grids have longer generation radius and clean up radius than the smaller grids, making fewer grass generations at distant areas and more grasses in near areas.
 2. PCG generates grasses by writing data to Niagara Data Channel.
     - Write grass instance data to NDC as a PCG point enters within the generation radius.
-    - Write the grass instance data again if the PCG point gets out of the clean up radius and re-enters to the generation radius.
+    - Write the grass instance data again if the PCG point gets out of the clean up radius and re-enters the generation radius.
    
-
 ### Niagara
 1. Spawn grass instances as data is received from Niagara Data Channel
 2. Calculate and update the motion of grass instances.
@@ -32,22 +30,20 @@ In order to combine PCG with Niagara, I am using a beta status plugin made by Ep
 ## Note on Unreal Engine HLSL left-hand rule!
 ![Left-hand rule rotation](./Resources/left_hand_rule_rotation.jpeg "Left-hand rule rotation")
 
-Unreal Engine 5 is using the **left-hand rule** in its HLSL code and built in quaternion functions.\
-Not the conventional right-hand rule.
+Unreal Engine 5 uses the **left-hand rule** in its HLSL code and built-in quaternion functions,\
+not the conventional right-hand rule.
 
-So given an rotation of axis and a positive angle, the rotation while the axis vector is facing toward you is clockwise direction.
+So given a rotation of axis and a positive angle, the rotation while the axis vector is facing toward you is in the clockwise direction.
 
 **Positive angle is clockwise direction!**
 
 This is one confusing part of Unreal Engine, because pitch, yaw, roll rotations use counter-clockwise rotation as positive rotation.
 
-This README file is also wrttien in assumption of the using left-hand rule.
+This README file is also written with the assumption of using the left-hand rule.
 
-(I had spent several hours to figure the problem I had because I didn't know UE was using left-hand rule.)
+(I spent several hours figuring out the problem I had because I didn't know UE was using the left-hand rule.)
 
-
-
-## Basics Physics of Bars Rotational System
+## Basic Physics of Bars Rotational System
 
 The grass is modeled as a bezier curve controlled by bezier points. 
 
@@ -55,18 +51,17 @@ The grass is modeled as a bezier curve controlled by bezier points.
 
 ***Quadratic Bezier curve Example drawn from [Demos](https://www.desmos.com/)***
 
-Instead of directly making motion on the bezier curve, the motions are made to the bars(the green line segments in above example) of the bezier curves.
-
+Instead of directly making motion on the bezier curve, the motions are applied to the bars (the green line segments in the above example) of the bezier curves.
 
 ### Forces acting on the bars
 
-There are three types of forces applied to the bars
+There are three types of forces applied to the bars:
 
 - Wind force
-- Damping force, which is air friction from the angualr velocities of the bars
+- Damping force, which is air friction from the angular velocities of the bars
 - Restoration force, which grows linearly with the angular displacement of the bars.
 
-The combined net force makes angular acceleration and updates angular velocity and angular displacement of the bars.
+The combined net force creates angular acceleration and updates angular velocity and angular displacement of the bars.
 
 ### Torque and Angular Acceleration
 
@@ -74,14 +69,13 @@ The combined net force makes angular acceleration and updates angular velocity a
 
 ***Torque example 1***
 
-
 ![Torque example 2](./Resources/torque_example_2.jpeg "Torque Example 2")
 
 ***Torque example 2***
 
-Given a pivot and an objects that rotates about the pivot, the force acting on the object creates torque.
+Given a pivot and an object that rotates about the pivot, the force acting on the object creates torque.
 
-In above examples the torque $\overrightarrow{T}$ is equal to  $\overrightarrow{F} \times \overrightarrow{B}$ where
+In the above examples, the torque $\overrightarrow{T}$ is equal to $\overrightarrow{F} \times \overrightarrow{B}$ where
 
 ```math
 \displaylines{
@@ -91,11 +85,11 @@ B = \text{Vector from pivot point to the point where the force is applied}
 \\
 }
 ```
-Torque is represented by the cross product of the two vectors. \
+Torque is represented by the cross product of the two vectors.\
 The direction of the torque is the axis of the rotation.\
 The length of the torque is the magnitude of the torque.
 
-Let T be the torque, the angular acceleration created by the torque is equalt to
+Let T be the torque, the angular acceleration created by the torque is equal to
 
 ```math
 \overrightarrow{T} / MI
@@ -107,16 +101,16 @@ Where MI is **moment of inertia** of the rotating object.
 
 ![Pivot examples](./Resources/pivot_location_examples.jpeg "Pivot examples")
 
-Given a straigt bar with uniform mass density, let
+Given a straight bar with uniform mass density, let
 ```math
 \displaylines{
 m = \text{mass of the rotating object}
 \\
 d = \text{distance from pivot to the center of mass point of the rotating object}
 \\
-MI_{d} = \text {moment of Inertia with given d}
+MI_{d} = \text{moment of Inertia with given d}
 \\
-MIC = MI_{0} = \text {moment of Inertia when the pivot is located at the center of mass of the object}
+MIC = MI_{0} = \text{moment of Inertia when the pivot is located at the center of mass of the object}
 }
 ```
 
@@ -124,7 +118,6 @@ Then, by parallel axis theorem,
 
 ```math
 MI_{d} = MIC + md^{2}
-
 ```
 
 For a straight bar with uniform mass density with length L,
@@ -132,17 +125,18 @@ For a straight bar with uniform mass density with length L,
 MIC = mL^{2}/12
 ```
 
-And if the bar is rotating about one of its end point, the distance from the pivot to the center of mass is L/2.
+And if the bar is rotating about one of its end points, the distance from the pivot to the center of mass is L/2.
 Hence,
 ```math
-MI = MI_{L/2} = mL^{2}/12  + m(L/2)^{2} = mL^{2}/3
+MI = MI_{L/2} = mL^{2}/12 + m(L/2)^{2} = mL^{2}/3
 ```
 
-#### MI of objects consists of multiple line segments.
-If the rotating object is consists of multiple line segment bars(as drawn on above Torque example 2) and the bars both have uniform mass density, 
-then the MI of the object is sum of the each bar MI.
+#### MI of objects consisting of multiple line segments
 
-For example, if the object consists of the two line segment bars.
+If the rotating object consists of multiple line segment bars (as drawn in the above Torque example 2) and the bars both have uniform mass density, 
+then the MI of the object is the sum of each bar's MI.
+
+For example, if the rotating object consists of the two line segment bars,
 ```math
 \displaylines{
     m_1 = \text{bar1 mass}
@@ -158,22 +152,23 @@ For example, if the object consists of the two line segment bars.
 }
 ```
 
-
 ## The Reference Study
-Because Sucker Punch Studio did not tell how they calculated the grass motion, I have searched if there is any work already done to make physics based grass motion.
 
-Then, I found this article: [A simulation on grass swaying with dynamic wind force](https://link.springer.com/article/10.1007/s00371-016-1263-7)
+Because Sucker Punch Studio did not explain how they calculated the grass motion, I searched for any existing work on physics-based grass motion.
 
-The study of the article also used Bezier curve modelled grass, and the idea of using rotational physics sounded great, so I decided to make an UE5 implementation of the article. 
-At first, my intention was just make an UE5 implementation of the article, without really understanding the physcis theory the dynamics is based on. 
+I found this article: [A simulation on grass swaying with dynamic wind force](https://link.springer.com/article/10.1007/s00371-016-1263-7)
+
+The study in the article also used Bezier curve modeled grass, and the idea of using rotational physics sounded great, so I decided to make a UE5 implementation of the article. 
+At first, my intention was just to make a UE5 implementation of the article without really understanding the physics theory the dynamics is based on. 
 
 I simply thought I would just copy and paste the equations written in the article.
 
-Note: The study uses the term "edge" to refer the bars in the bar-linkage rotational system, but in physics studies that involves a rotational system "bar" is a term more often used. 
+Note: The study uses the term "edge" to refer to the bars in the bar-linkage rotational system, but in physics studies that involve a rotational system, "bar" is a term more often used. 
 Hence, I am also going to use this term.
 
 ### Use of Dynamics
-The reference study suggests to use dynamics that numerically updates the angular velocity and and angular displacement at each time interval.
+
+The reference study suggests using dynamics that numerically updates the angular velocity and angular displacement at each time interval.
 
 ```math
 \displaylines{
@@ -181,7 +176,7 @@ The reference study suggests to use dynamics that numerically updates the angula
     \\
     d = \text{angular displacement}
     \\
-    acc = \text {current angualr acceleration}
+    acc = \text{current angular acceleration}
     \\
     t\Delta = \text{time delta}
     \\
@@ -192,12 +187,12 @@ The reference study suggests to use dynamics that numerically updates the angula
 }
 ```
 
-So the main problem is calculating plausible angular acceleration from the wind force, air friction damping force and grass's restoration force.
+So the main problem is calculating plausible angular acceleration from the wind force, air friction damping force, and grass's restoration force.
 
 
 ### The Basic Equation of the Reference Study
 
-In the reference study, The wind force, damping force, restoration force acting on a bar and the net torque T applied to the pivot are calculated as bellow.
+In the reference study, the wind force, damping force, restoration force acting on a bar, and the net torque T applied to the pivot are calculated as below.
 
 ```math
 \displaylines{
@@ -211,7 +206,7 @@ In the reference study, The wind force, damping force, restoration force acting 
 }
 ```
 
-Where v is the velocity of the wind, S is the area of contact of wind, $\delta$ is wind force coefficient, c and k are damping coefficient and resotration coefficient respectively.
+Where v is the velocity of the wind, S is the area of contact of wind, $\delta$ is wind force coefficient, c and k are damping coefficient and restoration coefficient respectively.
 
 ```math
 \displaylines{
@@ -223,100 +218,100 @@ Where v is the velocity of the wind, S is the area of contact of wind, $\delta$ 
 These are the static position of the end of the bar that is not connected to the pivot.
 
 The author of the reference study assumes wind force to be linear with wind velocity v, but actually wind force grows linearly with $v^2$ in physics.
-In tis document, the term "wind force" will be used instead of $\delta \overrightarrow{v}$.
+In this document, the term "wind force" will be used instead of $\delta \overrightarrow{v}$.
 
 ![Inconsistent Restoration Force](./Resources/inconsistent_restoration_force_1.jpeg "Inconsistent Restoration Force")
 
-### Other Methods in Reference Study.
+### Other Methods in Reference Study
 
-The reference study tells that applying above calculation to each individual bar and making full 3-dimensional rotation gives inconsistent motions between adjacent bars.
+The reference study states that applying the above calculation to each individual bar and making full 3-dimensional rotation gives inconsistent motions between adjacent bars.
 So it uses additional methods.
 
-#### Limiting the Rotational Axis.
+#### Limiting the Rotational Axis
 
-![Grass Direction Vecotrs](./Resources/grass_direction_vectors.jpeg "Grass Direction Vecotrs")
+![Grass Direction Vectors](./Resources/grass_direction_vectors.jpeg "Grass Direction Vectors")
 
-The pivot at ground can only roatate about the land normal and $\overrightarrow{E}_w$ vector direction of the grass blase(shown in the above image).
+The pivot at ground can only rotate about the land normal and $\overrightarrow{E}_w$ vector direction of the grass blade (shown in the above image).
 
-The rotation about land normal is referred as swinging and the rotation about $\overrightarrow{E}_w$ is referred as bending.
+The rotation about land normal is referred to as swinging and the rotation about $\overrightarrow{E}_w$ is referred to as bending.
 
-Other non-ground pivots that connect the bars are only limited to make bending.
+Other non-ground pivots that connect the bars are only limited to making bending.
 
 
 #### Grouped Bending and Swinging
 
-Once the swinging angular displacement of a grass instance is calculated, all pivot points are swinged with certain ratio of the calculated angular displacement. 
-The ratio depends on the stiffness of each bars of the grass with the bar connected to the grounds have the strongest stiffness and the stiffness decreases as the bars are near to the tip of the grass.
+Once the swinging angular displacement of a grass instance is calculated, all pivot points are swung with a certain ratio of the calculated angular displacement. 
+The ratio depends on the stiffness of each bar of the grass, with the bar connected to the ground having the strongest stiffness, and the stiffness decreases as the bars are near the tip of the grass.
 Force acting on the tip of the grass is used for swinging torque calculation.
 
-Bending also uses the same method, but unlike swing where there is only a single angualr displacement shared by pivots, 
+Bending also uses the same method, but unlike swinging where there is only a single angular displacement shared by pivots, 
 bending divides pivots into at most two groups and calculates the bending angular displacement for each group.
 The force at the furthest tip of each group is used for torque calculation of each group.
 
 This method is not used in this study, so I omit detailed explanation.
-Read the original paper for the further details. 
+Read the original paper for further details. 
 
 
-#### Samping The wind force only once for each grass
+#### Sampling The Wind Force Only Once for Each Grass
 
-Wind force is sampled once for each grass instance. So the bars of one grass instance receives uniform wind force.
+Wind force is sampled once for each grass instance. So the bars of one grass instance receive uniform wind force.
 
 
-#### Methods adopted in this study.
+#### Methods Adopted in This Study
 
-Limiting non-ground pivot's rotational axis $E_w$ vector, and samping wind force once for each grass instance is used in this study.
+Limiting non-ground pivot's rotational axis to the $E_w$ vector, and sampling wind force once for each grass instance are used in this study.
 The wind is sampled once for each grass for faster calculation.
-The ground pivot is rendered as a full 3 dimensional pivot. 
+The ground pivot is rendered as a full 3-dimensional pivot. 
 
 
 ### Errors and Physical Considerations Omitted in the Reference Study
 
 #### Errors in Notation
 The reference study has some minor notation errors and calculation errors. 
-A set of variables in the equation should be either all vectors or scalars, but the author made mistake of mixing both. 
-This error hides details of how to exactly. calculate some vectors or scalars.
+A set of variables in the equation should be either all vectors or scalars, but the author made the mistake of mixing both. 
+This error hides details of how to exactly calculate some vectors or scalars.
 
-The equation shown in `Basic Equation of the Reference Study` section is a notation corrected version.
+The equation shown in the `Basic Equation of the Reference Study` section is a notation-corrected version.
 
 #### Error in the Torque Calculation
 
-##### Damping force calculation error
+##### Damping Force Calculation Error
 
 Damping force is air friction force.
 Air friction force linearly grows with the actual velocity of the object moving in the air, not its angular velocity.
 
 The correct damping force vector is $-c (\overrightarrow{\omega} \times \overrightarrow{bar})$
 
-##### Inconsistent Restoration force direction
-The authors make unconventional restoration force vector. 
+##### Inconsistent Restoration Force Direction
+The authors make an unconventional restoration force vector. 
 ```math
 -k |\overrightarrow{\Delta\theta}| \frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}
 ```
-Generally restoration torque is considered to be $-k \overrightarrow{\Delta\theta}$
+Generally, restoration torque is considered to be $-k \overrightarrow{\Delta\theta}$
 
-Resotration torque is assumed to increase linearly with the angular displacement.
+Restoration torque is assumed to increase linearly with the angular displacement.
 
 Using 
 ```math
 \frac{\overrightarrow{b}_{current} - \overrightarrow{b}_{static}}{|\overrightarrow{b}_{current} - \overrightarrow{b}_{static}|}
 ```
-as a direction of the restoration force, does not make restoration torque grows linearly with the angular displacement.
+as a direction of the restoration force does not make restoration torque grow linearly with the angular displacement.
 
 With the restoration force in the reference study, the restoration torque becomes $\overrightarrow{bar} \times R$.
 
 It becomes non-monotonic with the angular displacement. 
 
-The restoration torque will keep increassing as the angular displacment reaches to some angle within $[\pi/2, \pi)$ and then decrase to zero at $\pi$.
+The restoration torque will keep increasing as the angular displacement reaches some angle within $[\pi/2, \pi)$ and then decrease to zero at $\pi$.
 
 ![Why it is inconsistent](./Resources/inconsistent_restoration_force_2.jpeg "Why it is inconsistent")
 
-The authors do not give any justification for this unconventional non-monotonic behavior restoration torque. 
-They do not explain if this is for reflecting some physical characterestics of grass. 
+The authors do not give any justification for this unconventional non-monotonic behavior of restoration torque. 
+They do not explain if this is for reflecting some physical characteristics of grass. 
 
-It seems the authors simply made mistake by attempting to make restoration torque derived from some force vector as wind torque and damping torques are derived from force vectors.
+It seems the authors simply made a mistake by attempting to make restoration torque derived from some force vector, as wind torque and damping torques are derived from force vectors.
 
-The correct direction of the restoration force should be same as the direction of $\overrightarrow{\Delta\theta} \times \overrightarrow{bar}$, 
-but this force direction calculation is unncessary as the restoration torque can be simply calculated as $-k \overrightarrow{\Delta\theta}$.
+The correct direction of the restoration force should be the same as the direction of $\overrightarrow{\Delta\theta} \times \overrightarrow{bar}$, 
+but this force direction calculation is unnecessary as the restoration torque can be simply calculated as $-k \overrightarrow{\Delta\theta}$.
 
 
 #### Corrected Torque Calculation
@@ -331,17 +326,17 @@ but this force direction calculation is unncessary as the restoration torque can
 }
 ```
 
-Even this corrected equation is ignoring an important physical consideration.
+Even this corrected equation ignores an important physical consideration.
 
 
-#### Wind and Air friction are not Point Forces
+#### Wind and Air Friction are not Point Forces
 
 Wind does not push a pivoted bar only at the open end point of the bar.
 
 Wind is pushing the bar along its whole line segment. 
-This is same for the air friction.
+This is the same for air friction.
 
-More physically accurate torque calculation on a straight bar is calculated by itegrating the point torque along the line segment.
+A more physically accurate torque calculation on a straight bar is calculated by integrating the point torque along the line segment.
 
 If there is a straight bar, and the wind is uniform along the bar's line segment, the torque T is 
 ```math
@@ -358,7 +353,7 @@ If there is a straight bar, and the wind is uniform along the bar's line segment
 }
 ```
 
-There are quadratic increase of the wind torque and cubic increase of the damping torque with the increase of the bar length.
+There is quadratic increase of the wind torque and cubic increase of the damping torque with the increase of the bar length.
 
 This difference in the degree of the bar length in the torque equation could be considered as a type of approximation.
 
@@ -368,19 +363,19 @@ However, treating wind and air friction as point forces gives more distortion wh
 
 The reference study calculates swing torque with the force applied at the tip of the grass. 
 
-In a case like above image, the torque will be the force at the tip and the red arrow, 
+In a case like the above image, the torque will be the force at the tip and the red arrow, 
 which is the vector from the ground pivot to the point where the swinging force is applied.
 
-The force applied at the middle pivot point(pointed by the blue arrow) is ignored in swinging torque calculation 
+The force applied at the middle pivot point (pointed by the blue arrow) is ignored in swinging torque calculation 
 even though it is more distant from the ground pivot than the tip.
 
-Same problem also applies to the bendings.
+The same problem also applies to bendings.
 
-##### Torque calculation with Two line segments
+##### Torque Calculation with Two Line Segments
 
 ![Non Linkage System](./Resources/non_linkage_system.jpeg "Non Linkage System")
 
-If the rotating object is consists of two line segments(noted as bar1 and bar2), the caculation becomes 
+If the rotating object consists of two line segments (noted as bar1 and bar2), the calculation becomes 
 
 ```math
 \displaylines{
@@ -393,62 +388,61 @@ If the rotating object is consists of two line segments(noted as bar1 and bar2),
 \end{align} 
 }
 ```
-(I am not solving the integral term here since the solution have too many terms, but solution is implemented as function `GetBar2TorqueOnP0` in the shader file [Plugins/RotationalDynamicGrass/Shaders/GrassMotionShader.ush](Plugins/RotationalDynamicGrass/Shaders/GrassMotionShader.ush)
+(I am not solving the integral term here since the solution has too many terms, but the solution is implemented as function `GetBar2TorqueOnP0` in the shader file [Plugins/RotationalDynamicGrass/Shaders/GrassMotionShader.ush](Plugins/RotationalDynamicGrass/Shaders/GrassMotionShader.ush)
 
-Above torque calculation is not for two-bars linkage system where two bars are connected by a rotational pivot. 
-It is only for a system without a linkage but jst an object with the form of two line segments with fixed connection between those.
+The above torque calculation is not for a two-bars linkage system where two bars are connected by a rotational pivot. 
+It is only for a system without a linkage but just an object with the form of two line segments with fixed connection between them.
 
-With the linkage system torque caculation becomes more complex.
+With the linkage system, torque calculation becomes more complex.
 
-#### Feedbacks between bars in Bar-Linkage System
+#### Feedbacks Between Bars in Bar-Linkage System
 
 If there are multiple bars connected with rotational pivots, a force acting on a bar may not just influence torque on the base pivot of the bar. 
-Bellow image shows two example with two-bar linkage system.
+The image below shows two examples with a two-bar linkage system.
 
 ![Linkage System Force Examples](./Resources/linkage_system_force_examples.jpeg "Linkage System Force Examples")
 
-As shown in above image,  a force actiong on a point of a bar may create torque with opposite or the same orientation to another bar 
+As shown in the above image, a force acting on a point of a bar may create torque with opposite or the same orientation to another bar 
 depending on the angle between the bars and the force direction.
 
-A force acting on a bar is not guranteed to make a torque on the single pivot at the base of the bar. 
+A force acting on a bar is not guaranteed to make a torque on the single pivot at the base of the bar. 
 
 There are feedbacks between bars.
 
-The reference study omits this physical consideration and calculate each pivot torque independently with each bar. 
+The reference study omits this physical consideration and calculates each pivot torque independently with each bar. 
 
 
-## Methods Used in This Motion Study.
+## Methods Used in This Motion Study
 
-The baisc idea of using rotational system dynamics is same as the reference study.
+The basic idea of using rotational system dynamics is the same as the reference study.
 
-Limitation of the rotation to bending on non-ground pivots and sampling single wind force samping per grass instance from the reference study are also used.
+Limitation of rotation to bending on non-ground pivots and single wind force sampling per grass instance from the reference study are also used.
 
 Limitation of rotation to bending is used for more plausible motion. 
 Single wind sampling per grass instance is used for faster computation.
 
-
-However, the torque calculation is differs from the refernce study as wind and air friction forces are applied at line segments 
+However, the torque calculation differs from the reference study as wind and air friction forces are applied to line segments 
 and an approximation method is used for reflecting physical characteristics of the bar-linkage systems.
 
-Also, there are additional methods for preventing distorted motionss.
+Also, there are additional methods for preventing distorted motions.
 
-The methods in this study is implemented with two-bars linkage system. Quadratic Bezier curve is used to render the grasses in the implementation.
+The methods in this study are implemented with a two-bars linkage system. A Quadratic Bezier curve is used to render the grasses in the implementation.
 
 
 ### Payback Torque Calculation Method
 
-A calculation method which would be referred as 'payback method' is devised in this study to account the feedbacks between bars.
+A calculation method which will be referred to as the 'payback method' is devised in this study to account for the feedbacks between bars.
 
-The method will be explaned with two-bar linkage system example.
+The method will be explained with a two-bar linkage system example.
 
-A two-bar linkage system with bar1, bar2, stationary pivot P0 and another pivot p1 that connects the bars are given.
+A two-bar linkage system with bar1, bar2, stationary pivot P0 and another pivot P1 that connects the bars are given.
 
 
 ![Payback example 01](./Resources/payback_example_01.jpeg "Payback example 01")
 
-#### 1. Calculate P1 seized P0 Angular Acceleration
+#### 1. Calculate P1 Seized P0 Angular Acceleration
 
-Calculate the angular acceleration $acc_{0fixed}$ that would occur at P0 if P1 did not exist and bar1 and bar2 have fixed connection.
+Calculate the angular acceleration $acc_{0fixed}$ that would occur at P0 if P1 did not exist and bar1 and bar2 have a fixed connection.
 
 ![Payback example 02](./Resources/payback_example_02.jpeg "Payback example 02")
 
@@ -478,25 +472,25 @@ acc_{0fixed} = \frac{T}{MI}
 
 $acc_{0fixed}$ is the angular acceleration that would occur on P0, if the net torque of P1 is zero.
 
-Hence, making angular acceleration equal to $acc_{0fixed}$ on P0 and make P1 seized is equivalent to lending extra torque that would cancel out the net torque on P1.
+Hence, making angular acceleration equal to $acc_{0fixed}$ on P0 and making P1 seized is equivalent to lending extra torque that would cancel out the net torque on P1.
 
-Next two steps are P1 paying back the extra torque it has burrowed. 
+The next two steps are P1 paying back the extra torque it has borrowed.
 
 
-#### 2. Calculate intertia torque force on P1.
+#### 2. Calculate Inertia Torque Force on P1
 
-From step1, bar 1 is assumed to make an angular acceleration, and bar1 has its own angular velocity. 
+From step 1, bar1 is assumed to make an angular acceleration, and bar1 has its own angular velocity.
 
-The angular acceleration and angular velocity make kinetic force on P1, which results an intertia force torque on P1.
+The angular acceleration and angular velocity make kinetic force on P1, which results in an inertia force torque on P1.
 
-The angular acceleration on P0, makes plain acceleration on P1 equal to
+The angular acceleration on P0 makes plain acceleration on P1 equal to:
 
 ```math
 acc_{0fixed} \times \overrightarrow{bar1}
 
 ```
 
-The angualr velocity of P1 refered as $\omega$, gives centripetal acceleration on P1 equal to 
+The angular velocity of P1 referred to as $\omega$ gives centripetal acceleration on P1 equal to:
 
 ```math
 \omega \times (\omega \times \overrightarrow{bar1})
@@ -506,24 +500,24 @@ The angualr velocity of P1 refered as $\omega$, gives centripetal acceleration o
 ![Payback example 03](./Resources/payback_example_03.jpeg "Payback example 03")
 
 
-At P2's point of view, bar2 is having acceleration at its center of mass point(this is approximated to the middle point in this implementation) with acceleration equal to
+From P2's point of view, bar2 is having acceleration at its center of mass point (this is approximated to the middle point in this implementation) with acceleration equal to:
 ```math
 -(acc_{0fixed} \times \overrightarrow{bar1} + \omega \times (\omega \times \overrightarrow{bar1}))
 
 ```
 
-Force is equal to mass times acceleration, so the inertia torque on P1, $T1_i$ is equal to 
+Force is equal to mass times acceleration, so the inertia torque on P1, $T1_i$ is equal to:
 
 ```math
 T1_i = \frac{\overrightarrow{bar2}}{2} \times -m_2(acc_{0fixed} \times \overrightarrow{bar1} + \omega \times (\omega \times \overrightarrow{bar1}))
 
 ```
 
-#### 3. Calculate acceleration on P1
+#### 3. Calculate Acceleration on P1
 
 Calculate the acceleration $acc_{1}$ on P1 that is from the net torque on P1 so far.
 Calculate the net torque on P1 so far.
-You need to project the torque from the raw forces to the rotational axis, because P1's rotation is only limited to the rotational axis $E_w$
+You need to project the torque from the raw forces to the rotational axis, because P1's rotation is only limited to the rotational axis $E_w$.
 
 ```math
 \displaylines{
@@ -535,27 +529,27 @@ You need to project the torque from the raw forces to the rotational axis, becau
 }
 ```
 
-However assigning this angular acceleration on P1 requires another payback. 
+However, assigning this angular acceleration on P1 requires another payback.
 
 If bar2 was in the middle of space without any pivot, the force applying to bar2 would rotate the bar about its center of mass point.
-Making bar2 to rotate about P1 due to forces applied to bar2 is equivalent to lending force to P1, which is again equivalent to lending torque to P0.
+Making bar2 rotate about P1 due to forces applied to bar2 is equivalent to lending force to P1, which is again equivalent to lending torque to P0.
 
 
-#### 4. Calculate P1 payback Torque on P0
+#### 4. Calculate P1 Payback Torque on P0
 
-First calculate the force F that would give the torque equal to $T_{bar2}$ if it is applied at the opend end of bar2 with stationary pivot p1.
+First calculate the force F that would give the torque equal to $T_{bar2}$ if it is applied at the opened end of bar2 with stationary pivot P1.
 
 ```math
 F = T_{bar2} \times \frac{\overrightarrow{bar2}}{2|\overrightarrow{bar2}|}
 
 ```
 
-F applied to P1 is an extra force lent to the system in order to make F to only make angular acceleration on P1. 
+F applied to P1 is an extra force lent to the system in order to make F only create angular acceleration on P1.
 
 ![Payback example 04](./Resources/payback_example_04.jpeg "Payback example 04")
 
 
-The payback torque and angualr acceleration $acc0_{payback}$ on P0 is equal to 
+The payback torque and angular acceleration $acc0_{payback}$ on P0 is equal to:
 
 ```math
 \displaylines{
@@ -566,7 +560,7 @@ The payback torque and angualr acceleration $acc0_{payback}$ on P0 is equal to
 ```
 
 
-#### 5. Update P0 Angular acceleration
+#### 5. Update P0 Angular Acceleration
 
 Calculate the final P0 angular acceleration $acc_{0}$.
 
@@ -578,24 +572,24 @@ acc_{0} = acc_{0fixed} + acc_{0payback}
 
 Adding $acc_{0payback}$ again is equivalent to lending extra torque on P1 to cancel the inertia torque caused by the newly added acceleration on P0.
 
-Step 2 to 5 can be repeated several times with only the newly added acceleration on P0; 
-However, repeating the payback process is not a convergence guranteed procedure.
+Steps 2 to 5 can be repeated several times with only the newly added acceleration on P0;
+However, repeating the payback process is not a convergence guaranteed procedure.
 
-Hence, current implementation of the study stops at step 5 and does not repeat the payback on p0 and p2.
+Hence, the current implementation of the study stops at step 5 and does not repeat the payback on P0 and P1.
 
 
 ### Divergence of Infinite Payback Method
 
-Repeating the payback method infinitely on two-bar linkage system gives two infinite series(one for P1 and the other for P1).
+Repeating the payback method infinitely on a two-bar linkage system gives two infinite series (one for P0 and the other for P1).
 
-The calculation on these series doses not give convergent result to every grass instance. 
-Depending on the mass and length of the bars, it leads to divergent result.
+The calculation on these series does not give convergent results for every grass instance.
+Depending on the mass and length of the bars, it leads to divergent results.
 
-Let $T0_i$ be torque on P0 and $T1_i$ be torque on P1 from i'th payback iteration.
+Let $T0_i$ be torque on P0 and $T1_i$ be torque on P1 from the i'th payback iteration.
 
-Let $T1_1$ be the torque from step 2 of above example.
+Let $T1_1$ be the torque from step 2 of the above example.
 
-Then, $T0_1$ from step 4 is
+Then, $T0_1$ from step 4 is:
 
 ```math
 \displaylines{
@@ -609,7 +603,7 @@ Then, $T0_1$ from step 4 is
 }
 ```
 
-Given $T1_i$ and $T0_i$,
+Given $T1_i$ and $T0_i$:
 
 ```math
 \displaylines{
@@ -620,9 +614,9 @@ Given $T1_i$ and $T0_i$,
     T0_{i + 1} = \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}T0_i
 }
 ```
-So both series are geometric sereis with the same multipler. 
+So both series are geometric series with the same multiplier.
 
-Hence infinitely applying payback would result
+Hence infinitely applying payback would result in:
 
 ```math
 \displaylines{
@@ -633,21 +627,21 @@ Hence infinitely applying payback would result
 ```
 if the multiplier is less than 1.
 
-However, the multipler $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$ 
-is not guranteed to be less than 1 for every grass instance.
+However, the multiplier $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$
+is not guaranteed to be less than 1 for every grass instance.
 
-When the infinite payback series sums are actaully used in the implementation, some grass instances show unplausiable motions.
+When the infinite payback series sums are actually used in the implementation, some grass instances show implausible motions.
 
-### Solving Payback method as Linear Algebra
+### Solving Payback Method as Linear Algebra
 
-Attempt to solve the payback method as linear algebra is made and failed.
+An attempt to solve the payback method as linear algebra is made and failed.
 
-Let T0 be the torque applied to P0 due to wind force, air friction force and restoration force.
+Let T0 be the torque applied to P0 due to wind force, air friction force, and restoration force.
 Let T1 be the torque applied to P1 in the same manner.
 
 Let K0, K1 be the actual kinetic torque applied to generate the acceleration on P0 and P1 respectively.
 
-Then, the variables form a linear algebra.
+Then, the variables form a linear algebra system.
 
 ```math
 \displaylines{
@@ -658,9 +652,9 @@ Then, the variables form a linear algebra.
 }
 ```
 
-It seems the payback method can be solved as a linear algebra problem, but above equation does not gurantee existence of the solution either.
+It seems the payback method can be solved as a linear algebra problem, but the above equation does not guarantee existence of the solution either.
 
-Above linear algebra leads to the solution 
+The above linear algebra leads to the solution:
 
 ```math
 \displaylines{
@@ -681,20 +675,20 @@ And this solution faces the same problem as the infinite series solution, which 
 It is only solvable when $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$ is less than 1.
 
 
-### Implications of the Failures of convergence of Payback Method
+### Implications of the Failures of Convergence of Payback Method
 
-The two previous failures imply that Payback method is not an unbiased approximation method that can lead to accurate result as the repeatance of the payback procedure increases.
+The two previous failures imply that the Payback method is not an unbiased approximation method that can lead to accurate results as the repetition of the payback procedure increases.
 
 Hence, it is only applied once for P0 and P1 in the implementation.
 
 ### Angular Displacement Magnitude Limitation on P0
 
-In the real world, a grass cannot rotate or twist infinitely. 
-A grass blade would have limitation, and it would be broken if it receives torque beyond its limitation.
+In the real world, grass cannot rotate or twist infinitely. 
+A grass blade would have limitations, and it would break if it receives torque beyond its limitation.
 
-Hence, we set threshold to the magnitude of the angular displacement and make additional process of keeping the limit.
+Hence, we set a threshold to the magnitude of the angular displacement and make an additional process of keeping the limit.
 
-In dynamics, angular displacement delta $\overrightarrow{\Delta\theta}$ is calculated in each frame and updates the angualr displacement.
+In dynamics, angular displacement delta $\overrightarrow{\Delta\theta}$ is calculated in each frame and updates the angular displacement.
 
 ```math
 \overrightarrow{d}_{new} = \overrightarrow{d}_{old} + \overrightarrow{\Delta\theta}
@@ -702,7 +696,7 @@ In dynamics, angular displacement delta $\overrightarrow{\Delta\theta}$ is calcu
 ```
 $\overrightarrow{\Delta\theta}$ is scaled down if it can lead to threshold breach.
 
-It seems just calculating the length of $d_{old} + \Delta\theta$ is enough to check the threashold breach, but it is not.
+It seems just calculating the length of $d_{old} + \Delta\theta$ is enough to check the threshold breach, but it is not.
 
 In some cases, the final updated angular displacement may not have the threshold breach, but it may have breached the threshold in the middle of the rotation.
 
@@ -712,7 +706,7 @@ Given $\overrightarrow{\Delta\theta}$, its axis of rotation $\overrightarrow{r}$
 \overrightarrow{r} = \overrightarrow{\Delta\theta} / |\overrightarrow{\Delta\theta}|
 ```
 
-Changing the magnitude of $\overrightarrow{\Delta\theta}$ to `t` would result the new angualr displacement to become
+Changing the magnitude of $\overrightarrow{\Delta\theta}$ to `t` would result in the new angular displacement becoming
 
 ```math
 \overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{r}
@@ -748,16 +742,16 @@ Hence solve for
 ```
 This is a simple quadratic equation.
 
-Depending the value of t, different task is performed.
+Depending on the value of t, different tasks are performed.
 
 1. Only negative real number solutions, or no real number solution for t
-    - this case suggests the delta angular displacement axis does not make the angular displacement to breach the threshold. No extra task is done.
+    - This case suggests the delta angular displacement axis does not make the angular displacement breach the threshold. No extra task is done.
 2. $|\overrightarrow{\Delta\theta}| <= t$
-    - the magnitude of delta angular displacement is not enough to breach the threshold. No extra task is done.
+    - The magnitude of delta angular displacement is not enough to breach the threshold. No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
-    - delta angular displacement will make angular displacement to breach threshold in this case set the new angular displacement to 
+    - Delta angular displacement will make angular displacement breach the threshold. In this case, set the new angular displacement to 
       - $\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t\overrightarrow{a}$
-    - and set the angular velocity to zero because the bar has reached to its threshold and stopped.
+    - and set the angular velocity to zero because the bar has reached its threshold and stopped.
         $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
 
 
@@ -769,22 +763,22 @@ Depending the value of t, different task is performed.
 
 We want to increase t from 0 to the point where $\frac{df}{dt}$ begins to stop being negative.
 
-If df/dt(0) > 0, then set t = 0; Other wise $t = -(a \cdot d_{old})$
+If df/dt(0) > 0, then set t = 0; Otherwise $t = -(a \cdot d_{old})$
 
 
-The angular displacement magnitude will be decreasing upto this t value. 
-The next task perfromed is also dependent to the value of t.
+The angular displacement magnitude will be decreasing up to this t value. 
+The next task performed is also dependent on the value of t.
 
 
 1. t = 0
-    - cannot decrease the angular displacement magnitude with the current delta axis.
-    - set angualr velocity to 0
-    - do not update angular displacement.
+    - Cannot decrease the angular displacement magnitude with the current delta axis.
+    - Set angular velocity to 0.
+    - Do not update angular displacement.
 2. $|\overrightarrow{\Delta\theta}| <= t$
     - No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
-    - change delta magnitude, $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
-    - set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
+    - Change delta magnitude, $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
+    - Set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
 
 
 ### Angular Displacement Magnitude Limitation on non-ground Pivots
@@ -792,14 +786,14 @@ The next task perfromed is also dependent to the value of t.
 The other pivots are only limited to make rotation about $\overrightarrow{E}_w$. 
 So the limitations can be handled more simply.
 
-Make minimum and maximum thersholds so that the bars do not touch each other.
-The threshold values are dependent to the static positions of the bars. 
+Make minimum and maximum thresholds so that the bars do not touch each other.
+The threshold values are dependent on the static positions of the bars. 
 
-If the delta angle breaches the threshold, adjust the angle to keep threshold and set the angular velocity to zero.
+If the delta angle breaches the threshold, adjust the angle to keep the threshold and set the angular velocity to zero.
 
 
 ### Ground Collision
-Grass should not rotate bellow the ground.
+Grass should not rotate below the ground.
 Ground collision is approximated with the dot product between the direction vector of the bar connected to P0 and the ground normal vector.
 
 Given threshold value g > 0, ground normal n and let $\overrightarrow{d} = \overrightarrow{bar1}/|\overrightarrow{bar1}|$, 
@@ -816,7 +810,7 @@ This would not accurately render the ground collision on steep landscapes.
 And the collision is only applied to the bar connected to the P0 pivot, so collisions of other bars to the ground are ignored.
 
 
-The solutions for these problems are not handled in this study, but these problems are noticable only when the clump of grasses have few blades of grasses.
+The solutions for these problems are not handled in this study, but these problems are noticeable only when the clump of grasses has few blades of grass.
 
 Let $\overrightarrow{r} = \overrightarrow{\Delta\theta} / |\overrightarrow{\Delta\theta}|$, then adding $t\overrightarrow{r}$ to the angular displacement 
 yields a new bar direction
@@ -851,7 +845,7 @@ We want to increase t from 0 to the point where $f(t)$ is not positive anymore.
 
 Solve t for $f(t) = 0$.
 
-Using trigonometric identity $sin(i + j) = sin(i)cos(j) = cos(i)sin(j)$ to solve the problem. 
+Using trigonometric identity $sin(i + j) = sin(i)cos(j) + cos(i)sin(j)$ to solve the problem. 
 
 Let 
 ```math
@@ -867,7 +861,7 @@ then
  \displaylines{
     R \sin(t + z) = 1
     \\
-    t = \arcsin(1/R) + \arctan(b/a)
+    t = \arcsin(1/R) - z
  }
 ```
 
@@ -878,18 +872,18 @@ For case $|a|$ is near zero or $|b|$ is near zero, you can solve t with use of $
 However, the inverse trigonometric function just gives one value from multiple candidate solutions.
 For example $sin(x) = sin(\pi - x)$.
 
-Every possible angular value of t for solving $f(t) = 0$ needs to be checked and the leat positive values must be selected.
+Every possible angular value of t for solving $f(t) = 0$ needs to be checked and the least positive value must be selected.
 
 The next task performed is similar to angular displacement magnitude limitation. Different tasks are performed depending on the value of t.
 
 1. No possible solution for $f(t) = 0$
-    - this case suggests the delta angular displacement cannot make the dot value bellow g.
+    - This case suggests the delta angular displacement cannot make the dot value below g.
 2. $|\overrightarrow{\Delta\theta}| <= t$
-    - the magnitude of delta angular displacement is not enough to breach the threshold. No extra task is done.
+    - The magnitude of delta angular displacement is not enough to breach the threshold. No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
-    - delta angular displacement will make the dot breach the threshold
+    - Delta angular displacement will make the dot breach the threshold
       - $\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t\overrightarrow{a}$
-    - and set the angular velocity to zero because the bar has reached to its threshold and stopped.
+    - and set the angular velocity to zero because the bar has reached its threshold and stopped.
         $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
 
 
@@ -903,15 +897,15 @@ Similar to the angular displacement magnitude limitation, we are interested in $
     \\
     b = (r \times (r \times d)) \cdot \overrightarrow{n}
     \\
-    \frac{df}{dt}(t) = a \cos(t) + b \sin(t)
+    \frac{df}{dt}(t) = a \cos(t) - b \sin(t)
 }
 ```
 
-we want to increase t from 0 to the point where $\frac{df}{dt}$ stops being positive.
+We want to increase t from 0 to the point where $\frac{df}{dt}$ stops being positive.
 
-If df/dt(0) < 0, then set t = 0; Other wise solve $\frac{df}{dt}(t) = 0$
+If df/dt(0) < 0, then set t = 0; Otherwise solve $\frac{df}{dt}(t) = 0$
 
-For $|a|$ or $|b|# near to zero, inverse trigonometric functions can be used to solve the problem.
+For $|a|$ or $|b|$ near to zero, inverse trigonometric functions can be used to solve the problem.
 
 Otherwise,
 
@@ -919,33 +913,33 @@ Otherwise,
 \displaylines{
     \frac{df}{dt}(t) = 0
     \\
-    a \cos(t) + b \sin(t) = 0
+    a \cos(t) - b \sin(t) = 0
 
-    t = \arctan(-a/b)
+    t = \arctan(a/b)
 }
 ```
 
-The next task done with the value of t is, 
+The next task done with the value of t is: 
 
 1. t = 0
-    - cannot increase the dot valuee with the current delta axis.
-    - set angualr velocity to 0
-    - do not update angular displacement.
+    - Cannot increase the dot value with the current delta axis.
+    - Set angular velocity to 0.
+    - Do not update angular displacement.
 2. $|\overrightarrow{\Delta\theta}| <= t$
     - No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
-    - change delta magnitude, $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
-    - set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
+    - Change delta magnitude, $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
+    - Set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
 
 
-### Quadratic Bezier Curve length Control
+### Quadratic Bezier Curve Length Control
 
-The length of bezier curve changes as the angles between the bars change.
+The length of a Bezier curve changes as the angles between the bars change.
 In order to keep constant length on each grass blade instance, each instance needs to be rescaled by the Bezier curve length. 
 
 The reference study does not concern this problem.
-The developers of Ghost of Tushima admits that they do not control the length of the grass blades because it is not noticeable and calculating the length of Bezier curve is a hard problem.
-Ghost of Tushima uses cubic Bezier curve, and indeed, there is no analytical function for length of Bezier curves with degree more than two.
+The developers of Ghost of Tsushima admit that they do not control the length of the grass blades because it is not noticeable and calculating the length of Bezier curve is a hard problem.
+Ghost of Tsushima uses cubic Bezier curve, and indeed, there is no analytical function for length of Bezier curves with degree more than two.
 If a Bezier curve has degree equal or greater than 3, it requires numerical method to calculate the length.
 
 However, Quadratic Bezier curve is used in this study, which is degree two Bezier curve, has analytical solution for the curve length.
@@ -973,7 +967,7 @@ For a quadratic Bezier curve, above equation is simplified to
 }
 ```
 
-Quadratic Bezier curve can be calculated by integrating square root of a quadratic equation.
+Quadratic Bezier curve length can be calculated by integrating the square root of a quadratic equation.
 
 The quadratic discriminant
 
@@ -990,14 +984,14 @@ The quadratic discriminant
 is greater than or equal to zero.
 
 
-For the case the quadratic discriminant is equal to zero or bellow some small threshold, L becomes
+For the case where the quadratic discriminant is equal to zero or below some small threshold, L becomes
 ```math
 L = \int_{0}^{x}(\sqrt{a}\left| t + \frac{b}{2a} \right|)dt
 ```
 which can be solved easily.
 
 
-For the case the discriminant is greater than zero or the threshold, there is a general solution that uses trigonometri substitution to solve the integration.
+For the case where the discriminant is greater than zero or the threshold, there is a general solution that uses trigonometric substitution to solve the integration.
 The solution for L is
 ```math
 \displaylines{
@@ -1014,17 +1008,17 @@ In the implementation of this study $t\in [0, 1]$, making x = 1.
 
 ### Wind Generation
 
-In the implementation, the wind force is fomred by adding noise to the base wind force.
+In the implementation, the wind force is formed by adding noise to the base wind force.
 
 The noise is generated from several levels of gradient noise function. 
-Gradient noise function with different grid sizes are added to generate noise. 
-The noise value is passed to trigonometric function to generate position continuous wind noise force.
+Gradient noise functions with different grid sizes are added to generate noise. 
+The noise value is passed to a trigonometric function to generate position-continuous wind noise force.
 The noise moves its position according to the direction of the base wind force.
 
 The movement speed of wind noise is linear with the square root of the length of the base wind force.
-This is because wind speed is linear with square root of the wind force magnitude in actual physics.
+This is because wind speed is linear with the square root of the wind force magnitude in actual physics.
 
-This is a slight modification of the method [presented by Pixel Ant Games in GIC](https://youtu.be/LCqeVnmcz3E?si=gny2cCKcLBKCCtnF&t=306)
+This is a slight modification of the method in the [presentation made by Pixel Ant Games at GIC](https://youtu.be/LCqeVnmcz3E?si=gny2cCKcLBKCCtnF&t=306)
 
 
 ### Results

@@ -414,7 +414,7 @@ There are feedbacks between bars.
 The reference study omits this physical consideration and calculate each pivot torque independently with each bar. 
 
 
-## Methods Used in This Study.
+## Methods Used in This Motion Study.
 
 The baisc idea of using rotational system dynamics is same as the reference study.
 
@@ -936,7 +936,24 @@ The next task done with the value of t is,
     - set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
 
 
-### The result of applying Ground Collision and Angular Displacement Magnitude Limitation
+### Quadratic Bezier Curve length Control
+
+The length of bezier curve changes as the angles between the bars change.
+In order to keep constant length on each grass blade instance, each instance needs to be rescaled by the Bezier curve length. 
+
+The reference study does not concern this problem.
+The developers of Ghost of Tushima admits that they do not control the length of the grass blades and let the grass blades change lengths while making motions because it is not noticeable and calculating the length of Bezier curve is a hard problem.
+Ghost of Tushima uses cubic Bezier curve, and indeed, there is no analytical function for length of Bezier curves with degree more than two.
+If a Bezier curve has degree equal or greater than 3, it requires numerical method to calculate the length.
+
+However, Quadratic Bezier curve used in this study, which is degree two Bezier curve, has analytical solution for the curve length.
+
+
+
+
+
+
+## The Results
 
 Without these two methods, the motion becomes unnatural with strong wind force.
 

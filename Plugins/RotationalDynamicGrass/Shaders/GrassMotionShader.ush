@@ -344,18 +344,25 @@ void limitAngleDispScale(in float3 angularDisp, inout float3 angularDispDelta, i
     
     float axisDotDisp = dot(axis, angularDisp); 
     float discriminant = -4 * leftMarginSquare - 4 * axisDotDisp * axisDotDisp;
+       
+    // magnitude of delta angle cannot make angular displacement to breach the threshold
+    if (discriminant < 0.0f)
+    {
+        return;
+    }
     
-    // discriminant > 0 if leftMarginSquare > 0, which is checked in above if statement
     float sqrtDiscriminant = sqrt(discriminant);
         
     float maxAngleCandidateMax = -axisDotDisp + sqrtDiscriminant / 2.0f;
     float maxAngleCandidateMin = -axisDotDisp - sqrtDiscriminant / 2.0f;
     
+    // No positive delta angle can breach the limit
     if (maxAngleCandidateMax < 0.0f)
     {
         return;
     }
     
+    // choose the minimum of the positive values
     float maxAngle = maxAngleCandidateMin < 0 ? maxAngleCandidateMax : maxAngleCandidateMin;
     if (deltaAngle < maxAngle)
     {
@@ -388,27 +395,28 @@ void getAngleDispScaleDecreasingDelta(in float3 angularDisp, inout float3 angula
     
         then, df/dx(x) = -2x - 2 dot(axis, disp)
     
-        we want to increase x from 0 to the point where df/dx(x) is no longer negative.
+        we want to increase x from 0 to the point where df/dx(x) is no longer positive.
     
     */
     
     float axisDotDisp = dot(axis, angularDisp);
     
-    // df/dx is alreaydy positive at 0
-    if (axisDotDisp < 0)
+    // df/dx is alreaydy negative at 0
+    if (axisDotDisp > 0)
     {
         angularDispDelta = 0.0f;
         angularVelocity = 0.0f;
         return;
     }
     
-    /*
-        if dot(axis, disp) > 0, then df/dx(x) < 0, for every positive value of x.
-        Hence any delta angle is allowed.
-    */
+    if (deltaAngle < -axisDotDisp)
+    {
+        return;
+    }
     
-    return;
-
+    angularDispDelta = -axisDotDisp * axis;
+    angularVelocity = 0.0f;
+    
 }
 
 

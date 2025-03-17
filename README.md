@@ -763,20 +763,18 @@ Depending on the value of t, different tasks are performed.
 \frac{df}{dt}(t)  = -2t - 2(a \cdot d_{old})
 ```
 
-We want to increase t from 0 to the point where $\frac{df}{dt}$ begins to stop being negative.
+We want to increase t from 0 to the point where $\frac{df}{dt}$ begins to stop being positive.
 
-However, next task peformed is only dependent to the value of $a \cdot d_{old}$
+The next task performed is also dependent on the value of t and $(a \cdot d_{old})$.
 
-If $a \cdot d_{old} < 0$, $\frac{df}{dt}(0)$ is already positive, 
-
-
-1. $a \cdot d_{old} < 0$
-    - $\frac{df}{dt}(0)$ is already positive.
+1. 1. df/dt(0) < 0
+    - Set angular velocity to 0.
+    - Do not update angular displacement.
+2. $|\overrightarrow{\Delta\theta}| <= t$
+    - No extra task is done.
+3. $|\overrightarrow{\Delta\theta}| > t$
     - Change delta magnitude, $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
     - Set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
-2. Otherwise:
-    -  $\frac{df}{dt}(0)$ is positive for every positive value of t
-    - No extra task is done.
 
 
 ### Angular Displacement Magnitude Limitation on non-ground Pivots

@@ -310,10 +310,10 @@ The restoration torque will keep increassing as the angular displacment reaches 
 
 ![Why it is inconsistent](./Resources/inconsistent_restoration_force_2.jpeg "Why it is inconsistent")
 
-The author does not give any justification for this unconventional non-monotonic behavior restoration torque. 
-The authors does not explain if this is for reflecting some physical characterestics of grass. 
+The authors do not give any justification for this unconventional non-monotonic behavior restoration torque. 
+They do not explain if this is for reflecting some physical characterestics of grass. 
 
-It seems the authors simply made mistake for attempting to make restoration torque derived from some force vector as wind torque and damping torques are derived from force vectors.
+It seems the authors simply made mistake in attempting to make restoration torque derived from some force vector as wind torque and damping torques are derived from force vectors.
 
 The correct direction of the restoration force should be same as the direction of $\overrightarrow{\Delta\theta} \times \overrightarrow{bar}$, 
 but this force calculation is unncessary as the restoration torque can be simply calculated as $-k \overrightarrow{\Delta\theta}$.

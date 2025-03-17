@@ -99,7 +99,7 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
         float zeroX = atan(-bVal / aVal);
         zeroX = zeroX < 0.0f ? zeroX + PI_VALUE : zeroX;
         
-        if (zeroX <= deltaAngle)
+        if (deltaAngle <= zeroX)
         {
             return;
         }
@@ -661,7 +661,7 @@ void GrassUpdate(
     }
     else
     {
-        //applyGroundCollision(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
+        applyGroundCollision(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
     }
     
     angularDisp += dispDelta;

@@ -724,7 +724,7 @@ Let l be the threshold.
 
 Let 
 ```math
-    f(t) = |\overrightarrow{d}_{new}|^2 - (l)^2
+    f(t) = (l)^2 - |\overrightarrow{d}_{new}|^2
 ```
 
 We want to increase t from 0 to the point where $f(t)$ is no longer positive and becomes zero.
@@ -736,7 +736,7 @@ Hence solve for
    \begin{align}
         0 & = f(t) 
         \\
-        0 & = |\overrightarrow{d}_{old}|^2 + t^2 + 2t(a \cdot \overrightarrow{d}_{old}) - (l)^2 &
+        0 & = (l)^2 - |\overrightarrow{d}_{old}|^2 - t^2 - 2t(a \cdot \overrightarrow{d}_{old})
     \end{align}
 }
 ```
@@ -745,9 +745,11 @@ This is a simple quadratic equation.
 Depending on the value of t, different tasks are performed.
 
 1. Only negative real number solutions, or no real number solution for t
-    - This case suggests the delta angular displacement axis does not make the angular displacement breach the threshold. No extra task is done.
+    - This case suggests the delta angular displacement axis does not make the angular displacement breach the threshold. 
+    - No extra task is done.
 2. $|\overrightarrow{\Delta\theta}| <= t$
-    - The magnitude of delta angular displacement is not enough to breach the threshold. No extra task is done.
+    - The magnitude of delta angular displacement is not enough to breach the threshold. 
+    - No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
     - Delta angular displacement will make angular displacement breach the threshold. In this case, set the new angular displacement to 
       - $\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t\overrightarrow{a}$
@@ -758,27 +760,23 @@ Depending on the value of t, different tasks are performed.
 #### Case $|\overrightarrow{d}_{old}| >= l$
 
 ```math
-\frac{df}{dt}(t)  = 2t + 2(a \cdot d_{old})
+\frac{df}{dt}(t)  = -2t - 2(a \cdot d_{old})
 ```
 
 We want to increase t from 0 to the point where $\frac{df}{dt}$ begins to stop being negative.
 
-If df/dt(0) > 0, then set t = 0; Otherwise $t = -(a \cdot d_{old})$
+However, next task peformed is only dependent to the value of $a \cdot d_{old}$
+
+If $a \cdot d_{old} < 0$, $\frac{df}{dt}(0)$ is already positive, 
 
 
-The angular displacement magnitude will be decreasing up to this t value. 
-The next task performed is also dependent on the value of t.
-
-
-1. t = 0
-    - Cannot decrease the angular displacement magnitude with the current delta axis.
-    - Set angular velocity to 0.
-    - Do not update angular displacement.
-2. $|\overrightarrow{\Delta\theta}| <= t$
-    - No extra task is done.
-3. $|\overrightarrow{\Delta\theta}| > t$
+1. $a \cdot d_{old} < 0$
+    - $\frac{df}{dt}(0)$ is already positive.
     - Change delta magnitude, $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
     - Set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
+2. Otherwise:
+    -  $\frac{df}{dt}(0)$ is positive for every positive value of t
+    - No extra task is done.
 
 
 ### Angular Displacement Magnitude Limitation on non-ground Pivots
@@ -872,7 +870,7 @@ For case $|a|$ is near zero or $|b|$ is near zero, you can solve t with use of $
 However, the inverse trigonometric function just gives one value from multiple candidate solutions.
 For example $sin(x) = sin(\pi - x)$.
 
-Every possible angular value of t for solving $f(t) = 0$ needs to be checked and the least positive value must be selected.
+Every possible angular value of t for solving $f(t) = 0$ needs to be checked and the least positive value(after converting the negative angles to positive angles by adding $2\pi$) must be selected.
 
 The next task performed is similar to angular displacement magnitude limitation. Different tasks are performed depending on the value of t.
 
@@ -901,7 +899,7 @@ Similar to the angular displacement magnitude limitation, we are interested in $
 }
 ```
 
-We want to increase t from 0 to the point where $\frac{df}{dt}$ stops being positive.
+We want to increase t from 0 to the point where $\frac{df}{dt}$ stops being negative.
 
 If df/dt(0) < 0, then set t = 0; Otherwise solve $\frac{df}{dt}(t) = 0$
 

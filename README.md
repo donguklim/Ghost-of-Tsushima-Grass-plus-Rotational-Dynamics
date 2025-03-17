@@ -751,11 +751,12 @@ Depending on the value of t, different tasks are performed.
     - The magnitude of delta angular displacement is not enough to breach the threshold. 
     - No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
-    - Delta angular displacement will make angular displacement breach the threshold. In this case, set the new angular displacement to 
-      - $\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t\overrightarrow{a}$
-    - and set the angular velocity to zero because the bar has reached its threshold and stopped.
+    - Set the angular velocity to zero because the bar has reached its threshold and stopped.
         $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
-
+    - Delta angular displacement will make angular displacement breach the threshold. In this case, set the new angular displacement to 
+      - ```math
+        \overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t\overrightarrow{a}
+      ```
 
 #### Case $|\overrightarrow{d}_{old}| >= l$
 

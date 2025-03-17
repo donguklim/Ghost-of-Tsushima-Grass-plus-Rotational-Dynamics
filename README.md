@@ -1017,22 +1017,83 @@ This is because wind speed is linear with the square root of the wind force magn
 This is a slight modification of the method in the [presentation made by Pixel Ant Games at GIC](https://youtu.be/LCqeVnmcz3E?si=gny2cCKcLBKCCtnF&t=306)
 
 
-### Results
+### Initial Angular Displacement
+Grasses are produced at runtime and cleaned up for optimization. 
 
-Without these two methods, the motion becomes unnatural with strong wind force.
+The motion dynamics is only applied to grasses that generated and not cleaned up.
+Hence, the implementation accurately make long time motion that matches with the life time of the grass in the environment.
 
-Surprisingly, applying the two methods also gives plausible result with point force torque motion used in the reference study.
+If the generated grass instance have zero angular displacement, it may have a sudden rise of angular velocity from its zero velocity. 
+For this reason, an approximated equilibrium angular displacement with the wind at the current time frame is calculated to minimize the sudden rise of the angular velocity.
+
+The initial angular displacement is made so that the restoration force becomes equal to the wind force at zero angular displacement.
+It is only a roughly made approximation because accurate approximation require numerical method.
+
+However, this unnatural motion due to the sudden rise of the angular velocity is not significantly noticeable.
+It is ocasinally noticeable when a clump of grasses has small number blades and are generated near to the camera.
 
 
+### Motion Results
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/VW9ld_k17Ho?si=A4A7nlCyoAGunIw2" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+The UE5 implementation provides UI to adjust wind force and air friction coefficient.
+
+It can be observed low air damping coefficient with strong wind force gives somewhat unnatural motion, 
+but in real world physics air friction is supposed grow linearly with wind force.
+
+In this implementation, air friction is not automatically adjusted as from the wind force for ease of testing, 
+but in the real usecase air friction should grow linearly with wind force.
+
+
+#### Comparing Results with or without Rotation Limits
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/gnih4243lIs?si=v4ybPCM_ZcM92D6J" title="The final result" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+Above video uses the methods in this study. 
+
+Bellow video is the result without ground collision and angular magnitude limitation on P0.
+
+Angle limitation on P1 is not removed and still remains because removing it can lead to zero length Bezier curve and yield division by zero error.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/3fyWGqc9AHo?si=d7G6kPpHYAUT_wPg" title="Result without rotation limit" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+It can be observed that, the motion without rotation limits shows unplausible motion when the wind force becomes strong.
+
+It can be observed that too high restoration force of a grass makes chaotic motion that does not make any movement to be aligned with the wind direction.
+
+
+#### Point Force Results with or without Rotation Limits
+
+Surprisingly, the calculation corrected version of point force(of wind and air friction) motion in the reference study also gives plausible motion 
+when the two rotation limiting methods are used.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/mJhBVzVHy_0?si=ZZM7FB8OqFczcabG" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 In above video, 
-- Torque is calculated with the assumption that the wind and air friction form a point force, but corrected version of damping and restoration torque calculation is used.
+- Torque is calculated with the assumption that the wind and air friction form a point force, 
+  - but corrected version of damping and restoration torque calculation is used.
 - Same as the reference study, the feedbacks between bars in bar-linkage system is ignored 
 - Following two methods used in the reference study to decrease inconsistent motion are not used.
-  - Limiting the rotation of the ground pivot 
-  - calculating angular displacement for each group of bars instead of each bars
-- Angular displacement is calculated for each bar in two-bar linkage system. 
-- The ground pivot is rendered as a full 3 dimensional pivot. 
+  - Limiting the rotation of the ground pivot to bending and swinging
+  - calculating angular displacement for each group of bars instead of each bars.
+- Instead,
+    - The ground pivot is rendered as a full 3 dimensional pivot. 
+    - Angular displacement is calculated for each bar in two-bar linkage system. 
 
+
+Compared to the line segment motion with payback method in this study, 
+point force motion tend to show more straight form of blades, aligned with the wind direction. 
+
+Also damping force has weaker effect.
+
+
+Bellow video is the result of using point forces without the rotation limits. The bending limit on P1 is still remained to avoid zero division from zero length bezier curve.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/qu_WTiCiIrc?si=rckFjbCcjFBs191D" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+It shows chaotic movement with strong wind force as expected.
 
 ## Procedural Grass Generation
+
+Todo

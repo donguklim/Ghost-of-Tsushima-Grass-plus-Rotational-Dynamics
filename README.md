@@ -211,7 +211,7 @@ In the reference study, The wind force, damping force, restoration force acting 
 }
 ```
 
-Where v is the velocity of the wind, S is the area of contact of wind, c and k are damping coefficient and resotration coefficient respectively.
+Where v is the velocity of the wind, S is the area of contact of wind, $\delta$ is wind force coefficient, c and k are damping coefficient and resotration coefficient respectively.
 
 ```math
 \displaylines{
@@ -221,6 +221,9 @@ Where v is the velocity of the wind, S is the area of contact of wind, c and k a
 }
 ```
 These are the static position of the end of the bar that is not connected to the pivot.
+
+The author of the reference study assumes wind force to be linear with wind velocity v, but actually wind force grows linearly with $v^2$ in physics.
+In tis document, the term "wind force" will be used instead of $\delta \overrightarrow{v}$.
 
 ![Inconsistent Restoration Force](./Resources/inconsistent_restoration_force_1.jpeg "Inconsistent Restoration Force")
 
@@ -1009,6 +1012,21 @@ The solution for L is
 }
 ```
 In the implementation of this study $t\in [0, 1]$, making x = 1.
+
+### Wind Generation
+
+In the implementation, the wind force is fomred by adding noise to the base wind force.
+
+The noise is generated from several levels of gradient noise function. 
+Gradient noise function with different grid sizes are added to generate noise. 
+The noise value is passed to trigonometric function to generate position continuous wind noise force.
+The noise moves its position according to the direction of the base wind force.
+
+The movement speed of wind noise is linear with the square root of the length of the base wind force.
+This is because wind speed is linear with square root of the wind force magnitude in actual physics.
+
+This is a slight modification of the method [presented by Pixel Ant Games in GIC](https://youtu.be/LCqeVnmcz3E?si=gny2cCKcLBKCCtnF&t=306)
+
 
 ### Results
 

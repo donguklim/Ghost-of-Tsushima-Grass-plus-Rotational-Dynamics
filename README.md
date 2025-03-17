@@ -1107,3 +1107,11 @@ It shows chaotic movement with strong wind force as expected.
 ## Procedural Grass Generation
 
 Todo
+
+
+## References
+
+- [Procedural Grass in 'Ghost of Tsushima](https://youtu.be/Ibe1JBF5i5Y?si=7FDrpTfoVFxUcRF1) - GDC Presentation by Sucker Punch Studio
+- [A simulation on grass swaying with dynamic wind force](https://link.springer.com/article/10.1007/s00371-016-1263-7) - the reference study
+- [Bezier Grass Series by Alex](https://youtube.com/playlist?list=PLfi0x1Dte6TnY1NIotJyD5ERpBozTnCUp&si=D8f5azPVrh68ECHT) - Using many of his ideas, such modelling grass with material, generating grass with runtime PCG
+- [Pixel Ant Games at GIC](https://youtu.be/LCqeVnmcz3E?si=gny2cCKcLBKCCtnF&t=306) - using the wind noise motion generation algorithm

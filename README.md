@@ -942,7 +942,7 @@ The length of bezier curve changes as the angles between the bars change.
 In order to keep constant length on each grass blade instance, each instance needs to be rescaled by the Bezier curve length. 
 
 The reference study does not concern this problem.
-The developers of Ghost of Tushima admits that they do not control the length of the grass blades and let the grass blades change lengths while making motions because it is not noticeable and calculating the length of Bezier curve is a hard problem.
+The developers of Ghost of Tushima admits that they do not control the length of the grass blades because it is not noticeable and calculating the length of Bezier curve is a hard problem.
 Ghost of Tushima uses cubic Bezier curve, and indeed, there is no analytical function for length of Bezier curves with degree more than two.
 If a Bezier curve has degree equal or greater than 3, it requires numerical method to calculate the length.
 
@@ -988,10 +988,12 @@ The quadratic discriminant
 is greater than or equal to zero.
 
 
-For the case the quadratic discriminant is equal to zero or bellow some small threshold, solve
+For the case the quadratic discriminant is equal to zero or bellow some small threshold, L becomes
 ```math
 L = \int_{0}^{x}(\sqrt{a}\left| t + \frac{b}{2a} \right|)dt
 ```
+which can be solved easily.
+
 
 For the case the discriminant is greater than zero or the threshold, there is a general solution that uses trigonometri substitution to solve the integration.
 The solution for L is
@@ -1006,9 +1008,9 @@ The solution for L is
     k = \frac{2at + b}{d}
 }
 ```
-In the implementation of this study $t\in [0, 1]$, so x = 1.
+In the implementation of this study $t\in [0, 1]$, making x = 1.
 
-## The Results
+### Results
 
 Without these two methods, the motion becomes unnatural with strong wind force.
 
@@ -1025,3 +1027,5 @@ In above video,
 - Angular displacement is calculated for each bar in two-bar linkage system. 
 - The ground pivot is rendered as a full 3 dimensional pivot. 
 
+
+## Procedural Grass Generation

@@ -961,6 +961,8 @@ For a quadratic Bezier curve, above equation is simplified to
     L = \int_{0}^{x}\left(\sqrt{a t^2 + bt + c}  \right)dt
     \\
     \\
+    \text{where}
+    \\
     a = |\overrightarrow{bar1} - \overrightarrow{bar2}|^2
     \\
     b = 2(\overrightarrow{bar1} \cdot \overrightarrow{bar2} - |\overrightarrow{bar2}|^2)
@@ -995,14 +997,16 @@ For the case the discriminant is greater than zero or the threshold, there is a 
 The solution for L is
 ```math
 \displaylines{
+    L = \frac{2d}{8a^{3/2}}(k\sqrt{1 + k^2} + \ln(k + \sqrt{1 + k^2}))\Big|_{t=0}^{t=x}
+    \\
+    \text{where}
+    \\
     d = 4ac - b^2
     \\
     k = \frac{2at + b}{d}
-    \\
-    L = \frac{2d}{8a^{3/2}}(k\sqrt{1 + k^2} + \ln(k + \sqrt{1 + k^2}))\Big|_{t=0}^{t=x}
 }
 ```
-In the implementation of this study, x = 1. $t\in [0, 1]$
+In the implementation of this study $t\in [0, 1]$, so x = 1.
 
 ## The Results
 

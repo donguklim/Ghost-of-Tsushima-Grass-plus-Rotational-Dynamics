@@ -313,10 +313,10 @@ The restoration torque will keep increassing as the angular displacment reaches 
 The authors do not give any justification for this unconventional non-monotonic behavior restoration torque. 
 They do not explain if this is for reflecting some physical characterestics of grass. 
 
-It seems the authors simply made mistake in attempting to make restoration torque derived from some force vector as wind torque and damping torques are derived from force vectors.
+It seems the authors simply made mistake by attempting to make restoration torque derived from some force vector as wind torque and damping torques are derived from force vectors.
 
 The correct direction of the restoration force should be same as the direction of $\overrightarrow{\Delta\theta} \times \overrightarrow{bar}$, 
-but this force calculation is unncessary as the restoration torque can be simply calculated as $-k \overrightarrow{\Delta\theta}$.
+but this force direction calculation is unncessary as the restoration torque can be simply calculated as $-k \overrightarrow{\Delta\theta}$.
 
 
 #### Corrected Torque Calculation
@@ -636,8 +636,7 @@ if the multiplier is less than 1.
 However, the multipler $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$ 
 is not guranteed to be less than 1 for every grass instance.
 
-When the infinite payback is actaully used in the implementation, 
-some grass instances show plausible motions, but some instances shows unnatural motions or disappears due to error.
+When the infinite payback series sums are actaully used in the implementation, some grass instances show unplausiable motions.
 
 ### Solving Payback method as Linear Algebra
 

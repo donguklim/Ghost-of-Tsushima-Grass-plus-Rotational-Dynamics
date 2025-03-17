@@ -775,9 +775,12 @@ The next task performed is also dependent on the value of t and $(a \cdot d_{old
 2. $|\overrightarrow{\Delta\theta}| <= t$
     - No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
-    - Change delta magnitude, $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
     - Set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
-
+    - Change delta magnitude,
+    
+```math
+\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}
+```
 
 ### Angular Displacement Magnitude Limitation on non-ground Pivots
 
@@ -879,11 +882,13 @@ The next task performed is similar to angular displacement magnitude limitation.
 2. $|\overrightarrow{\Delta\theta}| <= t$
     - The magnitude of delta angular displacement is not enough to breach the threshold. No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
-    - Delta angular displacement will make the dot breach the threshold
-      - $\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t\overrightarrow{a}$
-    - and set the angular velocity to zero because the bar has reached its threshold and stopped.
+    - Set the angular velocity to zero because the bar has reached its threshold and stopped.
         $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
+    - Delta angular displacement will make the dot breach the threshold
 
+```math
+\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t\overrightarrow{a}
+```
 
 #### Case $\overrightarrow{n} \cdot \overrightarrow{d} <= g$
 
@@ -926,9 +931,12 @@ The next task done with the value of t is:
 2. $|\overrightarrow{\Delta\theta}| <= t$
     - No extra task is done.
 3. $|\overrightarrow{\Delta\theta}| > t$
-    - Change delta magnitude, $$\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}$$
     - Set angular velocity to zero, $$\overrightarrow{\omega}_{new} = \overrightarrow{0}$$
-
+    - Change delta magnitude,
+    
+```math
+\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}
+```
 
 ### Quadratic Bezier Curve Length Control
 
@@ -1037,7 +1045,7 @@ It is ocasinally noticeable when a clump of grasses has small number blades and 
 
 ### Motion Results
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/VW9ld_k17Ho?si=A4A7nlCyoAGunIw2" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/VW9ld_k17Ho/hqdefault.jpg)](https://www.youtube.com/watch?v=VW9ld_k17Ho)
 
 The UE5 implementation provides UI to adjust wind force and air friction coefficient.
 
@@ -1050,7 +1058,7 @@ but in the real usecase air friction should grow linearly with wind force.
 
 #### Comparing Results with or without Rotation Limits
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/gnih4243lIs?si=v4ybPCM_ZcM92D6J" title="The final result" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/gnih4243lIs/hqdefault.jpg)](https://www.youtube.com/watch?v=gnih4243lIs)
 
 Above video uses the methods in this study. 
 
@@ -1058,7 +1066,7 @@ Bellow video is the result without ground collision and angular magnitude limita
 
 Angle limitation on P1 is not removed and still remains because removing it can lead to zero length Bezier curve and yield division by zero error.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/3fyWGqc9AHo?si=d7G6kPpHYAUT_wPg" title="Result without rotation limit" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/3fyWGqc9AHo/hqdefault.jpg)](https://www.youtube.com/watch?v=3fyWGqc9AHo)
 
 It can be observed that, the motion without rotation limits shows unplausible motion when the wind force becomes strong.
 
@@ -1070,7 +1078,7 @@ It can be observed that too high restoration force of a grass makes chaotic moti
 Surprisingly, the calculation corrected version of point force(of wind and air friction) motion in the reference study also gives plausible motion 
 when the two rotation limiting methods are used.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/mJhBVzVHy_0?si=ZZM7FB8OqFczcabG" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/mJhBVzVHy_0/hqdefault.jpg)](https://www.youtube.com/watch?v=mJhBVzVHy_0)
 
 In above video, 
 - Torque is calculated with the assumption that the wind and air friction form a point force, 
@@ -1092,7 +1100,7 @@ Also damping force has weaker effect.
 
 Bellow video is the result of using point forces without the rotation limits. The bending limit on P1 is still remained to avoid zero division from zero length bezier curve.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/qu_WTiCiIrc?si=rckFjbCcjFBs191D" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/qu_WTiCiIrc/hqdefault.jpg)](https://www.youtube.com/watch?v=qu_WTiCiIrc)
 
 It shows chaotic movement with strong wind force as expected.
 

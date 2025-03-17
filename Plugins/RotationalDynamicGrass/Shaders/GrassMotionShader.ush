@@ -320,7 +320,7 @@ void limitAngleDispScale(in float3 angularDisp, inout float3 angularDispDelta, i
     
     float leftMarginSquare = 4 * PI_VALUE * PI_VALUE - dot(angularDisp, angularDisp);
     // already exceeded the limit
-    if (leftMarginSquare < 0.0001f)
+    if (leftMarginSquare < 0.0f)
     {
         angularDispDelta = 0.0f;
         angularVelocity = 0.0f;

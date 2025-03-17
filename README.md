@@ -946,11 +946,30 @@ The developers of Ghost of Tushima admits that they do not control the length of
 Ghost of Tushima uses cubic Bezier curve, and indeed, there is no analytical function for length of Bezier curves with degree more than two.
 If a Bezier curve has degree equal or greater than 3, it requires numerical method to calculate the length.
 
-However, Quadratic Bezier curve used in this study, which is degree two Bezier curve, has analytical solution for the curve length.
+However, Quadratic Bezier curve is used in this study, which is degree two Bezier curve, has analytical solution for the curve length.
 
+Given a parametric function $f:\mathbb{R} \to \mathbb{R}^3$, with its curve length L is
+```math
+L = \int_{0}^{x}\left(\sqrt{(\frac{df_x}{dt}(t))^2 + (\frac{df_y}{dt}(t))^2 + (\frac{df_z}{dt}(t))^2}  \right)dt
+```
+when $t\in [0, x]$
 
+For a quadratic Bezier curve, above equation is simplified to
 
+```math
+\displaylines{
+    L = \int_{0}^{x}\left(\sqrt{a t^2 + bt + c}  \right)dt
+    \\
+    \\
+    a = |\overrightarrow{bar1} - \overrightarrow{bar2}|^2
+    \\
+    b = 2(\overrightarrow{bar1} \cdot \overrightarrow{bar2} - |\overrightarrow{bar2}|^2)
+    \\
+    c = |\overrightarrow{bar1}|^2
+}
+```
 
+Quadratic Bezier curve can be calculated by integrating square root of a quadratic equation.
 
 
 ## The Results

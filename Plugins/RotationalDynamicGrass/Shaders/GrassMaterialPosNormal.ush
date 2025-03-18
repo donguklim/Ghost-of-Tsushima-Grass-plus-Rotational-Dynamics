@@ -64,7 +64,7 @@ float3 GetRotatedCurvePointTangentSide(
 
     if (viewDependentTiltScale != 0.0)
     {
-        float tiltAngle = dot(sideDir, viewingDir) * viewDependentTiltScale;
+        float tiltAngle = dot(sideDir, viewingDir) * viewDependentTiltScale * t;
         sideDir = QuatRotateVector(
             QuatFromAxisAngle(unitTangent, tiltAngle),
             sideDir

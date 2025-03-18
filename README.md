@@ -938,6 +938,92 @@ The next task done with the value of t is:
 \overrightarrow{d}_{new} = \overrightarrow{d}_{old} + t \overrightarrow{a}
 ```
 
+### Grass Twist
+
+![Twist](./Resources/grass_twist.jpeg "Twist")
+
+The grass blades make twsit according to the angular displacement of P0.
+
+Given the angular displacement $\overrightarrow{d}$ on P0, the rotational axis $\overrightarrow{r} = \overrightarrow{d} / |\overrightarrow{d}|$, 
+and rotation angle $\theta = |\overrightarrow{d}|$.
+
+The $E_w$ direction of the grass blade along the Bezier curve is rotated with axis $\overrightarrow{r}$, but with different angle for each point of the curve.
+
+
+A grass instance has restoration torque coefficient at P0, and P1 referrred as $k_0$ and $1_1$ respectively.
+In addition, there is another coefficient $k_2$ that the grass tip is assumed to have. 
+This coefficient is not used in the torque cacluation, but used in twisting angle calculation.
+
+It is assumed
+```math
+k_0 \ge k_1 \ge k2
+```
+
+Along the Bezier curve, the relative stiffness of a point on the curve is calculated using Bezier function of the restoration coefficients.
+```math
+k_{relative}(t) = ((1-t)^2k_0 + 2t(1-t)k_1 + t^2k_2)/k_0
+```
+
+Then the twisting angle of $E_w$ at t is
+```math
+angle(t) = (k_{relative}(t) - 1 + \frac{k_2}{k_0}t)\theta 
+```
+
+If $k_0 = k_1 = k2$, the twisting angle becomes
+```math
+angle(t) = t\theta 
+```
+
+At t = 0, the angle becomes zero regardless of the value of $k_i$ coefficients, so no twist is applied at the very base of the grass blade. 
+
+The twist increases from the grass base to the tip.
+
+In reality, this twist should have effect in amount of wind force and air friction force received by the grass blade, but this physical detail is omitted in this study.
+The twist does not influence amount of torque received by the bars. 
+
+#### Additional Twist from Camera Angle
+
+When $E_w$ vector is aligned with the camera ray, the grass blade becomes thin and becomes invisible or almost invisible to the camera.
+
+The grass in Ghost of Tsushima make a camera ray dependent tilt on grass blade to avoid this problem.
+
+Given camera ray $\overrightarrow{r}$, making a tilt that is linear with $\overrightarrow{r} \cdot E_w$ seems to be a good method.
+However, this inevitably make an invisible angle of a grass blade. 
+
+In the bellow image, you can see that a camera ray perpendicular to the grass blade face, makes no tilt.
+
+![Camera Ray Induced Tilt 1](./Resources/camera_ray_induced_tilt_1.jpeg "Camera Ray Induced Tilt 1")
+
+Then, if camera ray is rotated and reach alignment with $E_w$, it reaches the maximum tilt.
+
+If camera ray is rotate further until its direction becomes perpendicular again, the tilt becomes zero again, but with different direction of the camera ray.
+
+![Camera Ray Induced Tilt 2](./Resources/camera_ray_induced_tilt_2.jpeg "Camera Ray Induced Tilt 2")
+
+Camera ray will create little tilt if the angle is a little bit rotate back, and near to the maximum tilt when it is rotated back near to the perpendicular angle.
+
+There is an enevitable tilt angle where camera ray, and tilted $E_w$ gets aligned, making the grass balde invisible.
+
+![Camera Ray Induced Tilt 3](./Resources/camera_ray_induced_tilt_3.jpeg "Camera Ray Induced Tilt 3")
+
+Hence, making a tilt to the whole blade can make some grass blades invisible depending on the camera angle.
+
+Therefore, like the grass twist from angular displacement, a single grass blade in this implementation receives differit tilt amount that linear grows with the Bezier curve parameter value.
+
+The blade receives additional camera ray dependent twist.
+
+```math
+angle(t) = (k_{relative}(t) - 1 + \frac{k_2}{k_0}t)\theta + c(\overrightarrow{r} \cdot E_w)
+```
+
+If the blade has twist from angualr displacement, the cameara ray dependent twist may make the blade invisible or too thin to the camera by some coincidence, 
+but such situation would be rare and would happen to anyway unless twist of grass is removed from the motion.
+
+The camera ray dependent twist would make whole grass blade that currently have zero or small twist from angular displacement to be invisible or too much thin on the camera.
+
+In addition, twist would make more natural motion than the whole blade tilt.
+
+
 ### Quadratic Bezier Curve Length Control
 
 The length of a Bezier curve changes as the angles between the bars change.

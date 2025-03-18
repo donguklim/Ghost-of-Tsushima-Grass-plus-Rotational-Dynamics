@@ -529,8 +529,8 @@ void GrassUpdate(
     
     wind *= scale.y;
     dampingCoff *= scale.y;
-    stiffness *= scale.y;
-    p1Stiffness *= scale.y;
+    //stiffness *= scale.y;
+    //p1Stiffness *= scale.y;
     
     float3 staticP1 = float3(p1Position.x, 0, p1Position.y) * scale;
     float3 staticP2 = float3(1, 0, 0) * scale;

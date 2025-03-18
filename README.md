@@ -1010,11 +1010,13 @@ Hence, making a tilt to the whole blade can make some grass blades invisible dep
 
 Therefore, like the grass twist from angular displacement, a single grass blade in this implementation receives differit tilt amount that linear grows with the Bezier curve parameter value.
 
-The blade receives additional camera ray dependent twist.
+The blade receives additional camera ray dependent twist angle,
 
 ```math
 angle(t) = (k_{relative}(t) - 1 + \frac{k_2}{k_0}t)\theta + c(\overrightarrow{r} \cdot E_w)
 ```
+
+where c is the cameray-ray dependent twsit coefficient.
 
 If the blade has twist from angualr displacement, the cameara ray dependent twist may make the blade invisible or too thin to the camera by some coincidence, 
 but such situation would be rare and would happen to anyway unless twist of grass is removed from the motion.

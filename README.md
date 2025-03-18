@@ -163,8 +163,17 @@ At first, my intention was just to make a UE5 implementation of the article with
 
 I simply thought I would just copy and paste the equations written in the article.
 
-Note: The study uses the term "edge" to refer to the bars in the bar-linkage rotational system, but in physics studies that involve a rotational system, "bar" is a term more often used. 
-Hence, I am also going to use this term.
+---
+**NOTE**
+
+The reference study uses the term **edge** to refer to the bars in the bar-linkage rotational system, 
+
+but in physics studies, **bar** is the term often used. 
+
+Hence, This study will also use the term "bar".
+
+---
+
 
 ### Use of Dynamics
 
@@ -983,6 +992,15 @@ The twist does not influence amount of torque received by the bars.
 
 #### Additional Twist from Camera Angle
 
+---
+**NOTE**
+
+In this section, **tilt** refers rotation about the grass bars that is uniform along the Bezier curve of the grass, 
+
+while **twist** refers to varying rotation about grass bars that is continuous but changes along the curve of the grass.
+
+---
+
 When $E_w$ vector is aligned with the camera ray, the grass blade becomes thin and becomes invisible or almost invisible to the camera.
 
 The grass in Ghost of Tsushima make a camera ray dependent tilt on grass blade to avoid this problem.
@@ -1006,24 +1024,77 @@ There is an enevitable tilt angle where camera ray, and tilted $E_w$ gets aligne
 
 ![Camera Ray Induced Tilt 3](./Resources/camera_ray_induced_tilt_3.jpeg "Camera Ray Induced Tilt 3")
 
-Hence, making a tilt to the whole blade can make some grass blades invisible depending on the camera angle.
+Hence, making a tilt to the whole blade can still make some grass blades invisible depending on the camera angle.
 
-Therefore, like the grass twist from angular displacement, a single grass blade in this implementation receives differit tilt amount that linear grows with the Bezier curve parameter value.
+Indeed, if the tilt angle is given by of $c(\overrightarrow{r} \cdot E_w)$, where c is a tilt coefficient, it may not give better result.
+This can be emprically confirmed by following Python script.
+
+```Python
+from math import sin, cos, radians
+
+
+no_tilt_result = 0
+for i in range(360):
+    no_tilt_result += abs(sin(radians(i)))
+
+no_tilt_result /= 360
+print(f'no tilt: {no_tilt_result}\n')
+
+average_result = 0
+for i in range(40):
+    accumulated = 0
+    tilt_amount = i / 10.0
+
+    for j in range(360):
+        accumulated += abs(sin(radians(j) + tilt_amount * cos(radians(j))))
+
+    result = accumulated / 360.0 / no_tilt_result
+    average_result += result
+    print(f'tilt amount{tilt_amount}, relative result: {result}')
+    print(f'average relative result up to tilt amount{tilt_amount}: {average_result / (i + 1)}\n')
+
+```
+
+Imagine there is a fixed camera ray, 
+
+if the angle between $E_w$ vector of a grass(assuming the grass has no twist and has a uniform $E_w$ vector along the curve ) and the camera ray is $/theta$, 
+the amount of area occupied by the grass blade is linear with $|\sin(\theta)|$. 
+
+Above script approximately measures the average occupied area a grass blade would made over all angles.
+
+When no tilt is given, the relative area is 0.64. You can find it by running above script.
+
+
+Testing with tilt amount from 0.1 to 3.9 with stride of 0.1, the maximum relative area is achieved with tilt coefficient set to 1.7.
+
+It is approximately 1.3 times better than giving no tilt.
+Some coefficient even gives worse result than zero tilt.
+
+If $E_w$ vectors of grass baldes do not vary much, tilting would be a good improvement,
+but in this research grass blades roations on the bases are three dimensional pivot. Grass blades can have large variation on $E_w$ depending on the landscape and wind force.
+
+Tilting only gives 1.3 times improvement, and it does not avoid some grasses to be hidden from camera.
+
+
+Therefore, like the grass twist from angular displacement, 
+a single grass blade in this implementation receives differit tilt amount that linearly grows with the Bezier curve parameter value.
+
+The main purpose is to avoid some grasses to be invisible or too thin on camera screen rather than increase the amount of area occupied by camera.
+In addition, twist would make more natural motion than the whole blade tilt.
 
 The blade receives additional camera ray dependent twist angle,
 
 ```math
-angle(t) = (k_{relative}(t) - 1 + \frac{k_2}{k_0}t)\theta + c(\overrightarrow{r} \cdot E_w)
+angle(t) = (k_{relative}(t) - 1 + \frac{k_2}{k_0}t)\theta + 2.2(\overrightarrow{r} \cdot E_w)t
 ```
 
-where c is the cameray-ray dependent twsit coefficient.
+2.2 is multiplied to $(\overrightarrow{r} \cdot E_w)$ instead of the best resulted value 1.7 on tilt. 
 
-If the blade has twist from angualr displacement, the cameara ray dependent twist may make the blade invisible or too thin to the camera by some coincidence, 
-but such situation would be rare and would happen to anyway unless twist of grass is removed from the motion.
+Unlike tilt, Bezier parameter t is multiplied to get the twisting rotation.
+2.2 shows best performance when a twist is made instead of a constant tilt.
 
-The camera ray dependent twist would make whole grass blade that currently have zero or small twist from angular displacement to be invisible or too much thin on the camera.
+This can be confirmed by running above Python script.
 
-In addition, twist would make more natural motion than the whole blade tilt.
 
 
 ### Quadratic Bezier Curve Length Control

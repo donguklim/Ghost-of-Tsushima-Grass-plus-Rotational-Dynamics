@@ -13,7 +13,7 @@
 float3 GetRotatedCurvePointTangentSide(
     float2 p1Position,
     float2 stiffnessRatios,
-    float viewDependentTiltScale,
+    bool isApplyingViewDependentTwist,
     in float2 uv,
     in float4 angularDisp,
     in float3 viewingDir,
@@ -62,9 +62,9 @@ float3 GetRotatedCurvePointTangentSide(
         sideDir = float3(0, 1, 0);
     }
 
-    if (viewDependentTiltScale != 0.0)
+    if (isApplyingViewDependentTwist)
     {
-        float tiltAngle = dot(sideDir, viewingDir) * viewDependentTiltScale * t;
+        float tiltAngle = 2.2 * dot(sideDir, viewingDir) * t;
         sideDir = QuatRotateVector(
             QuatFromAxisAngle(unitTangent, tiltAngle),
             sideDir
@@ -81,7 +81,7 @@ float3 GetRotatedCurvePointTangentSide(
 // Rotation from P0 is assumed to be already done by mesh orientation update in Niagara
 float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
     in float4 bezierPointsData,
-    in float viewDependentTiltScale,
+    in bool isApplyingViewDependentTwist,
     in float2 uv,
     in float4 angularDisp,
     in float3 viewingDir,
@@ -144,9 +144,9 @@ float3 GetRotatedCurvePointTangentSideWithoutP0Rotation(
         );
     }
         
-    if (viewDependentTiltScale != 0.0)
+    if (isApplyingViewDependentTwist)
     {
-        float tiltAngle = dot(sideDir, viewingDir) * viewDependentTiltScale * t;
+        float tiltAngle = dot(sideDir, viewingDir) * 2.2 * t;
         
         if (abs(tiltAngle) > ANGLE_THRESHOLD && tangentLength > GRASS_NORMAL_LENGTH_THRESHOLD)
         {

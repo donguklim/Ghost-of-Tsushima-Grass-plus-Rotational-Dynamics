@@ -1,5 +1,8 @@
 # UE5 Implementation of Rotational Dynamics Grass 
 
+
+[![Watch the video](https://img.youtube.com/vi/IbZkUX3rt54/hqdefault.jpg)](https://www.youtube.com/watch?v=IbZkUX3rt54)
+
 ## Introduction
 
 This is an implementation of the Ghost of Tsushima grass + rotational physics dynamics based motion of Bezier curve grass.

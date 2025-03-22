@@ -929,7 +929,7 @@ Otherwise,
     \frac{df}{dt}(t) = 0
     \\
     a \cos(t) - b \sin(t) = 0
-
+    \\
     t = \arctan(a/b)
 }
 ```

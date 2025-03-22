@@ -682,9 +682,9 @@ The above linear algebra leads to the solution:
 
 ```
 
-And this solution faces the same problem as the infinite series solution, which seems to be natural.
+And this solution faces a less constrained but similar problem to the infinite series solution.
 
-It is only solvable when $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$ is less than 1.
+The resulting torque values diverge as $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$ becomes near to 1.
 
 
 ### Implications of the Failures of Convergence of Payback Method

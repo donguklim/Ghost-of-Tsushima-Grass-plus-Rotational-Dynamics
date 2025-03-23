@@ -460,6 +460,24 @@ float3 GetPivotBarTorque(
         - dampingCoff / 3.0f * cross(bar, cross(angularVelocity, bar))
     ) - stiffness * angularDisp;
 }
+
+float3 GetBar1FeedbackForceFromBar2(
+    in float dampingCoff,
+    in float stiffness,
+    in float3 windForce,
+    in float3 bar2,
+    in float3 bar2RotationalAxis,
+    in float angualrVelocity,
+    in float angularDisplacement,
+)
+{
+    
+    float barLength = length(bar2);
+    
+    return stiffness * cross(bar2RotationalAxis, bar2) * angularDisplacement / barLength 
+        - windForce / 4.0f 
+        + dampingCoff * cross(bar2RotationalAxis, bar2) * angualrVelocity * barLength * 5.0f / 16.0f;
+}
     
     
 float GetMomentOfInertia(float segmentDensity, float3 bar1, float3 p2)
@@ -584,8 +602,10 @@ void GrassUpdate(
         
     // Inertia force acting on center of mass point(the mid point) of Bar2 due to movement of P1
     // = -(p1 acceleration) * mass of Bar2
+    
+    float3 bar2InertiaForce = -0.5f * bar2Mass * seizedP1PlainAcc;
 
-    float3 p1InertiaForceTorque = -0.5f * bar2Mass * cross(bar2, seizedP1PlainAcc);
+    float3 p1InertiaForceTorque = cross(bar2, bar2InertiaForce);
         
     float3 p1Torque = p1InertiaForceTorque + GetPivotBarTorque(
         dampingCoff,
@@ -631,8 +651,17 @@ void GrassUpdate(
     */
     if (allowP1FeedbackOnP0)
     {        
-        float bar1DotBar2 = dot(p1, bar2);
-        p0Acc -=  bar1DotBar2 / bar2LengthSquare / momentOfIntertia * p1TorqueMagnitude * bar2RotationalAxis;
+        float3 feedbackForce = GetBar1FeedbackForceFromBar2(
+            dampingCoff,
+            p1Stiffness,
+            wind,
+            bar2,
+            bar2RotationalAxis,
+            angularVelocity.w,
+            angularDisp.w
+        ) - bar2InertiaForce;
+
+        p0Acc -= dot(cross(p1, feedbackForce), bar2RotationalAxis) * bar2RotationalAxis / momentOfIntertia;
 
     }
            

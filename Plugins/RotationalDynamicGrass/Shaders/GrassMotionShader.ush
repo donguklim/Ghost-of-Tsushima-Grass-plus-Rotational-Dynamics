@@ -461,14 +461,14 @@ float3 GetPivotBarTorque(
     ) - stiffness * angularDisp;
 }
 
-float3 GetBar1FeedbackForceFromBar2(
+float3 GetBar1PaybackForceFromBar2(
     in float dampingCoff,
     in float stiffness,
     in float3 windForce,
     in float3 bar2,
     in float3 bar2RotationalAxis,
     in float angualrVelocity,
-    in float angularDisplacement,
+    in float angularDisplacement
 )
 {
     
@@ -525,7 +525,6 @@ float Get2DAngle(float2 vec)
 
  
 void GrassUpdate(
-    bool allowP1FeedbackOnP0,
     float dampingCoff,
     in float massDensity,
     float stiffness,
@@ -547,8 +546,6 @@ void GrassUpdate(
     
     wind *= scale.y;
     dampingCoff *= scale.y;
-    //stiffness *= scale.y;
-    //p1Stiffness *= scale.y;
     
     float3 staticP1 = float3(p1Position.x, 0, p1Position.y) * scale;
     float3 staticP2 = float3(1, 0, 0) * scale;
@@ -567,7 +564,9 @@ void GrassUpdate(
     // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
     
     float momentOfIntertia = GetMomentOfInertia(segmentMassDensity, p1, p2);
-    float3 p1SeizedP0AngularAcc = (
+    
+    // P0 moment from restoration force, wind force and air friction force
+    float3 p0Moment = (
         GetPivotBarTorque(
             dampingCoff,
             stiffness,
@@ -584,7 +583,7 @@ void GrassUpdate(
             bar2RotationalAxis,
             p2
         )
-    ) / momentOfIntertia;
+    );
 
     float3 bar2 = p2 - p1;
 
@@ -595,19 +594,15 @@ void GrassUpdate(
     float bar1Mass = segmentMassDensity * bar1Length;
     float bar2Mass = segmentMassDensity * bar2Length;
         
-    // plain p1 acceleration (not anuglar), when p1 is seized.
-    // (angular acceleration) x p1 is the tangential acceleration
-    // (angular velocity) x (angular velocity x p1) is the centirpetal acceleration
-    float3 seizedP1PlainAcc = cross(p1SeizedP0AngularAcc, p1) + cross(angularVelocity.xyz, cross(angularVelocity.xyz, p1));
-        
-    // Inertia force acting on center of mass point(the mid point) of Bar2 due to movement of P1
-    // = -(p1 acceleration) * mass of Bar2
     
-    float3 bar2InertiaForce = -0.5f * bar2Mass * seizedP1PlainAcc;
-
-    float3 p1InertiaForceTorque = cross(bar2, bar2InertiaForce);
+    // (angular velocity) x (angular velocity x p1) is the centirpetal acceleration made to p1(not angular accleration, just plain acceleration)
+    float3 p1CentripetalAccleration = cross(angularVelocity.xyz, cross(angularVelocity.xyz, p1));
         
-    float3 p1Torque = p1InertiaForceTorque + GetPivotBarTorque(
+    // Inertia force acting on center of mass point(the mid point) of Bar2 due to angular velocity of P1
+    float3 p1CenteripetalInertiaForceTorque = -0.5f * bar2Mass * cross(bar2, p1CentripetalAccleration);
+        
+    // moment from the intertia force due to centeripetal force, wind force, air friction force and restoration force.
+    float3 p1RawMoment = p1CenteripetalInertiaForceTorque + GetPivotBarTorque(
         dampingCoff,
         p1Stiffness,
         wind,
@@ -616,54 +611,37 @@ void GrassUpdate(
         angularDisp.w * bar2RotationalAxis
     );
         
-    float p1TorqueMagnitude = dot(bar2RotationalAxis, p1Torque);
+    // p1's pivot is limited to make only rotation about `bar2RotationalAxis`, so the true moment is calcualted by projection.
+    float p1Moment = dot(bar2RotationalAxis, p1RawMoment);
+    
+    // the force should be paid back from bar1 to withstand the moment of bar2
+    float3 paybackForce = GetBar1PaybackForceFromBar2(
+        dampingCoff,
+        p1Stiffness,
+        wind,
+        bar2,
+        bar2RotationalAxis,
+        angularVelocity.w,
+        angularDisp.w
+    );
+    
+    
+    p0Moment += dot(cross(p1, paybackForce), bar2RotationalAxis) * bar2RotationalAxis;
+    
+    float torqueTerm = 0.5 * bar2Mass * bar1Length / momentOfIntertia;
+    float p0TorqueDotAxis = dot(p0Moment, bar2RotationalAxis) / (1.0f + torqueTerm);
+    
+    float3 p0Torque = p0Moment - torqueTerm * p0TorqueDotAxis * bar2RotationalAxis;
+    
+    float3 p0Acc = p0Torque / momentOfIntertia;
         
     // The total torque to P1 required to make P1 seized is -p1BendingTorque.
     // Now payback the torque to P1
     
-    float p1Acc = p1TorqueMagnitude / (bar2Mass * bar2LengthSquare) * 3.0f;
+    float p1Torque = p1Moment - 0.5 * bar2Mass * p0TorqueDotAxis / momentOfIntertia * dot(p1, bar2) / bar1Length;
     
-    float3 p0Acc = p1SeizedP0AngularAcc;
+    float p1Acc = p1Torque / (bar2Mass * bar2LengthSquare) * 3.0f;
     
-    /*
-        The payback should not just happen once to bar2 on P1.
-        Bar2 make another payback torque to bar1 on P0.
-        This should happen infinitley and form two infinite serieses.
-        The sereises are a geometric sereis with multiplier r equal to 
-            
-            r = 0.5 * bar2 mass * dot(bar1, bar2)^2 / (moment of inertia)
-    
-        let K1 = p1TorqueMagnitude
-        then T1 = -bar1DotBar2 * p1TorqueMagnitude * bar2RotationalAxis
-    
-        K[i + 1] = Ki * r
-        T[i + 1] = Ti * r
-    
-        sum T = T1 / (1 - r)
-        sum K = K1 / (1 - r)
-    
-        However, this series may diverge because it is not gurantteed that r < 1.
-        Hence, this way of calculating the torques is not accurate.
-    
-        Just make the payback one more time in bellow if statment.
-    
-        In conclusion, the statemts within the bellow if statement does not work well and gives weird motion.
-    */
-    if (allowP1FeedbackOnP0)
-    {        
-        float3 feedbackForce = GetBar1FeedbackForceFromBar2(
-            dampingCoff,
-            p1Stiffness,
-            wind,
-            bar2,
-            bar2RotationalAxis,
-            angularVelocity.w,
-            angularDisp.w
-        ) - bar2InertiaForce;
-
-        p0Acc -= dot(cross(p1, feedbackForce), bar2RotationalAxis) * bar2RotationalAxis / momentOfIntertia;
-
-    }
            
     float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
     

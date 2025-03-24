@@ -536,7 +536,7 @@ M_\text{1 ci} = \frac{\overrightarrow{bar2}}{2} \times (-m_2 \omega \times (\ome
 
 Also, there is moment on P1 caused by wind force, air friction force on Bar2 and restoration force of P1.
 
-The total moment $M_2$ is eqaul to
+The total moment $M_1$ is eqaul to
 
 ```math
 \displaylines{
@@ -545,7 +545,13 @@ The total moment $M_2$ is eqaul to
     M_1 = (M_\text{1 raw} \cdot \overrightarrow{E}_w) \overrightarrow{E}_w 
 }
 ```
-(The projection on $\overrightarrow{E}_w)$ is made because P1 is only allowed to rotate around $\overrightarrow{E}_w)$)
+---
+**NOTE**
+
+The projection on $\overrightarrow{E}_w)$ from $M_\text{1 raw}$ is made because P1 is only allowed to rotate around $\overrightarrow{E}_w)$
+
+---
+
 
 However, this calculation of $M_2$ is only allowed when P1 is stationary.
 
@@ -555,28 +561,84 @@ However, this calculation of $M_2$ is only allowed when P1 is stationary.
 
 
 
-#### 4. Calculate the moment on P0 for Pyback
+#### 4. Calculate the Payback Moment on P0
 
-First calculate the force F that would cancel the recoil from the force of wind, air friction from Bar2 and the restoration moment from P1.
+Imagine Bar2 is in the middle of space without gravity, force applied to Bar2 would cause a rotation about Bar2's center of mass unless the force is exactly applied to Bar2's center.
+
+The required force to make P1 stationary is dependent to the location of the force on Bar2.
+
+##### Force further than the Center of Mass Point
+
+If the force is applied at a further position than the center of mass of Bar2 from P1 as shown in following illustration. 
+
+![Lending Force 01](./Resources/p1_reacting_force_01.jpeg "Lending Force 01")
+
+The force required to make P1 stationary has the same direction as the applied force.
+
+As shown in following free body diagram the force for making P1 stationary is equal to the applied force.
+
+![Lending Force 01 Freebody Diagram](./Resources/p1_reacting_force_01_freebody.jpeg "Lending Force 01 Freebody Diagram")
+
+##### Force nearer than the Center of Mass Point
+
+If the force is applied at a nearer position than the center of mass of Bar2 from P1 as shown in following illustration. 
+
+![Lending Force 02](./Resources/p1_reacting_force_02.jpeg "Lending Force 01")
+
+The force required to make P1 stationary has the opposite direction as the applied force.
+
+As shown in following free body diagram the force for making P1 stationary is equal to -0.5 times of the applied force.
+
+![Lending Force 02 Freebody Diagram](./Resources/p1_reacting_force_02_freebody.jpeg "Lending Force 02 Freebody Diagram")
+
+##### Force at the Center of Mass Point
+
+If the force is applied at the center of mass of Bar2, then the required force to make P1 stationary has opposite direction and half of the magnitude as shown in following freebody diagram.
+
+![Lending Force 03 Freebody Diagram](./Resources/p1_reacting_force_03_freebody.jpeg "Lending Force 03 Freebody Diagram")
+
+
+##### Total Payback Force and Moment
+
+The payback force from wind is eqaul to 
+```math
+\displaylines{
+    \begin{align}
+        W_{payback} & = -\left(\int_{0}^{|\overrightarrow{bar2}| / 2}-\frac{W}{2} dt + \int_{|\overrightarrow{bar2}| / 2}^{|\overrightarrow{bar2}|}Wdt\right) 
+        \\
+        & = -W/4
+    \end{align}
+}
+```
+
+The payback force from the damping force is equal to
+```math
+\displaylines{
+    \begin{align}
+        D_{payback} & = -\left(\int_{0}^{|\overrightarrow{bar2}| / 2}-\frac{-c\omega \times t\overrightarrow{u}_{bar2}}{2} dt + \int_{|\overrightarrow{bar2}| / 2}^{|\overrightarrow{bar2}|}-c\omega \times t\overrightarrow{u}_{bar2}dt\right) 
+        \\
+        & = \frac{5}{16}c|\overrightarrow{bar2}|(\omega \times \overrightarrow{bar2})
+    \end{align}
+}
+```
+
+The paybakc force for the P1's restoration moment is equal to
 
 ```math
-F = T_{bar2} \times \frac{\overrightarrow{bar2}}{2|\overrightarrow{bar2}|}
+R_{payback} = \frac{k_{p1} \overrightarrow{\Delta\theta}_{bar2} \times \overrightarrow{u}_{bar2}}{|\overrightarrow{bar2}|} 
 
 ```
 
-F applied to P1 is an extra force lent to the system in order to make F only create angular acceleration on P1.
-
-![Payback example 04](./Resources/payback_example_04.jpeg "Payback example 04")
-
-
-The payback torque and angular acceleration $acc0_{payback}$ on P0 is equal to:
+The payback force from Bar2's intertia force is equal to 
 
 ```math
-\displaylines{
-    T = -F \times \overrightarrow{bar1}
-    //
-    acc_{0payback} = T / MI
-}
+I_{payback} = \frac{m_2}{2}\omega \times (\omega \times \overrightarrow{bar1})
+```
+
+The total payback moment $M_0$ for P0 is
+
+```math
+M_\text{0 payback} = \overrightarrow{bar2} \times (W_{payback} + D_{payback}+ R_{payback} + I_{payback})
 ```
 
 

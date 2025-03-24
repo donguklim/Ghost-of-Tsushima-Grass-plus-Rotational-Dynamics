@@ -474,8 +474,8 @@ float3 GetBar1PaybackForceFromBar2(
     
     float barLength = length(bar2);
     
-    return stiffness * cross(bar2RotationalAxis, bar2) * angularDisplacement / barLength 
-        - windForce / 4.0f 
+    return stiffness * cross(bar2RotationalAxis, bar2) * angularDisplacement / barLength / barLength
+        - windForce * barLength / 4.0f
         + dampingCoff * cross(bar2RotationalAxis, bar2) * angualrVelocity * barLength * 5.0f / 16.0f;
 }
     
@@ -596,10 +596,10 @@ void GrassUpdate(
         
     
     // (angular velocity) x (angular velocity x p1) is the centirpetal acceleration made to p1(not angular accleration, just plain acceleration)
-    float3 p1CentripetalAccleration = cross(angularVelocity.xyz, cross(angularVelocity.xyz, p1));
+    float3 p1CentripetalInertiaForce = -bar2Mass * cross(angularVelocity.xyz, cross(angularVelocity.xyz, p1));
         
     // Inertia force acting on center of mass point(the mid point) of Bar2 due to angular velocity of P1
-    float3 p1CenteripetalInertiaForceTorque = -0.5f * bar2Mass * cross(bar2, p1CentripetalAccleration);
+    float3 p1CenteripetalInertiaForceTorque = cross(0.5 * bar2, p1CentripetalInertiaForce);
         
     // moment from the intertia force due to centeripetal force, wind force, air friction force and restoration force.
     float3 p1RawMoment = p1CenteripetalInertiaForceTorque + GetPivotBarTorque(
@@ -623,7 +623,7 @@ void GrassUpdate(
         bar2RotationalAxis,
         angularVelocity.w,
         angularDisp.w
-    );
+    ) + 0.5 * p1CentripetalInertiaForce;
     
     
     p0Moment += dot(cross(p1, paybackForce), bar2RotationalAxis) * bar2RotationalAxis;

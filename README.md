@@ -1269,7 +1269,7 @@ but in the real usecase air friction should grow linearly with wind force.
 
 #### Comparing Results with or without Rotation Limits
 
-[![Watch the video](https://img.youtube.com/vi/gnih4243lIs/hqdefault.jpg)](https://www.youtube.com/watch?v=gnih4243lIs)
+[![Watch the video](https://img.youtube.com/vi/2ipnWEWLgjE/hqdefault.jpg)](https://www.youtube.com/watch?v=2ipnWEWLgjE)
 
 Above video uses the methods in this study. 
 
@@ -1277,7 +1277,7 @@ Bellow video is the result without ground collision and angular magnitude limita
 
 Angle limitation on P1 is not removed and still remains because removing it can lead to zero length Bezier curve and yield division by zero error.
 
-[![Watch the video](https://img.youtube.com/vi/3fyWGqc9AHo/hqdefault.jpg)](https://www.youtube.com/watch?v=3fyWGqc9AHo)
+[![Watch the video](https://img.youtube.com/vi/dHm0AVDqMTM/hqdefault.jpg)](https://www.youtube.com/watch?v=dHm0AVDqMTM)
 
 It can be observed that, the motion without rotation limits shows unplausible motion when the wind force becomes strong.
 

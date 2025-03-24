@@ -446,11 +446,26 @@ The methods in this study are implemented with a two-bars linkage system. A Quad
 
 ### Payback Moment Method
 
-A calculation method which will be referred to as the 'payback method' is devised in this study to account for the feedbacks between bars.
+If the rotating bars do not have pivots, the angualr acceleration is simple. 
+You would integrate the torque along the line segments to calculate the torque and divide it by the moment of inertia of the bars.
 
-The method will be explained with a two-bar linkage system example.
+However, if there is a pivot connecting the bars, the problem becomes complex.
 
-A two-bar linkage system with bar1, bar2, stationary pivot P0 and another pivot P1 that connects the bars are given.
+You may try to calculate the torque separately on each bar.
+If you integrate torque only along Bar1 and calculate the angular acceleration by dividing the torque by bar1, it is an acceleration that would occur if Bar1 is not attached to Bar2.
+Bar2 will be dragging Bar1 while the torque along Bar1 is making acceleration.
+
+In the same way, you cannot integrate the torque along Bar2 to calculate the angular acceleration. 
+The acceleration from dividing the torque by Bar2's moment of inertia is the acceleration that would occur if P1 is stationary.
+
+However, what if the net torque on P1 ends up zero?
+In that case, P1 would be seized and the force along Bar2 would be transmitted without loss on P0.
+In the same way, if there is counter torque working on P0, to make P1 stationary from the force acting along Bar2, force on Bar2 would only cause angualr acceleration on P1.
+
+Accurate angular calculations can be made in these situations.
+
+Hence, I propose a method I named `Payback Moment Method`, which is to approximate the angular acceleration by lending extra torque or moment to P0 and P1, in order to make the said situations; 
+then, make P0 and P1 to payback the lent torque/moment.
 
 
 ![Payback example 01](./Resources/payback_example_01.jpeg "Payback example 01")
@@ -488,7 +503,7 @@ Calculate the moment $M_{0}$ that would occur at P0 if if all force on bar2 is t
 \\
 \\
 \begin{align}
-    M_{0} & = \frac{|\overrightarrow{bar1}|}{2}(\overrightarrow{W} \times \overrightarrow{bar1}) - \frac{c|\overrightarrow{bar1}|}{3}(\overrightarrow{\omega}_{bar1} \times \overrightarrow{bar1} \times \overrightarrow{bar1}) - k_{p0} \overrightarrow{\Delta\theta}_{bar1} 
+    M_\text{0 sezied} & = \frac{|\overrightarrow{bar1}|}{2}(\overrightarrow{W} \times \overrightarrow{bar1}) - \frac{c|\overrightarrow{bar1}|}{3}(\overrightarrow{\omega}_{bar1} \times \overrightarrow{bar1} \times \overrightarrow{bar1}) - k_{p0} \overrightarrow{\Delta\theta}_{bar1} 
     \\
     & + \int_{0}^{|\overrightarrow{bar2}|}[(\overrightarrow{W} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) - c (\overrightarrow{\omega_{bar1}} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2}) - c(\overrightarrow{\omega}_{bar2} \times  tu_{bar2})\times  tu_{bar2}]dt
 \end{align} 
@@ -498,14 +513,9 @@ Calculate the moment $M_{0}$ that would occur at P0 if if all force on bar2 is t
 }
 ```
 
-If the net moment of P1 is zero, P1 become sezied and won't make any rotation, trasmitting all force without loss to P0.
-$M_{0}$ is the moment that would occur on P0, if the net moment of P1 is zero.
+$M_{0}$ is achieved at P0 at by lending extra moment to P1.
 
-However P0 would not always have zero moment, so $M_{0}$ is achieved by lending extra moment on P1 to make its net moment to zero. 
-
-By lendthing extra moment to make P1's net moment 0,  $M_{0}$ is achieved at P0 at this step.
-
-Next step is to pay back the lent moment on P1.
+Next step is to payback the lent moment on P1.
 
 
 #### 2. Calculate the moment on P1 for Payback
@@ -635,134 +645,88 @@ The payback force from Bar2's intertia force is equal to
 I_{payback} = \frac{m_2}{2}\omega \times (\omega \times \overrightarrow{bar1})
 ```
 
-The total payback moment $M_0$ for P0 is
+The total payback moment $M_\text{0 payback}$ added to P0 is
 
 ```math
 M_\text{0 payback} = \overrightarrow{bar2} \times (W_{payback} + D_{payback}+ R_{payback} + I_{payback})
 ```
 
-
-#### 5. Update P0 Angular Acceleration
-
-Calculate the final P0 angular acceleration $acc_{0}$.
-
-
+The accumulated moment on P0 is
 ```math
-
-acc_{0} = acc_{0fixed} + acc_{0payback}
+M_0 = M_\text{0 sezied} + M_\text{0 payback}
 ```
 
-Adding $acc_{0payback}$ again is equivalent to lending extra torque on P1 to cancel the inertia torque caused by the newly added acceleration on P0.
+However, adding $M_\text{0 payback}$ requires lending another moment to P1 to cancel moment caused to P1 due to $M_\text{0 payback}$ on P0.
 
-Steps 2 to 5 can be repeated several times with only the newly added acceleration on P0;
-However, repeating the payback process is not a convergence guaranteed procedure.
+This would form two infinite series, each for P0's moment and P1's moment. 
+Repeating the steps from two infinite series with the same multiplier value $\frac{-m2}{2MI}|\overrightarrow{bar1}|$.
 
-Hence, the current implementation of the study stops at step 5 and does not repeat the payback on P0 and P1.
+It forms two alternating geometric series, but solving the infinite series is not used in the payback method.
+
+The actual torques that causes the angualr accelerations are calculated by solving a linear algebra.
 
 
-### Divergence of Infinite Payback Method
+#### 5. Solving Torque by Use of Linear Algebra
 
-Repeating the payback method infinitely on a two-bar linkage system gives two infinite series (one for P0 and the other for P1).
+The payback method forms following linear algebra
 
-The calculation on these series does not give convergent results for every grass instance.
-Depending on the mass and length of the bars, it leads to divergent results.
+```math
+M_0 + f_{bar1}(T_0) - T_0 = \overrightarrow{0}
+\\
+M_1 + f_{bar2}(T_0) - T_1 = \overrightarrow{0}
+```
 
-Let $T0_i$ be torque on P0 and $T1_i$ be torque on P1 from the i'th payback iteration.
+$T_0$ and $T_1$ are actual kinetic torque that causes the angular accelerations.
 
-Let $T1_1$ be the torque from step 2 of the above example.
+$T_0$ is the torque that gives angualr accelerations on P0 with the moment of inertia of bar 1 and bar2.
 
-Then, $T0_1$ from step 4 is:
+$T_1$ is the torque that gives angular accelerations on P1 with the moment of inertia of bar2.
+
+$f_{bar1}(T_0)$ and $f_{bar2}(T_0)$ represents payback moments added on P0 and P1 respectively due to $T_0$.
+
+
+Angular acceleration from $T_0$ adds another moment of intertia force to Bar2's center of mass, which is equal to
+
+```math
+\frac{m_2}{MI} (T_0 \times \overrightarrow{u}_{bar1})
+```
+So,
 
 ```math
 \displaylines{
-    \begin{align}
-        T0_1 & = \overrightarrow{bar1} \times  (T1_1 \times \frac{\overrightarrow{bar2}}{|\overrightarrow{bar2}|^2})
-        \\
-        & = \frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})T1_1 - (\overrightarrow{bar1} \cdot T1_1)}{|\overrightarrow{bar2}|^2}
-        \\
-        & = \frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})}{|\overrightarrow{bar2}|^2}T1_1
-    \end{align}
-}
-```
-
-Given $T1_i$ and $T0_i$:
-
-```math
-\displaylines{
-    T1_{i + 1} = \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}T1_i
-
+\begin{align}
+    f_{bar2}(T_0) & = -\frac{m_2}{2MI}((\overrightarrow{bar2} \times (T_0 \times \overrightarrow{u}_{bar1})) \cdot E_w)E_w
     \\
-
-    T0_{i + 1} = \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}T0_i
+    & = -\frac{m_2}{2MI}(\overrightarrow{u}_{bar1} \cdot \overrightarrow{bar2})(T_0 \cdot E_w)E_w
+\end{align}
 }
 ```
-So both series are geometric series with the same multiplier.
 
-Hence infinitely applying payback would result in:
+Because $T_0$ has given intertia force to Bar2 adding moment to P1, it needs to payback the force for making P1 stationary.
 
 ```math
 \displaylines{
-    \sum_{i=1}^{\infty}T0_{i + 1} = T0_1/(1 - \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2})
+\begin{align}
+    f_{bar1}(T_0) & = -\frac{m_2}{2MI}((\overrightarrow{bar1} \times (T_0 \times \overrightarrow{u}_{bar1})) \cdot E_w)E_w
     \\
-    \sum_{i=1}^{\infty}T1_{i + 1} = T1_1/(1 - \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2})
+    & = -\frac{m_2|\overrightarrow{bar1}|}{2MI}(T_0 \cdot E_w)E_w
+\end{align}
 }
 ```
-if the multiplier is less than 1.
 
-However, the multiplier $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$
-is not guaranteed to be less than 1 for every grass instance.
-
-When the infinite payback series sums are actually used in the implementation, some grass instances show implausible motions.
-
-### Solving Payback Method as Linear Algebra
-
-
-An attempt to solve the payback method as linear algebra is made and failed.
-
-Let T0 be the torque applied to P0 due to wind force, air friction force, and restoration force.
-Let T1 be the torque applied to P1 in the same manner.
-
-Let K0, K1 be the actual kinetic torque applied to generate the acceleration on P0 and P1 respectively.
-
-Then, the variables form a linear algebra system.
-
+You can first solve value for $T_0  \cdot E_w$
 ```math
-\displaylines{
-    T0 - K0 + \frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})}{|\overrightarrow{bar2}|^2}K1 = 0
-    \\
-
-    T1 - K1 - \frac{m_2}{2}([\overrightarrow{bar2} \times ((\omega \times(\omega \times (\overrightarrow{bar1})) + \frac{(K0 \times \overrightarrow{bar1})}{MI})] \cdot \overrightarrow{E}_w )\overrightarrow{E}_w = 0
-}
+(T_0 \cdot E_w) & = \frac{M_0}{1 + \frac{m_2|\overrightarrow{bar1}|}{2MI}}
 ```
 
-It seems the payback method can be solved as a linear algebra problem, but the above equation does not guarantee existence of the solution either.
+Then, you can solve $T_0$ and $T_1$
 
-The above linear algebra leads to the solution:
-
+The angular accelerations are,
 ```math
-\displaylines{
-    K1 = T1 + \frac{m_2}{2}|\omega^2|((\overrightarrow{bar2} \times \overrightarrow{bar1}) \cdot \overrightarrow{E}_w)\overrightarrow{E}_w - \frac{m_2}{2MI}(\overrightarrow{bar1} \cdot \overrightarrow{bar2})(K0 \cdot \overrightarrow{E}_w)\overrightarrow{E}_w
-    \\
-
-    K0 \cdot \overrightarrow{E}_w = \frac{
-        [T0 \cdot \overrightarrow{E}_w -\frac{\overrightarrow{bar1} \cdot \overrightarrow{bar2}}{|\overrightarrow{bar2}|^2}(T1 + \frac{m_2}{2}|\omega|^2(\overrightarrow{bar2} \times \overrightarrow{bar1}))\cdot \overrightarrow{E}_w]
-    }{
-        (1 - \frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2})
-    }
-}
-
+acc_{p0} = T_0 / MI_{bar1 + bar2}
+\\
+acc_{p1} = T_1 / MI_{bar2}
 ```
-
-And this solution faces a less constrained but similar problem to the infinite series solution.
-
-The resulting torque values diverge as $\frac{m_2}{2MI}\frac{(\overrightarrow{bar1} \cdot \overrightarrow{bar2})^2}{|\overrightarrow{bar2}|^2}$ becomes near to 1.
-
-
-### Implications of the Failures of Convergence of Payback Method
-
-The two previous failures imply that the Payback method is not an unbiased approximation method that can lead to accurate results as the repetition of the payback procedure increases.
-
-Hence, it is only applied once for P0 and P1 in the implementation.
 
 ### Angular Displacement Magnitude Limitation on P0
 

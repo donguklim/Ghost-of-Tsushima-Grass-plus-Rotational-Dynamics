@@ -446,7 +446,7 @@ The methods in this study are implemented with a two-bars linkage system. A Quad
 
 ### Payback Moment Method
 
-If the rotating bars do not have pivots, the angualr acceleration is simple. 
+If the rotating bars do not have pivots, the angular acceleration is simple. 
 
 You would integrate the torque along the line segments to calculate the torque and divide it by the moment of inertia of the bars.
 
@@ -467,7 +467,7 @@ However, what if the net torque on P1 ends up zero?
 
 In that case, P1 would be seized and the force along Bar2 would be transmitted without loss on P0.
 
-In the same way, if there is counter torque working on P0, to make P1 stationary from the force acting along Bar2, force on Bar2 would only cause angualr acceleration on P1.
+In the same way, if there is counter torque working on P0, to make P1 stationary from the force acting along Bar2, force on Bar2 would only cause angular acceleration on P1.
 
 Accurate angular calculations can be made in these situations.
 
@@ -483,7 +483,7 @@ then, make P0 and P1 to payback the lent torque/moment.
 ---
 **NOTE**
 
-In this section, **moment** refers the force that could potentially cause the bars to rotate about the pivots at the moment but are not actually generation any kinetic movement yet.
+In this section, **moment** refers to the force that could potentially cause the bars to rotate about the pivots at the moment but are not actually generating any kinetic movement yet.
 
 On the other hand, **torque** refers to the actual force that causes the bars to rotate about the pivots.
 
@@ -494,7 +494,7 @@ On the other hand, **torque** refers to the actual force that causes the bars to
 #### 1. Calculate P1 Seized P0 Moment
 
 
-Calculate the moment $M_{0}$ that would occur at P0 if if all force on bar2 is trasmitted to P0 without loss.
+Calculate the moment $M_{0}$ that would occur at P0 if all force on bar2 is transmitted to P0 without loss.
 
 
 
@@ -523,14 +523,14 @@ Calculate the moment $M_{0}$ that would occur at P0 if if all force on bar2 is t
 }
 ```
 
-$M_{0}$ is achieved at P0 at by lending extra moment to P1.
+$M_{0}$ is achieved at P0 by lending extra moment to P1.
 
 Next step is to payback the lent moment on P1.
 
 
 #### 2. Calculate the moment on P1 for Payback
 
-Bar1's angular velocity causes centripental acceleration(**NOTE**: Not an angular acceleration, but a plain acceleration) at P1 equal to 
+Bar1's angular velocity causes centripetal acceleration(**NOTE**: Not an angular acceleration, but a plain acceleration) at P1 equal to 
 
 ```math
 \omega \times (\omega \times \overrightarrow{bar1})
@@ -547,7 +547,7 @@ From P2's point of view, bar2 is having acceleration at its center of mass point
 
 ```
 
-Force is equal to mass times acceleration, so the inertia moment from this centirpetal acceleration $M_\text{1 ci}$ on P1, due to Bar1's velocity, is equal to:
+Force is equal to mass times acceleration, so the inertia moment from this centripetal acceleration $M_\text{1 ci}$ on P1, due to Bar1's velocity, is equal to:
 
 ```math
 M_\text{1 ci} = \frac{\overrightarrow{bar2}}{2} \times (-m_2 \omega \times (\omega \times \overrightarrow{bar1})
@@ -556,7 +556,7 @@ M_\text{1 ci} = \frac{\overrightarrow{bar2}}{2} \times (-m_2 \omega \times (\ome
 
 Also, there is moment on P1 caused by wind force, air friction force on Bar2 and restoration force of P1.
 
-The total moment $M_1$ is eqaul to
+The total moment $M_1$ is equal to
 
 ```math
 \displaylines{
@@ -575,9 +575,9 @@ The projection on $\overrightarrow{E}_w)$ from $M_\text{1 raw}$ is made because 
 
 However, this calculation of $M_2$ is only allowed when P1 is stationary.
 
- $M_2$ can be only achieved at P1 by lending extra force on P1 to cancel the recoil from Bar2. 
+$M_2$ can be only achieved at P1 by lending extra force on P1 to cancel the recoil from Bar2. 
 
- There is another lent moment on P0 with this force, so this require another payback from P0.
+There is another lent moment on P0 with this force, so this requires another payback from P0.
 
 
 
@@ -585,7 +585,7 @@ However, this calculation of $M_2$ is only allowed when P1 is stationary.
 
 Imagine Bar2 is in the middle of space without gravity, force applied to Bar2 would cause a rotation about Bar2's center of mass unless the force is exactly applied to Bar2's center.
 
-The required force to make P1 stationary is dependent to the location of the force on Bar2.
+The required force to make P1 stationary is dependent on the location of the force on Bar2.
 
 ##### Force further than the Center of Mass Point
 
@@ -620,7 +620,7 @@ If the force is applied at the center of mass of Bar2, then the required force t
 
 ##### Total Payback Force and Moment
 
-The payback force from wind is eqaul to 
+The payback force from wind is equal to 
 ```math
 \displaylines{
     \begin{align}
@@ -642,14 +642,14 @@ The payback force from the damping force is equal to
 }
 ```
 
-The paybakc force for the P1's restoration moment is equal to
+The payback force for the P1's restoration moment is equal to
 
 ```math
 R_{payback} = \frac{k_{p1} \overrightarrow{\Delta\theta}_{bar2} \times \overrightarrow{u}_{bar2}}{|\overrightarrow{bar2}|} 
 
 ```
 
-The payback force from Bar2's intertia force is equal to 
+The payback force from Bar2's inertia force is equal to 
 
 ```math
 I_{payback} = \frac{m_2}{2}\omega \times (\omega \times \overrightarrow{bar1})
@@ -673,7 +673,7 @@ Repeating the steps from two infinite series with the same multiplier value $\fr
 
 It forms two alternating geometric series, but solving the infinite series is not used in the payback method.
 
-The actual torques that causes the angualr accelerations are calculated by solving a linear algebra.
+The actual torques that cause the angular accelerations are calculated by solving a linear algebra.
 
 
 #### 5. Solving Torque by Use of Linear Algebra
@@ -690,14 +690,14 @@ The payback method forms following linear algebra
 
 $T_0$ and $T_1$ are actual kinetic torque that causes the angular accelerations.
 
-$T_0$ is the torque that gives angualr accelerations on P0 with the moment of inertia of bar 1 and bar2.
+$T_0$ is the torque that gives angular accelerations on P0 with the moment of inertia of bar 1 and bar2.
 
 $T_1$ is the torque that gives angular accelerations on P1 with the moment of inertia of bar2.
 
 $f_{bar1}(T_0)$ and $f_{bar2}(T_0)$ represents payback moments added on P0 and P1 respectively due to $T_0$.
 
 
-Angular acceleration from $T_0$ adds another moment of intertia force to Bar2's center of mass, which is equal to
+Angular acceleration from $T_0$ adds another moment of inertia force to Bar2's center of mass, which is equal to
 
 ```math
 \frac{m_2}{MI} (T_0 \times \overrightarrow{u}_{bar1})
@@ -714,7 +714,7 @@ So,
 }
 ```
 
-Because $T_0$ has given intertia force to Bar2 adding moment to P1, it needs to payback the force for making P1 stationary.
+Because $T_0$ has given inertia force to Bar2 adding moment to P1, it needs to payback the force for making P1 stationary.
 
 ```math
 \displaylines{
@@ -736,7 +736,7 @@ Then, you can solve $T_0$ and $T_1$
 The angular accelerations are,
 ```math
 \displaylines{
-    acc_{p0} = T_0 / MI_{bar1 + bar2}
+    acc_{p0} = T_0 / MI
     \\
     acc_{p1} = T_1 / MI_{bar2}
 }

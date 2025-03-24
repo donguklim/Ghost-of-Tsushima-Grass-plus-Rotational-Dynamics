@@ -447,24 +447,34 @@ The methods in this study are implemented with a two-bars linkage system. A Quad
 ### Payback Moment Method
 
 If the rotating bars do not have pivots, the angualr acceleration is simple. 
+
 You would integrate the torque along the line segments to calculate the torque and divide it by the moment of inertia of the bars.
 
 However, if there is a pivot connecting the bars, the problem becomes complex.
 
 You may try to calculate the torque separately on each bar.
-If you integrate torque only along Bar1 and calculate the angular acceleration by dividing the torque by bar1, it is an acceleration that would occur if Bar1 is not attached to Bar2.
+
+If you integrate torque only along Bar1 and calculate the angular acceleration by dividing the torque by bar1, 
+it is an acceleration that would occur if Bar1 is not attached to Bar2.
+
 Bar2 will be dragging Bar1 while the torque along Bar1 is making acceleration.
 
 In the same way, you cannot integrate the torque along Bar2 to calculate the angular acceleration. 
+
 The acceleration from dividing the torque by Bar2's moment of inertia is the acceleration that would occur if P1 is stationary.
 
 However, what if the net torque on P1 ends up zero?
+
 In that case, P1 would be seized and the force along Bar2 would be transmitted without loss on P0.
+
 In the same way, if there is counter torque working on P0, to make P1 stationary from the force acting along Bar2, force on Bar2 would only cause angualr acceleration on P1.
 
 Accurate angular calculations can be made in these situations.
 
-Hence, I propose a method I named `Payback Moment Method`, which is to approximate the angular acceleration by lending extra torque or moment to P0 and P1, in order to make the said situations; 
+Hence, I propose a method I named `Payback Moment Method`, 
+
+which is to approximate the angular acceleration by lending extra torque or moment to P0 and P1, in order to make the said situations; 
+
 then, make P0 and P1 to payback the lent torque/moment.
 
 
@@ -671,9 +681,11 @@ The actual torques that causes the angualr accelerations are calculated by solvi
 The payback method forms following linear algebra
 
 ```math
-M_0 + f_{bar1}(T_0) - T_0 = \overrightarrow{0}
-\\
-M_1 + f_{bar2}(T_0) - T_1 = \overrightarrow{0}
+\displaylines{
+    M_0 + f_{bar1}(T_0) - T_0 = \overrightarrow{0}
+    \\
+    M_1 + f_{bar2}(T_0) - T_1 = \overrightarrow{0}
+}
 ```
 
 $T_0$ and $T_1$ are actual kinetic torque that causes the angular accelerations.
@@ -716,16 +728,18 @@ Because $T_0$ has given intertia force to Bar2 adding moment to P1, it needs to 
 
 You can first solve value for $T_0  \cdot E_w$
 ```math
-(T_0 \cdot E_w) & = \frac{M_0}{1 + \frac{m_2|\overrightarrow{bar1}|}{2MI}}
+(T_0 \cdot E_w) = \frac{M_0}{1 + \frac{m_2|\overrightarrow{bar1}|}{2MI}}
 ```
 
 Then, you can solve $T_0$ and $T_1$
 
 The angular accelerations are,
 ```math
-acc_{p0} = T_0 / MI_{bar1 + bar2}
-\\
-acc_{p1} = T_1 / MI_{bar2}
+\displaylines{
+    acc_{p0} = T_0 / MI_{bar1 + bar2}
+    \\
+    acc_{p1} = T_1 / MI_{bar2}
+}
 ```
 
 ### Angular Displacement Magnitude Limitation on P0

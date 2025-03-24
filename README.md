@@ -3,6 +3,8 @@
 
 [![Watch the video](https://img.youtube.com/vi/IbZkUX3rt54/hqdefault.jpg)](https://www.youtube.com/watch?v=IbZkUX3rt54)
 
+This video had been made before I fixed a flaw in my calculation. For the fixed version, watch the video at [Motion Results](#motion-results)
+
 ## Introduction
 
 This is an implementation of the Ghost of Tsushima grass + rotational physics dynamics based motion of Bezier curve grass.
@@ -283,7 +285,7 @@ The reference study has some minor notation errors and calculation errors.
 A set of variables in the equation should be either all vectors or scalars, but the author made the mistake of mixing both. 
 This error hides details of how to exactly calculate some vectors or scalars.
 
-The equation shown in the `Basic Equation of the Reference Study` section is a notation-corrected version.
+The equation shown in the [Basic Equation of the Reference Study](#basic-equation-of-the-reference-study) section is a notation-corrected version.
 
 #### Error in the Torque Calculation
 

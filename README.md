@@ -387,7 +387,10 @@ The same problem also applies to bendings.
 
 ![Non Linkage System](./Resources/non_linkage_system.jpeg "Non Linkage System")
 
-If the rotating object consists of two line segments (noted as bar1 and bar2), the calculation becomes 
+If the rotating object consists of two line segments noted as bar1 and bar2, 
+and bar2 is somehow receiving extra air friction as if bar2 is having velocity $\overrightarrow{\omega}_{bar2}$, 
+
+the calculation becomes 
 
 ```math
 \displaylines{
@@ -441,7 +444,7 @@ Also, there are additional methods for preventing distorted motions.
 The methods in this study are implemented with a two-bars linkage system. A Quadratic Bezier curve is used to render the grasses in the implementation.
 
 
-### Payback Torque Calculation Method
+### Payback Moment Method
 
 A calculation method which will be referred to as the 'payback method' is devised in this study to account for the feedbacks between bars.
 
@@ -452,9 +455,23 @@ A two-bar linkage system with bar1, bar2, stationary pivot P0 and another pivot 
 
 ![Payback example 01](./Resources/payback_example_01.jpeg "Payback example 01")
 
-#### 1. Calculate P1 Seized P0 Angular Acceleration
+---
+**NOTE**
 
-Calculate the angular acceleration $acc_{0fixed}$ that would occur at P0 if P1 did not exist and bar1 and bar2 have a fixed connection.
+In this section, **moment** refers the force that could potentially cause the bars to rotate about the pivots at the moment but are not actually generation any kinetic movement yet.
+
+On the other hand, **torque** refers to the actual force that causes the bars to rotate about the pivots.
+
+---
+
+
+
+#### 1. Calculate P1 Seized P0 Moment
+
+
+Calculate the moment $M_{0}$ that would occur at P0 if if all force on bar2 is trasmitted to P0 without loss.
+
+
 
 ![Payback example 02](./Resources/payback_example_02.jpeg "Payback example 02")
 
@@ -471,85 +488,76 @@ Calculate the angular acceleration $acc_{0fixed}$ that would occur at P0 if P1 d
 \\
 \\
 \begin{align}
-    T & = \frac{|\overrightarrow{bar1}|}{2}(\overrightarrow{W} \times \overrightarrow{bar1}) - \frac{c|\overrightarrow{bar1}|}{3}(\overrightarrow{\omega}_{bar1} \times \overrightarrow{bar1} \times \overrightarrow{bar1}) - k_{p0} \overrightarrow{\Delta\theta}_{bar1} 
+    M_{0} & = \frac{|\overrightarrow{bar1}|}{2}(\overrightarrow{W} \times \overrightarrow{bar1}) - \frac{c|\overrightarrow{bar1}|}{3}(\overrightarrow{\omega}_{bar1} \times \overrightarrow{bar1} \times \overrightarrow{bar1}) - k_{p0} \overrightarrow{\Delta\theta}_{bar1} 
     \\
     & + \int_{0}^{|\overrightarrow{bar2}|}[(\overrightarrow{W} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) - c (\overrightarrow{\omega_{bar1}} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2}) - c(\overrightarrow{\omega}_{bar2} \times  tu_{bar2})\times  tu_{bar2}]dt
 \end{align} 
 
 \\
 \\
-acc_{0fixed} = \frac{T}{MI}
 }
 ```
 
-$acc_{0fixed}$ is the angular acceleration that would occur on P0, if the net torque of P1 is zero.
+If the net moment of P1 is zero, P1 become sezied and won't make any rotation, trasmitting all force without loss to P0.
+$M_{0}$ is the moment that would occur on P0, if the net moment of P1 is zero.
 
-Hence, making angular acceleration equal to $acc_{0fixed}$ on P0 and making P1 seized is equivalent to lending extra torque that would cancel out the net torque on P1.
+However P0 would not always have zero moment, so $M_{0}$ is achieved by lending extra moment on P1 to make its net moment to zero. 
 
-The next two steps are P1 paying back the extra torque it has borrowed.
+By lendthing extra moment to make P1's net moment 0,  $M_{0}$ is achieved at P0 at this step.
+
+Next step is to pay back the lent moment on P1.
 
 
-#### 2. Calculate Inertia Torque Force on P1
+#### 2. Calculate the moment on P1 for Payback
 
-From step 1, bar1 is assumed to make an angular acceleration, and bar1 has its own angular velocity.
-
-The angular acceleration and angular velocity make kinetic force on P1, which results in an inertia force torque on P1.
-
-The angular acceleration on P0 makes plain acceleration on P1 equal to:
-
-```math
-acc_{0fixed} \times \overrightarrow{bar1}
-
-```
-
-The angular velocity of P1 referred to as $\omega$ gives centripetal acceleration on P1 equal to:
+Bar1's angular velocity causes centripental acceleration(**NOTE**: Not an angular acceleration, but a plain acceleration) at P1 equal to 
 
 ```math
 \omega \times (\omega \times \overrightarrow{bar1})
 
 ```
 
+
 ![Payback example 03](./Resources/payback_example_03.jpeg "Payback example 03")
 
 
 From P2's point of view, bar2 is having acceleration at its center of mass point (this is approximated to the middle point in this implementation) with acceleration equal to:
 ```math
--(acc_{0fixed} \times \overrightarrow{bar1} + \omega \times (\omega \times \overrightarrow{bar1}))
+-\omega \times (\omega \times \overrightarrow{bar1})
 
 ```
 
-Force is equal to mass times acceleration, so the inertia torque on P1, $T1_i$ is equal to:
+Force is equal to mass times acceleration, so the inertia moment from this centirpetal acceleration $M_\text{1 ci}$ on P1, due to Bar1's velocity, is equal to:
 
 ```math
-T1_i = \frac{\overrightarrow{bar2}}{2} \times -m_2(acc_{0fixed} \times \overrightarrow{bar1} + \omega \times (\omega \times \overrightarrow{bar1}))
+M_\text{1 ci} = \frac{\overrightarrow{bar2}}{2} \times (-m_2 \omega \times (\omega \times \overrightarrow{bar1})
 
 ```
 
-#### 3. Calculate Acceleration on P1
+Also, there is moment on P1 caused by wind force, air friction force on Bar2 and restoration force of P1.
 
-Calculate the acceleration $acc_{1}$ on P1 that is from the net torque on P1 so far.
-Calculate the net torque on P1 so far.
-You need to project the torque from the raw forces to the rotational axis, because P1's rotation is only limited to the rotational axis $E_w$.
+The total moment $M_2$ is eqaul to
 
 ```math
 \displaylines{
-    RawT_{bar2} = T1_i +  \frac{|\overrightarrow{bar2}|}{2}(\overrightarrow{W} \times \overrightarrow{bar2}) - \frac{c|\overrightarrow{bar2}|}{3}(\overrightarrow{\omega}_{bar2} \times \overrightarrow{bar2} \times \overrightarrow{bar2}) - k_{p1} \overrightarrow{\Delta\theta}_{bar2}
+    M_\text{1 raw} = M_\text{1 ci} +  \frac{|\overrightarrow{bar2}|}{2}(\overrightarrow{W} \times \overrightarrow{bar2}) - \frac{c|\overrightarrow{bar2}|}{3}(\overrightarrow{\omega}_{bar2} \times \overrightarrow{bar2} \times \overrightarrow{bar2}) - k_{p1} \overrightarrow{\Delta\theta}_{bar2}
     \\
-    T_{bar2} = (RawT_{bar2} \bullet \overrightarrow{E}_w) \overrightarrow{E}_w 
-    \\
-    acc_{1} = \frac{T_{bar2}}{MI_{bar2}}
+    M_1 = (M_\text{1 raw} \cdot \overrightarrow{E}_w) \overrightarrow{E}_w 
 }
 ```
+(The projection on $\overrightarrow{E}_w)$ is made because P1 is only allowed to rotate around $\overrightarrow{E}_w)$)
 
-However, assigning this angular acceleration on P1 requires another payback.
+However, this calculation of $M_2$ is only allowed when P1 is stationary.
 
-If bar2 was in the middle of space without any pivot, the force applying to bar2 would rotate the bar about its center of mass point.
-Making bar2 rotate about P1 due to forces applied to bar2 is equivalent to lending force to P1, which is again equivalent to lending torque to P0.
+ $M_2$ can be only achieved at P1 by lending extra force on P1 to cancel the recoil from Bar2. 
+
+ There is another lent moment on P0 with this force, so this require another payback from P0.
 
 
-#### 4. Calculate P1 Payback Torque on P0
 
-First calculate the force F that would give the torque equal to $T_{bar2}$ if it is applied at the opened end of bar2 with stationary pivot P1.
+#### 4. Calculate the moment on P0 for Pyback
+
+First calculate the force F that would cancel the recoil from the force of wind, air friction from Bar2 and the restoration moment from P1.
 
 ```math
 F = T_{bar2} \times \frac{\overrightarrow{bar2}}{2|\overrightarrow{bar2}|}
@@ -645,6 +653,7 @@ is not guaranteed to be less than 1 for every grass instance.
 When the infinite payback series sums are actually used in the implementation, some grass instances show implausible motions.
 
 ### Solving Payback Method as Linear Algebra
+
 
 An attempt to solve the payback method as linear algebra is made and failed.
 

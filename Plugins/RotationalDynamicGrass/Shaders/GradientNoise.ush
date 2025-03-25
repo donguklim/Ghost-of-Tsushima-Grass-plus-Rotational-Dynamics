@@ -71,7 +71,7 @@ float LeveledGradientNoise(float seed, float2 UV, float Scale, int NumLevels, fl
         OutScale *= InvLevelScale;
     }
 
-    //Out /= OutScaleSum;
+    Out /= OutScaleSum;
     return lerp(OutputMin, OutputMax, Out);
 }
 

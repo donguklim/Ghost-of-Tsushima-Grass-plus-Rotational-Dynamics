@@ -589,7 +589,6 @@ void GrassUpdate(
 
     float bar1Length = length(p1);
     float bar2Length = length(bar2);
-    float bar2LengthSquare = bar2Length * bar2Length;
         
     float bar1Mass = segmentMassDensity * bar1Length;
     float bar2Mass = segmentMassDensity * bar2Length;
@@ -628,7 +627,7 @@ void GrassUpdate(
     
     p0Moment += dot(cross(p1, paybackForce), bar2RotationalAxis) * bar2RotationalAxis;
     
-    float torqueTerm = 0.5 * bar2Mass * bar1Length / momentOfIntertia;
+    float torqueTerm = 0.5 * bar2Mass * bar1Length * bar1Length / momentOfIntertia;
     float p0TorqueDotAxis = dot(p0Moment, bar2RotationalAxis) / (1.0f + torqueTerm);
     
     float3 p0Torque = p0Moment - torqueTerm * p0TorqueDotAxis * bar2RotationalAxis;
@@ -638,9 +637,9 @@ void GrassUpdate(
     // The total torque to P1 required to make P1 seized is -p1BendingTorque.
     // Now payback the torque to P1
     
-    float p1Torque = p1Moment - 0.5 * bar2Mass * p0TorqueDotAxis / momentOfIntertia * dot(p1, bar2) / bar1Length;
+    float p1Torque = p1Moment - 0.5 * bar2Mass * p0TorqueDotAxis / momentOfIntertia * dot(p1, bar2);
     
-    float p1Acc = p1Torque / (bar2Mass * bar2LengthSquare) * 3.0f;
+    float p1Acc = p1Torque * 3.0f / (bar2Mass * bar2Length * bar2Length);
     
            
     float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;

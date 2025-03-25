@@ -702,16 +702,16 @@ $f_{bar1}(T_0)$ and $f_{bar2}(T_0)$ represents payback moments added on P0 and P
 Angular acceleration from $T_0$ adds another moment of inertia force to Bar2's center of mass, which is equal to
 
 ```math
-\frac{m_2}{MI} (T_0 \times \overrightarrow{u}_{bar1})
+\frac{m_2}{MI} (T_0 \times \overrightarrow{bar1})
 ```
 So,
 
 ```math
 \displaylines{
 \begin{align}
-    f_{bar2}(T_0) & = -\frac{m_2}{2MI}((\overrightarrow{bar2} \times (T_0 \times \overrightarrow{u}_{bar1})) \cdot E_w)E_w
+    f_{bar2}(T_0) & = -\frac{m_2}{2MI}((\overrightarrow{bar2} \times (T_0 \times \overrightarrow{bar1})) \cdot E_w)E_w
     \\
-    & = -\frac{m_2}{2MI}(\overrightarrow{u}_{bar1} \cdot \overrightarrow{bar2})(T_0 \cdot E_w)E_w
+    & = -\frac{m_2}{2MI}(\overrightarrow{bar1} \cdot \overrightarrow{bar2})(T_0 \cdot E_w)E_w
 \end{align}
 }
 ```
@@ -721,16 +721,16 @@ Because $T_0$ has given inertia force to Bar2 adding moment to P1, it needs to p
 ```math
 \displaylines{
 \begin{align}
-    f_{bar1}(T_0) & = -\frac{m_2}{2MI}((\overrightarrow{bar1} \times (T_0 \times \overrightarrow{u}_{bar1})) \cdot E_w)E_w
+    f_{bar1}(T_0) & = -\frac{m_2}{2MI}((\overrightarrow{bar1} \times (T_0 \times \overrightarrow{bar1})) \cdot E_w)E_w
     \\
-    & = -\frac{m_2|\overrightarrow{bar1}|}{2MI}(T_0 \cdot E_w)E_w
+    & = -\frac{m_2|\overrightarrow{bar1}|^2}{2MI}(T_0 \cdot E_w)E_w
 \end{align}
 }
 ```
 
 You can first solve value for $T_0  \cdot E_w$
 ```math
-(T_0 \cdot E_w) = \frac{M_0}{1 + \frac{m_2|\overrightarrow{bar1}|}{2MI}}
+(T_0 \cdot E_w) = \frac{M_0}{1 + \frac{m_2|\overrightarrow{bar1}|^2}{2MI}}
 ```
 
 Then, you can solve $T_0$ and $T_1$

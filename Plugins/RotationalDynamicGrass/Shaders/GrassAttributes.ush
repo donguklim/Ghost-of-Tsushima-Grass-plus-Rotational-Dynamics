@@ -124,7 +124,7 @@ void GetGrassttributes(
         4,
         -PI_VALUE * 8,
         PI_VALUE * 8
-    ) + positionNoiseRatio * 0.5 * lerp(-PI_VALUE, PI_VALUE, FRand(positionSeed));
+    ) + positionNoiseRatio / clumpLengthScale * 0.5 * lerp(-PI_VALUE, PI_VALUE, FRand(positionSeed));
    
 
     FQuat yawQaut = QuatFromAxisAngle(

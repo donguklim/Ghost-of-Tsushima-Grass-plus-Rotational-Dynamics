@@ -115,7 +115,7 @@ void GetGrassttributes(
 
     FQuat yawQaut = QuatFromAxisAngle(
         float3(0, 0, 1),
-        clumpYaw + positionNoiseRatio / (clumpLengthScale * clumpLengthScale) * PI_VALUE * FRand(positionSeed)
+        clumpYaw + positionNoiseRatio / clumpLengthScale * PI_VALUE * FRand(positionSeed)
     );
     
     FQuat minPitchQuat = QuatMultiply(
@@ -272,6 +272,9 @@ void GetGrassttributes(
     );
     
     pivotStiffnessRatio = float2(p1StiffnessRatio, p2StiffnessRatio);
+    
+    // too low stiffness can cause weird motions.
+    stiffness = max(stiffness, 1.0f);
     
 }
 

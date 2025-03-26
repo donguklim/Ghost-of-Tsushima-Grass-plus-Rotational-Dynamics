@@ -660,7 +660,13 @@ I_{payback} = \frac{m_2}{2}\omega \times (\omega \times \overrightarrow{bar1})
 The total payback moment $M_\text{0 payback}$ added to P0 is
 
 ```math
-M_\text{0 payback} = \overrightarrow{bar2} \times (W_{payback} + D_{payback}+ R_{payback} + I_{payback})
+M_\text{0 payback} = \overrightarrow{bar1} \times (W_{payback} + D_{payback}+ R_{payback} + I_{payback})
+```
+
+But $\overrightarrow{bar1} \times I_{payback} = 0$ because $I_{payback}$ has the same direction as $-\overrightarrow{bar1}$, so
+
+```math
+M_\text{0 payback} = \overrightarrow{bar1} \times (W_{payback} + D_{payback}+ R_{payback})
 ```
 
 The accumulated moment on P0 is

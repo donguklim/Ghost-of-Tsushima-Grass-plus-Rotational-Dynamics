@@ -474,9 +474,11 @@ float3 GetBar1PaybackForceFromBar2(
     
     float barLength = length(bar2);
     
-    return stiffness * cross(bar2RotationalAxis, bar2) * angularDisplacement / barLength / barLength
-        - windForce * barLength / 4.0f
-        + dampingCoff * cross(bar2RotationalAxis, bar2) * angualrVelocity * barLength * 5.0f / 16.0f;
+    return cross(bar2RotationalAxis, bar2) * (
+            stiffness * angularDisplacement / barLength / barLength
+            + dampingCoff * angualrVelocity * barLength * 5.0f / 16.0f
+        )
+        - windForce * barLength / 4.0f;
 }
     
     
@@ -594,14 +596,12 @@ void GrassUpdate(
     float bar2Mass = segmentMassDensity * bar2Length;
         
     
-    // (angular velocity) x (angular velocity x p1) is the centirpetal acceleration made to p1(not angular accleration, just plain acceleration)
+    // (angular velocity) x (angular velocity x p1) is the centirpetal acceleration made at p1(not angular accleration, just plain acceleration)
     float3 p1CentripetalInertiaForce = -bar2Mass * cross(angularVelocity.xyz, cross(angularVelocity.xyz, p1));
-        
-    // Inertia force acting on center of mass point(the mid point) of Bar2 due to angular velocity of P1
-    float3 p1CenteripetalInertiaForceTorque = cross(0.5 * bar2, p1CentripetalInertiaForce);
-        
-    // moment from the intertia force due to centeripetal force, wind force, air friction force and restoration force.
-    float3 p1RawMoment = p1CenteripetalInertiaForceTorque + GetPivotBarTorque(
+
+    // moment from the intertia force due to centeripetal force == cross(0.5 * bar2, p1CentripetalInertiaForce) 
+    // and moment from wind force, air friction force and restoration moment.
+    float3 p1RawMoment = cross(0.5 * bar2, p1CentripetalInertiaForce) + GetPivotBarTorque(
         dampingCoff,
         p1Stiffness,
         wind,
@@ -622,7 +622,9 @@ void GrassUpdate(
         bar2RotationalAxis,
         angularVelocity.w,
         angularDisp.w
-    ) + 0.5 * p1CentripetalInertiaForce;
+    ); // + 0.5 * p1CentripetalInertiaForce;
+    
+    //(0.5 * p1CentripetalInertiaForce) is ignored because it has same direction as -bar1, contributing zero torque on P0.
     
     
     p0Moment += dot(cross(p1, paybackForce), bar2RotationalAxis) * bar2RotationalAxis;

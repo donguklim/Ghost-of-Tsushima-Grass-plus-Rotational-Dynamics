@@ -6,6 +6,7 @@
 
 
 #define COLLISION_COEFFICENT_TRHESHOLD 0.01
+#define WIND_MAGNITUDE_THRESHOLD 0.01
 
 
 void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angularDispDelta, inout float3 angularVelocity)
@@ -427,22 +428,22 @@ float3 GetBar2TorqueOnP0(
     float3 bar1,
     float bar2AngularVelocity,
     float3 bar2RotationalAxis,
-    float3 p2
+    float3 bar2
 )
 {
-    float3 bar2 = (p2 - bar1);
     float bar2Length = length(bar2);
-    float bar2LengthSquare = bar2Length * bar2Length;
-    float3 bar2Dir = bar2 / bar2Length;
-    float3 bar2TorqueDir = cross(bar2RotationalAxis, bar2Dir);
+    float3 axisCrossBar2 = cross(bar2RotationalAxis, bar2);
+    float windMag = length(windForce);
+    float3 bar2CrossWind = cross(bar2, windForce);
         
-    float3 l0ForceTerm = windForce - dampingCoeff * cross(bar1AngularVelocity, bar1);
-    float3 l1ForceTerm = -dampingCoeff * bar2AngularVelocity * bar2TorqueDir - dampingCoeff * cross(bar1AngularVelocity, bar2Dir);
+    float3 l0ForceTerm = (windMag > WIND_MAGNITUDE_THRESHOLD ? length(bar2CrossWind) / (windMag * bar2Length) : 0.0f) * windForce 
+        - dampingCoeff * cross(bar1AngularVelocity, bar1);
+    float3 l1ForceTerm = -dampingCoeff * (bar2AngularVelocity * axisCrossBar2 + cross(bar1AngularVelocity, bar2));
     float3 l0Term = cross(bar1, l0ForceTerm);
-    float3 l1Term = cross(bar2Dir, l0ForceTerm) + cross(bar1, l1ForceTerm);
-    float3 l2Term = cross(bar2Dir, l1ForceTerm);
+    float3 l1Term = cross(bar2, l0ForceTerm) + cross(bar1, l1ForceTerm);
+    float3 l2Term = cross(bar2, l1ForceTerm);
         
-    return l0Term * bar2Length + l1Term * bar2LengthSquare / 2.0f + l2Term * bar2Length * bar2LengthSquare / 3.0f;
+    return bar2Length * (l0Term + l1Term / 2.0f + l2Term / 3.0f);
 
 }
 float3 GetPivotBarTorque(
@@ -455,10 +456,12 @@ float3 GetPivotBarTorque(
 )
 {
     float barLength = length(bar);
-    return barLength * (
-        cross(bar, windForce) / 2.0f
-        - dampingCoff / 3.0f * cross(bar, cross(angularVelocity, bar))
-    ) - stiffness * angularDisp;
+    float3 barCrossWind = cross(bar, windForce);
+    float windMag = length(windForce);
+   
+    return (windMag > WIND_MAGNITUDE_THRESHOLD ? length(barCrossWind) * barCrossWind / windMag : 0.0f)
+        - dampingCoff / 3.0f * barLength  * cross(bar, cross(angularVelocity, bar))
+        - stiffness * angularDisp;
 }
 
 float3 GetBar1PaybackForceFromBar2(
@@ -567,6 +570,7 @@ void GrassUpdate(
     
     float momentOfIntertia = GetMomentOfInertia(segmentMassDensity, p1, p2);
     
+    float3 bar2 = p2 - p1;
     // P0 moment from restoration force, wind force and air friction force
     float3 p0Moment = (
         GetPivotBarTorque(
@@ -583,11 +587,10 @@ void GrassUpdate(
             p1,
             angularVelocity.w,
             bar2RotationalAxis,
-            p2
+            bar2
         )
     );
 
-    float3 bar2 = p2 - p1;
 
     float bar1Length = length(p1);
     float bar2Length = length(bar2);

@@ -477,11 +477,14 @@ float3 GetBar1PaybackForceFromBar2(
     
     float barLength = length(bar2);
     
+    float windMag = length(windForce);
+    float3 barCrossWind = cross(bar2, windForce);
+
     return cross(bar2RotationalAxis, bar2) * (
             stiffness * angularDisplacement / barLength / barLength
             + dampingCoff * angualrVelocity * barLength * 5.0f / 16.0f
         )
-        - windForce * barLength / 4.0f;
+        - (windMag > WIND_MAGNITUDE_THRESHOLD ? length(barCrossWind) / windMag : 0.0f) * windForce / 4.0f;
 }
     
     

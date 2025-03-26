@@ -328,11 +328,10 @@ The correct direction of the restoration force should be the same as the directi
 but this force direction calculation is unnecessary as the restoration torque can be simply calculated as $-k \overrightarrow{\Delta\theta}$.
 
 
+
 #### Corrected Torque Calculation
 ```math
 \displaylines{
-    W = S \delta \overrightarrow{v} 
-    \\
     D = -c (\overrightarrow{\omega} \times \overrightarrow{bar})
     \\
     \\
@@ -348,6 +347,7 @@ Even this corrected equation ignores an important physical consideration.
 Wind does not push a pivoted bar only at the open end point of the bar.
 
 Wind is pushing the bar along its whole line segment. 
+Also wind force density on bar is dependent to the $\sin(\theta) = \frac{|bar \times wind|}{|bar||wind|}$
 This is the same for air friction.
 
 A more physically accurate torque calculation on a straight bar is calculated by integrating the point torque along the line segment.
@@ -360,9 +360,9 @@ If there is a straight bar, and the wind is uniform along the bar's line segment
     \overrightarrow{W} = S \delta \overrightarrow{v} 
     \\
     \begin{align}
-        T & =\int_{0}^{|\overrightarrow{bar}|} (\overrightarrow{W} - c (\overrightarrow{\omega} \times t\overrightarrow{u}_{bar})) \times tu_{bar}dt - k \overrightarrow{\Delta\theta}
+        T & =\int_{0}^{|\overrightarrow{bar}|} (\frac{|\overrightarrow{W} \times \overrightarrow{bar}|}{|\overrightarrow{W}|}\overrightarrow{W} - c (\overrightarrow{\omega} \times t\overrightarrow{u}_{bar})) \times tu_{bar}dt - k \overrightarrow{\Delta\theta}
         \\
-        & = \frac{|\overrightarrow{bar}|}{2}(\overrightarrow{W} \times \overrightarrow{bar}) - \frac{c|\overrightarrow{bar}|}{3}(\overrightarrow{\omega} \times \overrightarrow{bar} \times \overrightarrow{bar}) - k \overrightarrow{\Delta\theta}
+        & = \frac{|\overrightarrow{W} \times \overrightarrow{bar}|}{2|\overrightarrow{W}|}(\overrightarrow{W} \times \overrightarrow{bar}) - \frac{c|\overrightarrow{bar}|}{3}(\overrightarrow{\omega} \times \overrightarrow{bar} \times \overrightarrow{bar}) - k \overrightarrow{\Delta\theta}
     \end{align} 
 }
 ```
@@ -399,9 +399,9 @@ the calculation becomes
 \overrightarrow{u}_{bar2} = \overrightarrow{bar2}/|\overrightarrow{bar2}|
 \\
 \begin{align}
-    T & = \frac{|\overrightarrow{bar1}|}{2}(\overrightarrow{W} \times \overrightarrow{bar1}) - \frac{c|\overrightarrow{bar1}|}{3}(\overrightarrow{\omega}_{bar1} \times \overrightarrow{bar1} \times \overrightarrow{bar1}) - k \overrightarrow{\Delta\theta}_{bar1} 
+    T & = \frac{|\overrightarrow{W} \times \overrightarrow{bar1}|}{2|\overrightarrow{W}|}(\overrightarrow{W} \times \overrightarrow{bar1}) - \frac{c|\overrightarrow{bar1}|}{3}(\overrightarrow{\omega}_{bar1} \times \overrightarrow{bar1} \times \overrightarrow{bar1}) - k \overrightarrow{\Delta\theta}_{bar1} 
     \\
-    & + \int_{0}^{|\overrightarrow{bar2}|}[(\overrightarrow{W} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) - c (\overrightarrow{\omega_{bar1}} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2}) - c(\overrightarrow{\omega}_{bar2} \times  tu_{bar2})\times  tu_{bar2}]dt
+    & + \int_{0}^{|\overrightarrow{bar2}|}[\frac{|\overrightarrow{W} \times \overrightarrow{u}_{bar2}|}{|\overrightarrow{W}|}(\overrightarrow{W} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) - c (\overrightarrow{\omega_{bar1}} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2}) - c(\overrightarrow{\omega}_{bar2} \times  tu_{bar2})\times  tu_{bar2}]dt
 \end{align} 
 }
 ```
@@ -515,9 +515,9 @@ Calculate the moment $M_{0}$ that would occur at P0 if all force on bar2 is tran
 \\
 \\
 \begin{align}
-    M_\text{0 sezied} & = \frac{|\overrightarrow{bar1}|}{2}(\overrightarrow{W} \times \overrightarrow{bar1}) - \frac{c|\overrightarrow{bar1}|}{3}(\overrightarrow{\omega}_{bar1} \times \overrightarrow{bar1} \times \overrightarrow{bar1}) - k_{p0} \overrightarrow{\Delta\theta}_{bar1} 
+    M_\text{0 sezied} & = \frac{|\overrightarrow{W} \times \overrightarrow{bar1}|}{2|\overrightarrow{W}|}(\overrightarrow{W} \times \overrightarrow{bar1}) - \frac{c|\overrightarrow{bar1}|}{3}(\overrightarrow{\omega}_{bar1} \times \overrightarrow{bar1} \times \overrightarrow{bar1}) - k_{p0} \overrightarrow{\Delta\theta}_{bar1} 
     \\
-    & + \int_{0}^{|\overrightarrow{bar2}|}[(\overrightarrow{W} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) - c (\overrightarrow{\omega_{bar1}} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2}) - c(\overrightarrow{\omega}_{bar2} \times  tu_{bar2})\times  tu_{bar2}]dt
+    & + \int_{0}^{|\overrightarrow{bar2}|}[\frac{|\overrightarrow{W} \times \overrightarrow{u}_{bar2}|}{|\overrightarrow{W}|}(\overrightarrow{W} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) - c (\overrightarrow{\omega_{bar1}} \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2})) \times (\overrightarrow{bar1} + t\overrightarrow{u}_{bar2}) - c(\overrightarrow{\omega}_{bar2} \times  tu_{bar2})\times  tu_{bar2}]dt
 \end{align} 
 
 \\
@@ -562,7 +562,7 @@ The total moment $M_1$ is equal to
 
 ```math
 \displaylines{
-    M_\text{1 raw} = M_\text{1 ci} +  \frac{|\overrightarrow{bar2}|}{2}(\overrightarrow{W} \times \overrightarrow{bar2}) - \frac{c|\overrightarrow{bar2}|}{3}(\overrightarrow{\omega}_{bar2} \times \overrightarrow{bar2} \times \overrightarrow{bar2}) - k_{p1} \overrightarrow{\Delta\theta}_{bar2}
+    M_\text{1 raw} = M_\text{1 ci} +  \frac{|\overrightarrow{W} \times \overrightarrow{bar2}|}{2|\overrightarrow{W} |}(\overrightarrow{W} \times \overrightarrow{bar2}) - \frac{c|\overrightarrow{bar2}|}{3}(\overrightarrow{\omega}_{bar2} \times \overrightarrow{bar2} \times \overrightarrow{bar2}) - k_{p1} \overrightarrow{\Delta\theta}_{bar2}
     \\
     M_1 = (M_\text{1 raw} \cdot \overrightarrow{E}_w) \overrightarrow{E}_w 
 }
@@ -736,7 +736,7 @@ Because $T_0$ has given inertia force to Bar2 adding moment to P1, it needs to p
 
 You can first solve value for $T_0  \cdot E_w$
 ```math
-(T_0 \cdot E_w) = \frac{M_0}{1 + \frac{m_2|\overrightarrow{bar1}|^2}{2MI}}
+(T_0 \cdot E_w) = \frac{M_0 \cdot E_w}{1 + \frac{m_2|\overrightarrow{bar1}|^2}{2MI}}
 ```
 
 Then, you can solve $T_0$ and $T_1$
@@ -886,7 +886,7 @@ Let $\overrightarrow{r} = \overrightarrow{\Delta\theta} / |\overrightarrow{\Delt
 yields a new bar direction
 
 ```math
-\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + sin(t)(r \times d) + (1 - cos(t))(r \times (r \times d))
+\overrightarrow{d}_{new} = \overrightarrow{d}_{old} + \sin(t)(r \times d) + (1 - \cos(t))(r \times (r \times d))
 ```
 
 

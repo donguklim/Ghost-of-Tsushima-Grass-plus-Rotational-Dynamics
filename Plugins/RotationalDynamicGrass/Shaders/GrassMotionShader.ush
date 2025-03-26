@@ -692,36 +692,35 @@ void GrassUpdate(
 
 
 float3 GetWindOnlyDistantBarTorque(
-    float3 wind_force,
-    float3 bar2_rotational_axis,
-    float3 bar1_end,
-    float3 bar2_end
+    float3 windForce,
+    float3 bar2RotationalAxis,
+    float3 bar1,
+    float3 bar2
 )
 {
-    float3 bar2 = (bar2_end - bar1_end);
-    float bar2_length = length(bar2);
-    float bar2_length_square = bar2_length * bar2_length;
-    float3 bar2_dir = bar2 / bar2_length;
+    
+    float bar2Length = length(bar2);
+    float windMag = length(windForce);
+    float3 bar2CrossWind = cross(bar2, windForce);
         
-    float3 bar2_torque_dir = cross(bar2_rotational_axis, bar2_dir);
+    float3 l0ForceTerm = (windMag > WIND_MAGNITUDE_THRESHOLD ? length(bar2CrossWind) / (windMag * bar2Length) : 0.0f) * windForce;
+    float3 l0Term = cross(bar1, l0ForceTerm);
+    float3 l1Term = cross(bar2, l0ForceTerm) ;
         
-    float3 l0_force_term = wind_force;
-    float3 l0_term = cross(bar1_end, l0_force_term);
-    float3 l1_term = cross(bar2_dir, l0_force_term);
-  
-    return l0_term * bar2_length + l1_term * bar2_length_square / 2.0;
-
+    return bar2Length * (l0Term + l1Term / 2.0f);
 }
 
 
 float3 GetWindOnlyPivotBarTorque(
-    float3 wind_force,
+    float3 windForce,
     float3 bar
 )
 {
     float bar_length = length(bar);
-    float3 wind_torque = cross(bar, wind_force) * bar_length / 2.0;  
-    return bar_length * cross(bar, wind_force) / 2.0;   
+    float3 barCrossWind = cross(bar, windForce);
+    float windMag = length(windForce);
+   
+    return (windMag > WIND_MAGNITUDE_THRESHOLD ? length(barCrossWind) * barCrossWind / windMag : 0.0f);
 }
     
 
@@ -744,7 +743,7 @@ float4 GetApproximateEquilibriumAngularDisplacement(
     p2 = QuatRotateVector(initialOrientation, p2);
     
     float3 r2_rotational_axis = QuatRotateVector(initialOrientation, float3(0, 1, 0));
-    float3 p1p2 = p2 - p1;
+    float3 bar2 = p2 - p1;
 
     float3 p0Torque = GetWindOnlyPivotBarTorque(
         wind,
@@ -753,46 +752,42 @@ float4 GetApproximateEquilibriumAngularDisplacement(
         wind,
         r2_rotational_axis,
         p1,
-        p2
+        bar2
     );
         
-    float p1Torque = dot(GetWindOnlyPivotBarTorque(wind, p1p2), r2_rotational_axis);
+    float p1Torque = dot(GetWindOnlyPivotBarTorque(wind, bar2), r2_rotational_axis);
         
     float4 angularDisp = float4(p0Torque / stiffness, p1Torque / p1Stiffness);
-    
-    float3 p1Dir = p1 / length(p1);
-    
     float dispAngle = length(angularDisp.xyz);
-    FQuat rotation = dispAngle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1) : QuatFromAxisAngle(angularDisp.xyz / dispAngle, dispAngle);
-    float3 newP1Dir = QuatRotateVector(rotation, p1Dir);
-    
-    float maxAngle = PI_VALUE - P1_ANGLE_THRESHOLD - p1StaticAngle;
-    float minAngle = P1_ANGLE_THRESHOLD - PI_VALUE - p1StaticAngle;
-    
-    if (maxAngle < 0)
+    if (dispAngle > ANGLE_THRESHOLD)
     {
-        maxAngle = 0;
-    }
-    if (minAngle > 0)
-    {
-        minAngle = 0;
-    }
-    
-    angularDisp.w = angularDisp.w > maxAngle ? maxAngle : angularDisp.w;
-    angularDisp.w = angularDisp.w < minAngle ? minAngle : angularDisp.w;
-    
-    
-    float3 zero = float3(0, 0, 0);
-    limitAngleDispScale(zero, angularDisp.xyz, zero);
+        angularDisp.xyz = angularDisp.xyz / dispAngle * ANGLE_THRESHOLD;
 
+    }
     
-    if (dot(p1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
+    // Limit P1 angle displacement so that bar1 does not touch bar2.
+    float maxP1AngleDelta = PI_VALUE - P1_ANGLE_THRESHOLD - (p1StaticAngle + angularDisp.w);
+    float minP1AngleDelta = P1_ANGLE_THRESHOLD - PI_VALUE - (p1StaticAngle + angularDisp.w);
+    
+    maxP1AngleDelta = maxP1AngleDelta < 0 ? 0 : maxP1AngleDelta;
+    minP1AngleDelta = minP1AngleDelta > 0 ? 0 : minP1AngleDelta;
+    
+
+    if (angularDisp.w < minP1AngleDelta || maxP1AngleDelta < angularDisp.w)
     {
-        getMaximumUpwardDelta(p1Dir, groundNormal, angularDisp.xyz, zero);
+        angularDisp.w = clamp(angularDisp.w, minP1AngleDelta, maxP1AngleDelta);
+    }
+    
+    float3 bar1Dir = p1 / length(p1);
+    float3 zero = float3(0, 0, 0);
+    
+    if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
+    {
+        getMaximumUpwardDelta(bar1Dir, groundNormal, angularDisp.xyz, zero);
     }
     else
     {
-        applyGroundCollision(p1Dir, groundNormal, angularDisp.xyz, zero);
+        applyGroundCollision(bar1Dir, groundNormal, angularDisp.xyz, zero);
     }
     
     

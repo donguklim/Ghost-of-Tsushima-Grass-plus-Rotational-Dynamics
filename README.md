@@ -628,7 +628,7 @@ The payback force from wind is equal to
     \begin{align}
         W_{payback} & = -\frac{|\overrightarrow{W} \times \overrightarrow{bar2}|}{|\overrightarrow{W}||\overrightarrow{bar2}|} \left(\int_{0}^{|\overrightarrow{bar2}| / 2}-\frac{W}{2} dt + \int_{|\overrightarrow{bar2}| / 2}^{|\overrightarrow{bar2}|}Wdt\right) 
         \\
-        & = -\frac{|\overrightarrow{W} \times \overrightarrow{bar2}|W}{4|\overrightarrow{W}||\overrightarrow{bar2}|}
+        & = -\frac{|\overrightarrow{W} \times \overrightarrow{bar2}|W}{4|\overrightarrow{W}|}
     \end{align}
 }
 ```

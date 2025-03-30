@@ -1,5 +1,18 @@
 # UE5 Implementation of Rotational Dynamics Grass 
 
+---
+**NOTE**
+
+I have found out that there is a way to accurately calculate the grass motion.
+
+The grass motion should be based on multi-bodyod dynamics.
+
+I should use Articulated Body algorithm, which is application of Recursive Newton-Euler Algorithm.
+
+I am going to get rid of my `payback` method and substitute it with ABA as soon as I finish studying multi-bodyod dynamics, RNEA and ABA.
+
+---
+
 
 [![Watch the video](https://img.youtube.com/vi/IbZkUX3rt54/hqdefault.jpg)](https://www.youtube.com/watch?v=IbZkUX3rt54)
 

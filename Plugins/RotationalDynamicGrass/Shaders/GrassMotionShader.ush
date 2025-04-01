@@ -531,6 +531,9 @@ float Get2DAngle(float2 vec)
     return angle;
 }
 
+/*
+Using articulated body algorithm from FeatherStone's book
+*/
  
 void GrassUpdate(
     float dampingCoff,
@@ -547,6 +550,7 @@ void GrassUpdate(
     inout float4 angularDisp
 )
 {
+    
     float2 p1p2XZ = float2(1, 0) - p1Position;
     float bar2StaticAngle = Get2DAngle(p1p2XZ) - Get2DAngle(p1Position);
     float segmentMassDensity = scale.y * massDensity;
@@ -568,12 +572,103 @@ void GrassUpdate(
     GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis);
     
     float3 bar1Dir = normalize(p1);
+    
+    float radius = 0.05f * scale.y;
+    
+    float3 bar2 = p2 - p1;
+    float3 bar2Dir = normalize(bar2);
+    
+    float bar1Length = length(p1);
+    float bar2Length = length(bar2);
+        
+    float bar1Mass = segmentMassDensity * bar1Length;
+    float bar2Mass = segmentMassDensity * bar2Length;
+
+    
+    float3 bar1Orientation = cross(float3(1, 0, 0), bar1Dir);
+    
+    float bar1OrientationAngleSin = length(bar1OrientationAngleSin);
+    float bar1Angle = asin(bar1OrientationAngleSin);
+    if (bar1OrientationAngleSin < 0.01f)
+    {
+        bar1Orientation = float3(0, 0, 1);
+        if (dot(bar1Dir, float3(1, 0, 0)) < 0)
+        {
+            bar1Angle = PI_VALUE;
+
+        }
+        else
+        {
+            bar1Angle = 0.0f;
+        }
+    }
+    else
+    {
+        bar1Orientation /= bar1OrientationAngleSin;
+
+    }
+    
+    float bar1InertiaVal = bar1Mass * (3.0f * radius * radius * 3.0f + 4.0f * bar1Length * bar1Length) / 12.0f;
+    
+    float3x3 bar1InertiaTensor = QuatToMatrix(QuatFromAxisAngle(bar1Orientation, bar1Angle))
+        * float3x3(
+            bar1Mass * radius * radius / 2.0f, 0.0f, 0.0f,
+            0.0f, bar1InertiaVal, 0.0f,
+            0.0f, 0.0f, bar1InertiaVal
+        )
+        * QuatToMatrix(QuatFromAxisAngle(bar1Orientation, -bar1Angle));
+
+    
+    float3 bar2Orientation = cross(float3(1, 0, 0), bar2Dir);
+    
+    float bar2OrientationAngleSin = length(bar2OrientationAngleSin);
+    float bar2Angle = asin(bar2OrientationAngleSin);
+    if (bar2OrientationAngleSin < 0.01f)
+    {
+        bar2Orientation = float3(0, 0, 1);
+        if (dot(bar2Dir, float3(1, 0, 0)) < 0)
+        {
+            bar2Angle = PI_VALUE;
+
+        }
+        else
+        {
+            bar2Angle = 0.0f;
+        }
+    }
+    else
+    {
+        bar2Orientation /= bar2OrientationAngleSin;
+
+    }
+    
+    float bar2InertiaVal = bar2Mass * (3.0f * radius * radius * 3.0f + 4.0f * bar2Length * bar1Length) / 12.0f;
+    
+    float3x3 bar2InertiaTensor = QuatToMatrix(QuatFromAxisAngle(bar2Orientation, ba21Angle))
+         * float3x3(
+            bar2Mass * radius * radius / 2.0f, 0.0f, 0.0f,
+            0.0f, bar2InertiaVal, 0.0f,
+            0.0f, 0.0f, bar2InertiaVal
+        )
+        * QuatToMatrix(QuatFromAxisAngle(bar2Orientation, -bar2Angle));
+    
+    float3x3 bar1CrossMatrix = float3x3(
+        0, -p1.z, p1.y,
+        p1.z, 0, -p1.x,
+        -p1.y, p1.x, 0
+    );
+    
+    bar2InertiaTensor += bar2Mass * bar1CrossMatrix * transpose(bar1CrossMatrix);
+    
+    float3x3 bar2InertiaTensorYOuter = bar2InertiaTensor[1] * float3(bar2InertiaTensor[1][0], bar2InertiaTensor[1][1], bar2InertiaTensor[1][2]);
+    
+    float3x3 combinedInertiaTensor = bar1InertiaTensor + bar2InertiaTensor - bar2InertiaTensorYOuter / bar2InertiaTensor[1][1];
              
     // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
     
     float momentOfIntertia = GetMomentOfInertia(segmentMassDensity, p1, p2);
     
-    float3 bar2 = p2 - p1;
+
     // P0 moment from restoration force, wind force and air friction force
     float3 p0Moment = (
         GetPivotBarTorque(
@@ -595,11 +690,7 @@ void GrassUpdate(
     );
 
 
-    float bar1Length = length(p1);
-    float bar2Length = length(bar2);
-        
-    float bar1Mass = segmentMassDensity * bar1Length;
-    float bar2Mass = segmentMassDensity * bar2Length;
+   
         
     
     // (angular velocity) x (angular velocity x p1) is the centirpetal acceleration made at p1(not angular accleration, just plain acceleration)

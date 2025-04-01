@@ -821,39 +821,45 @@ void GrassUpdate(
     bar1BiasForceFromBar2[1] = bar2BiasForce[1] + bar2InertiaYColum[1] * weightVal;
     
     bar2InertiaTensorOnBar1[0][0] -= OuterProduct(bar2InertiaYColum[0], bar2InertiaYColum[0]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    bar2InertiaTensorOnBar1[0][1] -= OuterProduct(bar2InertiaYColum[0], bar2InertiaYColum[1]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    
     bar2InertiaTensorOnBar1[1][0] -= OuterProduct(bar2InertiaYColum[1], bar2InertiaYColum[0]) / bar2InertiaTensorOnBar1[0][0][1][1];
-    bar2InertiaTensorOnBar1[0][0] -= OuterProduct(bar2InertiaYColum[0], bar2InertiaYColum[1]) / bar2InertiaTensorOnBar1[0][0][1][1];
-    bar2InertiaTensorOnBar1[1][0] -= OuterProduct(bar2InertiaYColum[1], bar2InertiaYColum[1]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    bar2InertiaTensorOnBar1[1][1] -= OuterProduct(bar2InertiaYColum[1], bar2InertiaYColum[1]) / bar2InertiaTensorOnBar1[0][0][1][1];
     
     float3 tempSpatialVec[2];
     SpatialMatVectorMul(bar2InertiaTensorOnBar1, bar2VelocityProductAcc, tempSpatialVec);
     bar1BiasForceFromBar2[0] += tempSpatialVec[0];
-    bar1BiasForceFromBar2[1] += tempSpatialVec[1];
+    // bar1BiasForceFromBar2[1] += tempSpatialVec[1];
     
     float3x3 bar2ToBar1ForceTransformation[2][2];
     getSpatialForceTransformaton(-localBar1, float3(0, (bar2StaticAngle + angularDisp.w), 0), bar2ToBar1ForceTransformation);
     
     SpatialMatVectorMul(bar2ToBar1ForceTransformation, bar1BiasForceFromBar2, bar1BiasForceFromBar2);
     bar1BiasForce[0] += bar1BiasForceFromBar2[0];
-    bar1BiasForce[1] += bar1BiasForceFromBar2[1];
+    // bar1BiasForce[1] += bar1BiasForceFromBar2[1];
     
     float3x3 bar1InertiaTensor[2][2];
     bar1InertiaTensor[0][0] = bar1BaseInertiaTensor;
+    /*
     bar1InertiaTensor[1][1] = float3x3(
         bar1Mass, 0, 0,
         0, bar1Mass, 0,
         0, 0, bar1Mass
     );
+    */
+    bar1InertiaTensor[1][1] = 0;
+    
     bar1InertiaTensor[0][1] = 0;
     bar1InertiaTensor[1][0] = 0;
+
     
     SpatialMatMul(bar2InertiaTensorOnBar1, bar1ToBar2VelTransformation, bar2InertiaTensorOnBar1);
     SpatialMatMul(bar2ToBar1ForceTransformation, bar2InertiaTensorOnBar1, bar2InertiaTensorOnBar1);
 
     bar1InertiaTensor[0][0] += bar2InertiaTensorOnBar1[0][0];
-    bar1InertiaTensor[1][0] += bar2InertiaTensorOnBar1[1][0];
-    bar1InertiaTensor[0][0] += bar2InertiaTensorOnBar1[0][0];
-    bar1InertiaTensor[1][0] += bar2InertiaTensorOnBar1[1][0];
+    // bar1InertiaTensor[1][0] += bar2InertiaTensorOnBar1[1][0];
+    bar1InertiaTensor[0][1] += bar2InertiaTensorOnBar1[0][1];
+    // bar1InertiaTensor[1][1] += bar2InertiaTensorOnBar1[1][1];
 
     float3 p0Acc = Inverse3x3(bar1InertiaTensor[0][0]) * (
         generalizedBar1Torque 

@@ -446,6 +446,7 @@ float3 GetBar2TorqueOnP0(
     return bar2Length * (l0Term + l1Term / 2.0f + l2Term / 3.0f);
 
 }
+
 float3 GetPivotBarTorque(
     float dampingCoff,
     float stiffness,
@@ -462,6 +463,23 @@ float3 GetPivotBarTorque(
     return (windMag > WIND_MAGNITUDE_THRESHOLD ? length(barCrossWind) * barCrossWind / windMag : 0.0f)
         - dampingCoff / 3.0f * barLength  * cross(bar, cross(angularVelocity, bar))
         - stiffness * angularDisp;
+}
+
+float3 GetBar2Torque(
+    float dampingCoeff,
+    float stiffness,
+    float3 windForce,
+    float3 bar1AngularVelocity,
+    float3 bar1,
+    float bar2AngularVelocity,
+    float bar2AngularDisp,
+    float3 bar2
+)
+{
+    float bar2Length = length(bar2);
+    return GetPivotBarTorque(dampingCoeff, stiffness, windForce, bar2, float3(0, 1, 0) * bar2AngularVelocity, float3(0, 1, 0) * bar2AngularDisp)
+    - dampingCoeff * bar2Length * (cross(bar2, cross(bar1AngularVelocity, bar1)) / 2.0f + cross(bar2, cross(bar1AngularVelocity, bar2)) / 3.0f);
+
 }
 
 float3 GetBar1PaybackForceFromBar2(
@@ -641,32 +659,38 @@ void GrassUpdate(
     float3x3 bar2InertiaTensorYOuter = bar2InertiaTensorOnP0[1] * float3(bar2InertiaTensorOnP0[1][0], bar2InertiaTensorOnP0[1][1], bar2InertiaTensorOnP0[1][2]);
     float3x3 combinedInertiaTensor = bar1InertiaTensor + bar2InertiaTensorOnP0 - bar2InertiaTensorYOuter / bar2InertiaTensorOnP0[1][1];
     
-    float3 bar1FrameBar1 = float3(bar1Length, 0, 0);
-    float3 bar1FrameAngularVelocity = QuatRotateVector(bar1ReverseQuat, angularVelocity.xyz);
-    float3 bar1BiasForce = cross(bar1FrameAngularVelocity, mul(bar1InertiaTensor, bar1FrameAngularVelocity));
+    float3 localBar1 = float3(bar1Length, 0, 0);
+    float3 localBar1AngularVelocity = QuatRotateVector(bar1ReverseQuat, angularVelocity.xyz);
+    float3 bar1BiasForce = cross(localBar1AngularVelocity, mul(bar1InertiaTensor, localBar1AngularVelocity));
     float3 bar1BiasTorque = -GetPivotBarTorque(
         dampingCoff,
         stiffness,
         QuatRotateVector(bar1ReverseQuat, wind),
-        bar1FrameBar1,
-        bar1FrameAngularVelocity,
+        localBar1,
+        localBar1AngularVelocity,
         QuatRotateVector(bar1ReverseQuat, angularDisp.xyz)
     );
     
     float3 bar2LocalAngularVelocity = float3(0, angularVelocity.w, 0);
-    float3 bar2AngularVelocity = QuatRotateVector(bar2FrameQuat, bar1FrameAngularVelocity) + bar2LocalAngularVelocity;
+    float3 bar2AngularVelocity = QuatRotateVector(bar2FrameQuat, localBar1AngularVelocity) + bar2LocalAngularVelocity;
     
-    float3 bar2LinearVelocity = cross(bar1FrameAngularVelocity, bar1FrameBar1);
+    float3 bar2LinearVelocity = cross(localBar1AngularVelocity, localBar1);
     
     float3 bar2VelocityProductAcc = cross(bar2LinearVelocity, bar2LocalAngularVelocity);
     float3 bar2VelocityProductAngularAcc = cross(bar2AngularVelocity, bar2LocalAngularVelocity);
-    
 
-
-    float3 bar2BiasTorque = cross(bar2AngularVelocity, bar2InertiaTensor * bar2AngularVelocity);
+    float3 bar2BiasTorque = cross(bar2AngularVelocity, mul(bar2InertiaTensor, bar2AngularVelocity)) - GetBar2Torque(
+        dampingCoff,
+        p1Stiffness,
+        QuatRotateVector(bar2FrameQuat, wind),
+        QuatRotateVector(bar2FrameQuat, angularVelocity.xyz),
+        QuatRotateVector(bar2FrameQuat, localBar1),
+        angularVelocity.w,
+        angularDisp.w,
+        float3(bar2Length, 0, 0)
+    );
     float3 bar2BiasForce = bar2Mass * cross(bar2AngularVelocity, bar2LinearVelocity);
     
-             
     // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
     
     float momentOfIntertia = GetMomentOfInertia(segmentMassDensity, p1, p2);

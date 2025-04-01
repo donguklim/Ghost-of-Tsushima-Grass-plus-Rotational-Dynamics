@@ -567,9 +567,12 @@ void GrassUpdate(
 
     float3 p1 = float3(0, 0, 0);
     float3 p2 = float3(0, 0, 0);
-    
+    float3 p2RelativePos = float3(0, 0, 0);
+    FQaut bar1Quat;
 
-    GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis);
+    GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis, p2RelativePos, bar1Quat);
+    
+    FQuat bar1ReverseQuat = FQuat(-bar1Quat.xyz, bar1Quat.w);
     
     float3 bar1Dir = normalize(p1);
     
@@ -585,55 +588,31 @@ void GrassUpdate(
     float bar2Mass = segmentMassDensity * bar2Length;
 
     
-    float3 bar1Orientation = cross(float3(1, 0, 0), bar1Dir);
-    
-    float bar1OrientationAngleSin = length(bar1OrientationAngleSin);
-    float bar1Angle = asin(bar1OrientationAngleSin);
-    if (bar1OrientationAngleSin < 0.01f)
-    {
-        bar1Orientation = float3(0, 0, 1);
-        if (dot(bar1Dir, float3(1, 0, 0)) < 0)
-        {
-            bar1Angle = PI_VALUE;
-
-        }
-        else
-        {
-            bar1Angle = 0.0f;
-        }
-    }
-    else
-    {
-        bar1Orientation /= bar1OrientationAngleSin;
-
-    }
-    
     float bar1InertiaVal = bar1Mass * (3.0f * radius * radius * 3.0f + 4.0f * bar1Length * bar1Length) / 12.0f;
     
-    float3x3 bar1InertiaTensor = QuatToMatrix(QuatFromAxisAngle(bar1Orientation, bar1Angle))
-        * float3x3(
-            bar1Mass * radius * radius / 2.0f, 0.0f, 0.0f,
-            0.0f, bar1InertiaVal, 0.0f,
-            0.0f, 0.0f, bar1InertiaVal
-        )
-        * QuatToMatrix(QuatFromAxisAngle(bar1Orientation, -bar1Angle));
+    float3x3 bar1InertiaTensor = float3x3(
+        bar1Mass * radius * radius / 2.0f, 0.0f, 0.0f,
+        0.0f, bar1InertiaVal, 0.0f,
+        0.0f, 0.0f, bar1InertiaVal
+    );
 
     
-    float3 bar2Orientation = cross(float3(1, 0, 0), bar2Dir);
+    float3 bar2RelativeDir = normalize(p2RelativePos - float3(bar1Length, 0, 0));
+    float3 bar2Orientation = cross(float3(1, 0, 0), bar2RelativeDir);
     
     float bar2OrientationAngleSin = length(bar2OrientationAngleSin);
-    float bar2Angle = asin(bar2OrientationAngleSin);
+    float bar2RelativeAngle = asin(bar2OrientationAngleSin);
     if (bar2OrientationAngleSin < 0.01f)
     {
         bar2Orientation = float3(0, 0, 1);
         if (dot(bar2Dir, float3(1, 0, 0)) < 0)
         {
-            bar2Angle = PI_VALUE;
+            bar2RelativeAngle = PI_VALUE;
 
         }
         else
         {
-            bar2Angle = 0.0f;
+            bar2RelativeAngle = 0.0f;
         }
     }
     else
@@ -641,28 +620,52 @@ void GrassUpdate(
         bar2Orientation /= bar2OrientationAngleSin;
 
     }
+    FQuat bar2Quat = QuatFromAxisAngle(bar2Orientation, bar2RelativeAngle);
+    FQuat bar2FrameQuat = bar2FrameQuat(-bar2Quat.xyz, bar2Quat.w);
     
     float bar2InertiaVal = bar2Mass * (3.0f * radius * radius * 3.0f + 4.0f * bar2Length * bar1Length) / 12.0f;
     
-    float3x3 bar2InertiaTensor = QuatToMatrix(QuatFromAxisAngle(bar2Orientation, ba21Angle))
-         * float3x3(
+    float3x3 bar2InertiaTensor = float3x3(
             bar2Mass * radius * radius / 2.0f, 0.0f, 0.0f,
             0.0f, bar2InertiaVal, 0.0f,
             0.0f, 0.0f, bar2InertiaVal
-        )
-        * QuatToMatrix(QuatFromAxisAngle(bar2Orientation, -bar2Angle));
-    
-    float3x3 bar1CrossMatrix = float3x3(
-        0, -p1.z, p1.y,
-        p1.z, 0, -p1.x,
-        -p1.y, p1.x, 0
     );
     
-    bar2InertiaTensor += bar2Mass * bar1CrossMatrix * transpose(bar1CrossMatrix);
+    float3x3 bar1CrossMatrix = float3x3(
+        0, 0, 0,
+        0, 0, -bar1Length,
+        0, bar1Length, 0
+    );
     
-    float3x3 bar2InertiaTensorYOuter = bar2InertiaTensor[1] * float3(bar2InertiaTensor[1][0], bar2InertiaTensor[1][1], bar2InertiaTensor[1][2]);
+    float3x3 bar2InertiaTensorOnP0 = QuatToMatrix(bar2Quat) * bar2InertiaTensor * QuatToMatrix(bar2FrameQuat) + bar2Mass * bar1CrossMatrix * transpose(bar1CrossMatrix);
+    float3x3 bar2InertiaTensorYOuter = bar2InertiaTensorOnP0[1] * float3(bar2InertiaTensorOnP0[1][0], bar2InertiaTensorOnP0[1][1], bar2InertiaTensorOnP0[1][2]);
+    float3x3 combinedInertiaTensor = bar1InertiaTensor + bar2InertiaTensorOnP0 - bar2InertiaTensorYOuter / bar2InertiaTensorOnP0[1][1];
     
-    float3x3 combinedInertiaTensor = bar1InertiaTensor + bar2InertiaTensor - bar2InertiaTensorYOuter / bar2InertiaTensor[1][1];
+    float3 bar1FrameBar1 = float3(bar1Length, 0, 0);
+    float3 bar1FrameAngularVelocity = QuatRotateVector(bar1ReverseQuat, angularVelocity.xyz);
+    float3 bar1BiasForce = cross(bar1FrameAngularVelocity, mul(bar1InertiaTensor, bar1FrameAngularVelocity));
+    float3 bar1BiasTorque = -GetPivotBarTorque(
+        dampingCoff,
+        stiffness,
+        QuatRotateVector(bar1ReverseQuat, wind),
+        bar1FrameBar1,
+        bar1FrameAngularVelocity,
+        QuatRotateVector(bar1ReverseQuat, angularDisp.xyz)
+    );
+    
+    float3 bar2LocalAngularVelocity = float3(0, angularVelocity.w, 0);
+    float3 bar2AngularVelocity = QuatRotateVector(bar2FrameQuat, bar1FrameAngularVelocity) + bar2LocalAngularVelocity;
+    
+    float3 bar2LinearVelocity = cross(bar1FrameAngularVelocity, bar1FrameBar1);
+    
+    float3 bar2VelocityProductAcc = cross(bar2LinearVelocity, bar2LocalAngularVelocity);
+    float3 bar2VelocityProductAngularAcc = cross(bar2AngularVelocity, bar2LocalAngularVelocity);
+    
+
+
+    float3 bar2BiasTorque = cross(bar2AngularVelocity, bar2InertiaTensor * bar2AngularVelocity);
+    float3 bar2BiasForce = bar2Mass * cross(bar2AngularVelocity, bar2LinearVelocity);
+    
              
     // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
     

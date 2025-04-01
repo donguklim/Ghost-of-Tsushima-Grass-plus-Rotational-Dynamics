@@ -700,10 +700,9 @@ void GrassUpdate(
 
     float3 p1 = float3(0, 0, 0);
     float3 p2 = float3(0, 0, 0);
-    float3 p2RelativePos = float3(0, 0, 0);
     FQaut bar1Quat;
 
-    GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis, p2RelativePos, bar1Quat);
+    GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis, bar1Quat);
     
     FQuat bar1ReverseQuat = FQuat(-bar1Quat.xyz, bar1Quat.w);
     
@@ -798,38 +797,45 @@ void GrassUpdate(
     bar2BiasForce[1] -= bar2ExternalTorque; 
     float bar2GeneralizedTorque = dot(bar2ExternalTorque, bar2RotationalAxis) - p1Stiffness * angularDisp.w;
     
-    
-    float3x3 bar2ToBar1ForceTransformation[2][2];
-    float3x3 bar2ToBar1VelocityTransformation[2][2];
-    getSpatialForceTransformaton(-localBar1, float3(0, (bar2StaticAngle + angularDisp.w), 0), bar2ToBar1ForceTransformation);
-    getSpatialVelocityTransformaton(-localBar1, float3(0, (bar2StaticAngle + angularDisp.w), 0), bar2ToBar1VelocityTransformation);
-    
-    float3x3 bar2InertiaOnBar1[2][2];
-    bar2InertiaOnBar1[0][0] = bar2BaseInertiaTensor;
-    bar2InertiaOnBar1[1][1] = float3x3(
+   
+    float3x3 bar2InertiaTensorOnBar1[2][2];
+    bar2InertiaTensorOnBar1[0][0] = bar2BaseInertiaTensor;
+    bar2InertiaTensorOnBar1[1][1] = float3x3(
         bar2Mass, 0, 0,
         0, bar2Mass, 0,
         0, 0, bar2Mass
     );
-    bar2InertiaOnBar1[0][1] = 0;
-    bar2InertiaOnBar1[1][0] = 0;
-        
-    SpatialMatMul(bar2InertiaOnBar1, bar1ToBar2VelTransformation, bar2InertiaOnBar1);
-    SpatialMatMul(bar2ToBar1ForceTransformation, bar2InertiaOnBar1, bar2InertiaOnBar1);
+    bar2InertiaTensorOnBar1[0][1] = 0;
+    bar2InertiaTensorOnBar1[1][0] = 0;
+   
     
     float3 bar2InertiaYColum[2];
-    bar2InertiaYColum[0] = float3(bar2InertiaOnBar1[0][0][1][0], bar2InertiaOnBar1[0][0][1][1], bar2InertiaOnBar1[0][0][1][2]);
-    bar2InertiaYColum[1] = float3(bar2InertiaOnBar1[1][0][1][0], bar2InertiaOnBar1[1][0][1][1], bar2InertiaOnBar1[1][0][1][2]);
+    bar2InertiaYColum[0] = float3(bar2InertiaTensorOnBar1[0][0][1][0], bar2InertiaTensorOnBar1[0][0][1][1], bar2InertiaTensorOnBar1[0][0][1][2]);
+    bar2InertiaYColum[1] = float3(bar2InertiaTensorOnBar1[1][0][1][0], bar2InertiaTensorOnBar1[1][0][1][1], bar2InertiaTensorOnBar1[1][0][1][2]);
     
-        
-    float3 tempBiasForceHolder[2];
-    SpatialMatVectorMul(bar2ToBar1ForceTransformation, bar2BiasForce, tempBiasForceHolder);
     
-    float weightVal = (bar2GeneralizedTorque - tempBiasForceHolder[0][1]) / bar2InertiaOnBar1[0][0][1][1];
+    float weightVal = (bar2GeneralizedTorque - bar2BiasForce[0][1]) / bar2InertiaTensor[0][0][1][1];
     
-    bar1BiasForce[0] += tempBiasForceHolder[0] + bar2InertiaYColum[0] * weightVal;
-    bar1BiasForce[1] += tempBiasForceHolder[1] + bar2InertiaYColum[1] * weightVal;
+    float3 bar1BiasForceFromBar2[2];
+    bar1BiasForceFromBar2[0] = bar2BiasForce[0] + bar2InertiaYColum[0] * weightVal;
+    bar1BiasForceFromBar2[1] = bar2BiasForce[1] + bar2InertiaYColum[1] * weightVal;
     
+    bar2InertiaTensorOnBar1[0][0] -= OuterProduct(bar2InertiaYColum[0], bar2InertiaYColum[0]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    bar2InertiaTensorOnBar1[1][0] -= OuterProduct(bar2InertiaYColum[1], bar2InertiaYColum[0]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    bar2InertiaTensorOnBar1[0][0] -= OuterProduct(bar2InertiaYColum[0], bar2InertiaYColum[1]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    bar2InertiaTensorOnBar1[1][0] -= OuterProduct(bar2InertiaYColum[1], bar2InertiaYColum[1]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    
+    float3 tempSpatialVec[2];
+    SpatialMatVectorMul(bar2InertiaTensorOnBar1, bar2VelocityProductAcc, tempSpatialVec);
+    bar1BiasForceFromBar2[0] += tempSpatialVec[0];
+    bar1BiasForceFromBar2[1] += tempSpatialVec[1];
+    
+    float3x3 bar2ToBar1ForceTransformation[2][2];
+    getSpatialForceTransformaton(-localBar1, float3(0, (bar2StaticAngle + angularDisp.w), 0), bar2ToBar1ForceTransformation);
+    
+    SpatialMatVectorMul(bar2ToBar1ForceTransformation, bar1BiasForceFromBar2, bar1BiasForceFromBar2);
+    bar1BiasForce[0] += bar1BiasForceFromBar2[0];
+    bar1BiasForce[1] += bar1BiasForceFromBar2[1];
     
     float3x3 bar1InertiaTensor[2][2];
     bar1InertiaTensor[0][0] = bar1BaseInertiaTensor;
@@ -841,23 +847,14 @@ void GrassUpdate(
     bar1InertiaTensor[0][1] = 0;
     bar1InertiaTensor[1][0] = 0;
     
+    SpatialMatMul(bar2InertiaTensorOnBar1, bar1ToBar2VelTransformation, bar2InertiaTensorOnBar1);
+    SpatialMatMul(bar2ToBar1ForceTransformation, bar2InertiaTensorOnBar1, bar2InertiaTensorOnBar1);
 
-    bar2InertiaOnBar1[0][0] -= OuterProduct(bar2InertiaYColum[0], bar2InertiaYColum[0]) / bar2InertiaOnBar1[0][0][1][1];
-    bar2InertiaOnBar1[1][0] -= OuterProduct(bar2InertiaYColum[1], bar2InertiaYColum[0]) / bar2InertiaOnBar1[0][0][1][1];
-    bar2InertiaOnBar1[0][0] -= OuterProduct(bar2InertiaYColum[0], bar2InertiaYColum[1]) / bar2InertiaOnBar1[0][0][1][1];
-    bar2InertiaOnBar1[1][0] -= OuterProduct(bar2InertiaYColum[1], bar2InertiaYColum[1]) / bar2InertiaOnBar1[0][0][1][1];
-    
+    bar1InertiaTensor[0][0] += bar2InertiaTensorOnBar1[0][0];
+    bar1InertiaTensor[1][0] += bar2InertiaTensorOnBar1[1][0];
+    bar1InertiaTensor[0][0] += bar2InertiaTensorOnBar1[0][0];
+    bar1InertiaTensor[1][0] += bar2InertiaTensorOnBar1[1][0];
 
-    SpatialMatVectorMul(bar2InertiaOnBar1, bar2VelocityProductAcc, tempBiasForceHolder);
-    
-    bar1BiasForce[0] += tempBiasForceHolder[0];
-    bar1BiasForce[1] += tempBiasForceHolder[1];
-    
-    bar1InertiaTensor[0][0] += bar2InertiaOnBar1[0][0];
-    bar1InertiaTensor[1][0] += bar2InertiaOnBar1[1][0];
-    bar1InertiaTensor[0][0] += bar2InertiaOnBar1[0][0];
-    bar1InertiaTensor[1][0] += bar2InertiaOnBar1[1][0];
-    
     float3 p0Acc = Inverse3x3(bar1InertiaTensor[0][0]) * (
         generalizedBar1Torque 
         - mul(bar1BaseInertiaTensor[0][1], QuatRotateVector(bar1ReverseQuat, float3(0, 0, 0))) 
@@ -884,7 +881,7 @@ void GrassUpdate(
     minP1AngleDelta = minP1AngleDelta > 0 ? 0 : minP1AngleDelta;
     
     
-    if (length(angularDisp.xyz) < 2 * PI_VALUE)
+    if (p0Angle < 2 * PI_VALUE)
     {
         limitAngleDispScale(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }

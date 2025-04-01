@@ -36,7 +36,16 @@ void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float3 side
 }
 
 
-void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float3 inputSideDir, in float4 angularDisp, out float3 p1, out float3 p2, out float3 sideDir)
+void GetRotatedBezierPoints(
+    in float3 inputP1, 
+    in float3 inputP2, 
+    in float3 inputSideDir, 
+    in float4 angularDisp, 
+    out float3 p1, 
+    out float3 p2, 
+    out float3 sideDir,
+    out FQuat bar1Quat
+)
 {
     sideDir = inputSideDir;
     
@@ -61,7 +70,7 @@ void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float3 inpu
     
     float3 axis = angularDisp.xyz / angle;
         
-    FQuat bar1Quat = QuatFromAxisAngle(axis, angle);
+    bar1Quat = QuatFromAxisAngle(axis, angle);
         
     p1 = QuatRotateVector(bar1Quat, inputP1);
     p2 = QuatRotateVector(bar1Quat, p2);

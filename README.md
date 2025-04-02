@@ -1,7 +1,7 @@
 # UE5 Implementation of Multi-Body Dynamics Grass 
 
 
-[![Watch the video](https://img.youtube.com/vi/IbZkUX3rt54/hqdefault.jpg)](https://www.youtube.com/watch?v=IbZkUX3rt54)
+[![Watch the video](https://img.youtube.com/vi/EvAdOainE4k/hqdefault.jpg)](https://youtu.be/EvAdOainE4k)
 
 This video had been made before I fixed a flaw in my calculation. For the fixed version, watch the video at [Motion Results](#motion-results)
 
@@ -966,9 +966,9 @@ It is ocasinally noticeable when a clump of grasses has small number blades and 
 ### Motion Results
 
 
-[![Watch the video](https://img.youtube.com/vi/zVhQW_Om9-c/hqdefault.jpg)](https://www.youtube.com/watch?v=zVhQW_Om9-c)
+[![Watch the video](https://img.youtube.com/vi/EvAdOainE4k/hqdefault.jpg)](https://youtu.be/EvAdOainE4k)
 
-(Updated vesion - modified grass facing direction generation and fixed error in motion calculations)
+(Updated vesion - Used ABA Algorithm to accurately calculate accelerations)
 
 [![Watch the video](https://img.youtube.com/vi/btgx3LElU2Q/hqdefault.jpg)](https://www.youtube.com/watch?v=btgx3LElU2Q)
 
@@ -985,19 +985,17 @@ but in the real usecase air friction should grow linearly with wind force.
 
 #### Comparing Results with or without Rotation Limits
 
-[![Watch the video](https://img.youtube.com/vi/2ipnWEWLgjE/hqdefault.jpg)](https://www.youtube.com/watch?v=2ipnWEWLgjE)
-
-Above video uses the methods in this study. 
 
 Bellow video is the result without ground collision and angular magnitude limitation on P0.
 
 Angle limitation on P1 is not removed and still remains because removing it can lead to zero length Bezier curve and yield division by zero error.
 
-[![Watch the video](https://img.youtube.com/vi/dHm0AVDqMTM/hqdefault.jpg)](https://www.youtube.com/watch?v=dHm0AVDqMTM)
+[![Watch the video](https://img.youtube.com/vi/sHjHLRHukEs/hqdefault.jpg)](https://youtu.be/sHjHLRHukEs)
 
 It can be observed that, the motion without rotation limits shows unplausible motion when the wind force becomes strong.
 
-It can be observed that too high restoration force of a grass makes chaotic motion that does not make any movement to be aligned with the wind direction.
+It can be observed that too high restoration force of a grass makes chaotic motion that does not make any movement to be aligned with the wind direction. 
+Some grasses are disappearing at the end possibly due to some floating point overflow error. Without limiting the angular displacement, dynamics keep increasing the total displacement and velocity.
 
 
 #### Point Force Results with or without Rotation Limits

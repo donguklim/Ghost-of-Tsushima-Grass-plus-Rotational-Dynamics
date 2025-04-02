@@ -5,19 +5,68 @@
 #include "/Engine/Private/Quaternion.ush"
 
 
-// angle magnitude less than 0.001 is ignored
-float3 RotateVectorByRotationalVector(float3 v, float3 rotationalVec)
+
+FQuat GetRotationBetweenVectors(float3 fromDir, float3 toDir)
 {
-    float angle = length(rotationalVec);
-    if (angle < ANGLE_THRESHOLD)
+    // Normalize input vectors
+    fromDir = normalize(fromDir);
+    toDir = normalize(toDir);
+    
+    // Get the cross product (rotation axis)
+    float3 rotationAxis = cross(fromDir, toDir);
+    
+    // Check if vectors are parallel
+    float parallelCheck = length(rotationAxis);
+    
+    // Handle special case when vectors are parallel
+    if (parallelCheck < 0.001f)
     {
-        return v;
+        // Check if vectors are in the same direction
+        if (dot(fromDir, toDir) > 0.999999f)
+        {
+            // Vectors are identical, return identity quaternion
+            return float4(0, 0, 0, 1);
+        }
+        else
+        {
+            // Vectors are opposite, find orthogonal axis to rotate around
+            float3 orthoAxis;
+            
+            // Find suitable rotation axis (perpendicular to fromDir)
+            if (abs(fromDir.x) < 0.707f)
+                orthoAxis = cross(fromDir, float3(1, 0, 0));
+            else
+                orthoAxis = cross(fromDir, float3(0, 1, 0));
+                
+            orthoAxis = normalize(orthoAxis);
+            
+            // Return 180 degree rotation quaternion
+            return FQuat(orthoAxis.x, orthoAxis.y, orthoAxis.z, 0);
+        }
     }
     
-    float3 axis = rotationalVec / angle;
+    // Normalize rotation axis
+    rotationAxis /= parallelCheck;
     
-    return QuatRotateVector(QuatFromAxisAngle(axis, angle), v);
-
+    // Calculate the dot product for rotation angle
+    float dotProduct = dot(fromDir, toDir);
+    
+    // Clamp dot product to valid range
+    dotProduct = clamp(dotProduct, -1.0f, 1.0f);
+    
+    // Calculate rotation angle (half-angle for quaternion)
+    float rotationAngle = acos(dotProduct) * 0.5f;
+    
+    // Calculate the quaternion components
+    float sinHalfAngle = sin(rotationAngle);
+    
+    // Return quaternion as (x, y, z, w) where w is the scalar part
+    return FQuat(
+        rotationAxis.x * sinHalfAngle,
+        rotationAxis.y * sinHalfAngle,
+        rotationAxis.z * sinHalfAngle,
+        cos(rotationAngle)
+    );
 }
 
 #endif // __ROTATIONAL_DYNAMIC_GRASS_QUATERNION_HLSL__

@@ -458,7 +458,7 @@ float3 GetPivotBarTorque(
     float3 barCrossWind = cross(bar, windForce);
     float windMag = length(windForce);
    
-    return (windMag > WIND_MAGNITUDE_THRESHOLD ? length(barCrossWind) * barCrossWind / windMag : 0.0f)
+    return (windMag > WIND_MAGNITUDE_THRESHOLD ? length(barCrossWind) * barCrossWind / windMag : 0.0f) / 2.0f
         - dampingCoff / 3.0f * barLength  * cross(bar, cross(angularVelocity, bar));
 }
 
@@ -635,42 +635,6 @@ float3x3 OuterProduct(float3 a, float3 b)
         a.z * b
     );
 }
-
-float3x3 PseudoInverseInertia(float3x3 A)
-{
-    // Compute the determinant
-    float detA = determinant(A);
-    
-    // Compute the cofactor matrix (adjugate)
-    float3x3 adjA = float3x3(
-        A._22 * A._33 - A._23 * A._32, -(A._12 * A._33 - A._13 * A._32), (A._12 * A._23 - A._13 * A._22),
-       -(A._21 * A._33 - A._23 * A._31), A._11 * A._33 - A._13 * A._31, -(A._11 * A._23 - A._13 * A._21),
-        A._21 * A._32 - A._22 * A._31, -(A._11 * A._32 - A._12 * A._31), A._11 * A._22 - A._12 * A._21
-    );
-    
-    // If determinant is very small, regularize
-    float epsilon = 1e-5;
-    if (abs(detA) < epsilon)
-    {
-        // Compute a symmetric damped version of A
-        A += epsilon * float3x3(1, 0, 0, 0, 1, 0, 0, 0, 1);
-        detA = determinant(A);
-        adjA = float3x3(
-            A._22 * A._33 - A._23 * A._32, -(A._12 * A._33 - A._13 * A._32), (A._12 * A._23 - A._13 * A._22),
-           -(A._21 * A._33 - A._23 * A._31), A._11 * A._33 - A._13 * A._31, -(A._11 * A._23 - A._13 * A._21),
-            A._21 * A._32 - A._22 * A._31, -(A._11 * A._32 - A._12 * A._31), A._11 * A._22 - A._12 * A._21
-        );
-    }
-    
-    // Compute inverse (or pseudo-inverse approximation)
-    float3x3 R = adjA / detA;
-    
-    // Ensure symmetry
-    R = 0.5 * (R + transpose(R));
-    
-    return R;
-}
-
  
 
 void GrassUpdate(
@@ -690,7 +654,9 @@ void GrassUpdate(
 {
     
     float2 p1p2XZ = float2(1, 0) - p1Position;
+    float bar1Staticangle = Get2DAngle(p1Position);
     float bar2StaticAngle = Get2DAngle(p1p2XZ) - Get2DAngle(p1Position);
+
     float segmentMassDensity = scale.y * massDensity;
     segmentMassDensity = segmentMassDensity < 0.01f ? 1.0f : segmentMassDensity;
     
@@ -705,15 +671,11 @@ void GrassUpdate(
 
     float3 p1 = float3(0, 0, 0);
     float3 p2 = float3(0, 0, 0);
-    FQuat bar1Quat;
-
     
-    GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis, bar1Quat);
+    GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis);
     
-    FQuat bar1ReverseQuat = FQuat(-bar1Quat.xyz, bar1Quat.w);
-    
+        
     float3 bar1Dir = normalize(p1);
-    
     float3 bar2 = p2 - p1;
     float3 bar2Dir = normalize(bar2);
     
@@ -738,13 +700,24 @@ void GrassUpdate(
             0.0f, 0.0f, bar2InertiaVal
     );
     
+    float p0DispAngle = length(angularDisp.xyz);
+    FQuat p0DispReverseQuat = p0DispAngle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1.0f) : QuatFromAxisAngle(angularDisp.xyz/p0DispAngle, -p0DispAngle);
+    FQuat worldToBar1FrameQuat = QuatMultiply(
+        QuatFromAxisAngle(-bar1Staticangle, float3(0, 1, 0)), 
+        QuatMultiply(
+            FQuat(-initialOrientation.xyz, initialOrientation.w), 
+            p0DispReverseQuat
+        )
+        
+    );
+
     float3 localBar1 = float3(bar1Length, 0, 0);
  
     float3 bar1Velocity[2];
     float3 bar1BiasForce[2];
     float3 bar1Momentum[2];
     
-    bar1Velocity[0] = QuatRotateVector(bar1ReverseQuat, angularVelocity.xyz);
+    bar1Velocity[0] = QuatRotateVector(worldToBar1FrameQuat, angularVelocity.xyz);
     bar1Velocity[1] = 0;
 
     bar1Momentum[0] = mul(bar1BaseInertiaTensor, bar1Velocity[0]);
@@ -754,13 +727,13 @@ void GrassUpdate(
     
     float3 bar1ExternalTorque = GetPivotBarTorque(
         dampingCoff,
-        QuatRotateVector(bar1ReverseQuat, wind),
+        QuatRotateVector(worldToBar1FrameQuat, wind),
         localBar1,
         bar1Velocity[0]
     );
     
     bar1BiasForce[1] -= bar1ExternalTorque;
-    float3 generalizedBar1Torque = bar1ExternalTorque - stiffness * QuatRotateVector(bar1ReverseQuat, angularDisp.xyz);
+    float3 generalizedBar1Torque = bar1ExternalTorque - stiffness * QuatRotateVector(worldToBar1FrameQuat, angularDisp.xyz);
     
     float3x3 zeroMat = float3x3(
         0, 0, 0,
@@ -793,15 +766,17 @@ void GrassUpdate(
     
     spatialForceCross(bar2Velocity, bar2Momentum, bar2BiasForce);
     
-    float p0Angle = length(angularDisp.xyz);
-    FQuat bar2FrameQuat =  p0Angle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1) : QuatFromAxisAngle(angularDisp.xyz / p0Angle, -p0Angle);
     
-    bar2FrameQuat = angularDisp.w < ANGLE_THRESHOLD ? bar2FrameQuat : QuatMultiply(QuatFromAxisAngle(bar2RotationalAxis, -angularDisp.w), bar2FrameQuat);
+    FQuat worldToBar2FrameQuat = QuatMultiply(
+        QuatFromAxisAngle(-(bar2StaticAngle + angularDisp.w), float3(0, 1, 0)), 
+        worldToBar1FrameQuat
+    );
+
     float3 bar2ExternalTorque = GetBar2Torque(
         dampingCoff,
-        QuatRotateVector(bar2FrameQuat, wind),
-        QuatRotateVector(bar2FrameQuat, angularVelocity.xyz),
-        QuatRotateVector(bar2FrameQuat, localBar1),
+        QuatRotateVector(worldToBar2FrameQuat, wind),
+        QuatRotateVector(worldToBar2FrameQuat, angularVelocity.xyz),
+        QuatRotateVector(worldToBar2FrameQuat, localBar1),
         angularVelocity.w,
         float3(bar2Length, 0, 0)
     );
@@ -898,6 +873,7 @@ void GrassUpdate(
         bar2GeneralizedTorque - mul(bar2BaseInertiaTensor, p0Acc + bar2VelocityProductAcc[0])[1] - bar2BiasForce[0][1]
     ) / bar2BaseInertiaTensor[1][1];
     
+    p0Acc = QuatRotateVector(FQuat(-worldToBar1FrameQuat.xyz, worldToBar1FrameQuat.w), p0Acc);
    
     float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
     
@@ -914,7 +890,7 @@ void GrassUpdate(
     minP1AngleDelta = minP1AngleDelta > 0 ? 0 : minP1AngleDelta;
     
     
-    if (p0Angle < 2 * PI_VALUE)
+    if (p0DispAngle < 2 * PI_VALUE)
     {
         limitAngleDispScale(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }

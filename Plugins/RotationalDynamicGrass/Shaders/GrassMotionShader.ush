@@ -693,7 +693,7 @@ void GrassUpdate(
         0.0f, 0.0f, bar1InertiaVal
     );
     
-    float bar2InertiaVal = bar2Mass * (bar2Length * bar1Length) / 3.0f;
+    float bar2InertiaVal = bar2Mass * (bar2Length * bar2Length) / 3.0f;
     float3x3 bar2BaseInertiaTensor = float3x3(
             0, 0.0f, 0.0f,
             0.0f, bar2InertiaVal, 0.0f,
@@ -864,13 +864,19 @@ void GrassUpdate(
     
     bar1FinalInertia = bar1FinalInertia < 0.01 ? 1.0f : bar1FinalInertia;
     
+    
+    //float3 gravityForce = mul(bar2InertiaTensorOnBar1[0][1], QuatRotateVector(worldToBar1FrameQuat, float3(0.0, 0.0, -9.81)));
+    
     float3 p0Acc = (
         generalizedBar1Torque
         - bar1BiasForce[0]
+        //+ gravityForce
     ) / bar1FinalInertia;
 
     float p1Acc = (
-        bar2GeneralizedTorque - mul(bar2BaseInertiaTensor, p0Acc + bar2VelocityProductAcc[0])[1] - bar2BiasForce[0][1]
+        bar2GeneralizedTorque - mul(
+            bar2BaseInertiaTensor, 
+            mul(bar1ToBar2VelTransformation[0][0], p0Acc) + bar2VelocityProductAcc[0])[1] - bar2BiasForce[0][1]
     ) / bar2BaseInertiaTensor[1][1];
     
     p0Acc = QuatRotateVector(FQuat(-worldToBar1FrameQuat.xyz, worldToBar1FrameQuat.w), p0Acc);

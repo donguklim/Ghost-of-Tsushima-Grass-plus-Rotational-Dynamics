@@ -3,6 +3,7 @@
 
 #include "Common/Constants.ush"
 #include "Common/BezierCurve.ush"
+#include "Common/SpatialVector.ush"
 
 
 #define COLLISION_COEFFICENT_TRHESHOLD 0.01
@@ -421,32 +422,6 @@ void getAngleDispScaleDecreasingDelta(in float3 angularDisp, inout float3 angula
 }
 
 
-float3 GetBar2TorqueOnP0(
-    float dampingCoeff,
-    float3 windForce,
-    float3 bar1AngularVelocity,
-    float3 bar1,
-    float bar2AngularVelocity,
-    float3 bar2RotationalAxis,
-    float3 bar2
-)
-{
-    float bar2Length = length(bar2);
-    float3 axisCrossBar2 = cross(bar2RotationalAxis, bar2);
-    float windMag = length(windForce);
-    float3 bar2CrossWind = cross(bar2, windForce);
-        
-    float3 l0ForceTerm = (windMag > WIND_MAGNITUDE_THRESHOLD ? length(bar2CrossWind) / (windMag * bar2Length) : 0.0f) * windForce 
-        - dampingCoeff * cross(bar1AngularVelocity, bar1);
-    float3 l1ForceTerm = -dampingCoeff * (bar2AngularVelocity * axisCrossBar2 + cross(bar1AngularVelocity, bar2));
-    float3 l0Term = cross(bar1, l0ForceTerm);
-    float3 l1Term = cross(bar2, l0ForceTerm) + cross(bar1, l1ForceTerm);
-    float3 l2Term = cross(bar2, l1ForceTerm);
-        
-    return bar2Length * (l0Term + l1Term / 2.0f + l2Term / 3.0f);
-
-}
-
 float3 GetPivotBarTorque(
     float dampingCoff,
     float3 windForce,
@@ -473,53 +448,7 @@ float3 GetBar2Torque(
         - dampingCoeff * length(bar2) * (cross(bar2, cross(bar1AngularVelocity, bar1)) / 2.0f + cross(bar2, cross(bar1AngularVelocity, bar2)) / 3.0f);
 
 }
-
-float3 GetBar1PaybackForceFromBar2(
-    in float dampingCoff,
-    in float stiffness,
-    in float3 windForce,
-    in float3 bar2,
-    in float3 bar2RotationalAxis,
-    in float angualrVelocity,
-    in float angularDisplacement
-)
-{
-    
-    float barLength = length(bar2);
-    
-    float windMag = length(windForce);
-    float3 barCrossWind = cross(bar2, windForce);
-
-    return cross(bar2RotationalAxis, bar2) * (
-            stiffness * angularDisplacement / barLength / barLength
-            + dampingCoff * angualrVelocity * barLength * 5.0f / 16.0f
-        )
-        - (windMag > WIND_MAGNITUDE_THRESHOLD ? length(barCrossWind) / windMag : 0.0f) * windForce / 4.0f;
-}
-    
-    
-float GetMomentOfInertia(float segmentDensity, float3 bar1, float3 p2)
-{
-    float3 bar2 = p2 - bar1;
-    float bar2Length = length(bar2);
-    float bar1Length = length(bar1);
-    // bar2 center distance from pivot (0, 0, 0)
-    float bar2CenterDistance = length(bar2 / 2 + bar1);
-        
-    float bar2Mass = segmentDensity * bar2Length;
-    float bar1Mass = segmentDensity * bar1Length;
-    
-    // Moment of Inertia caused by bar 2
-    // = Moment of Inertia of bar2 at its center of mass + (bar 2 center of mass distance from the pivot)^2
-    //
-    // Moment of Inertia of bar 2 at its center of mass = bar2_mass * bar2_length * bar2_length / 12.0
-    float bar2MomentOfIntertia = bar2Mass * (bar2Length * bar2Length / 12.0 + bar2CenterDistance * bar2CenterDistance);
-        
-    float bar1MomentOfIntertia = (bar1Mass) / 3.0 * bar1Length * bar1Length;
-        
-    return bar1MomentOfIntertia + bar2MomentOfIntertia;
-    
-}
+ 
 
 float Get2DAngle(float2 vec)
 {
@@ -545,94 +474,6 @@ float Get2DAngle(float2 vec)
 Using articulated body algorithm from FeatherStone's book
 */
 
-void SpatialMatMul(in float3x3 mat1[2][2], in float3x3 mat2[2][2], out float3x3 matOut[2][2])
-{
-    matOut[0][0] = mat1[0][0] * mat2[0][0] + mat1[0][1] * mat2[1][0];
-    matOut[1][0] = mat1[1][0] * mat2[0][0] + mat1[1][1] * mat2[1][0];
-    
-    matOut[0][1] = mat1[0][0] * mat2[0][1] + mat1[0][1] * mat2[1][1];
-    matOut[1][1] = mat1[1][0] * mat2[0][1] + mat1[1][1] * mat2[1][1];
-}
-
-void SpatialMatVectorMul(in float3x3 mat[2][2], in float3 inVec[2], out float3 outVec[2])
-{
-    outVec[0] = mul(mat[0][0], inVec[0]) + mul(mat[0][1], inVec[1]);
-    outVec[1] = mul(mat[1][0], inVec[0]) + mul(mat[1][1], inVec[1]);
-}
-
-float3x3 getLeftCrossMat(in float3 vec)
-{
-    return float3x3(
-        0, -vec.z, vec.y,
-        vec.z, 0, -vec.x,
-        -vec.y, vec.x, 0
-    );
-}
-
-void getSpatialVelocityTransformaton(
-    in float3 trans,
-    in float3 rotation,
-    out float3x3 result[2][2]
-)
-{
-    float angle = length(rotation);
-    
-    float3x3 rotationMat = angle < ANGLE_THRESHOLD ? float3x3(
-        1, 0, 0,
-        0, 1, 0,
-        0, 0, 1
-    ) : QuatToMatrix(QuatFromAxisAngle(rotation / angle, angle));
-    
-    result[0][1] = 0;
-    result[0][0] = rotationMat;
-    result[1][1] = rotationMat;
-    result[1][0] = -rotationMat * getLeftCrossMat(trans);
-
-}
-
-void getSpatialForceTransformaton(
-    in float3 trans,
-    in float3 rotation,
-    out float3x3 result[2][2]
-)
-{
-    float angle = length(rotation);
-    
-    float3x3 rotationMat = angle < ANGLE_THRESHOLD ? float3x3(
-        1, 0, 0,
-        0, 1, 0,
-        0, 0, 1
-    ) : QuatToMatrix(QuatFromAxisAngle(rotation / angle, angle));
-    
-    result[1][0] = 0;
-    result[0][0] = rotationMat;
-    result[1][1] = rotationMat;
-    result[0][1] = -rotationMat * getLeftCrossMat(trans);
-}
-
-void spatioalVelocityCross(in float3 vec1[2], in float3 vec2[2], out float3 outVec[2])
-{
-    outVec[0] = cross(vec1[0], vec2[0]);
-    outVec[1] = cross(vec1[0], vec2[1]) + cross(vec1[1], vec2[0]);
-
-}
- 
-void spatialForceCross(in float3 vec1[2], in float3 vec2[2], out float3 outVec[2])
-{
-    outVec[0] = cross(vec1[0], vec2[0]) + cross(vec1[1], vec2[1]);
-    outVec[1] = cross(vec1[0], vec2[1]);
-
-}
-
-float3x3 OuterProduct(float3 a, float3 b)
-{
-    return float3x3(
-        a.x * b,
-        a.y * b,
-        a.z * b
-    );
-}
- 
 
 void GrassUpdate(
     float dampingCoff,

@@ -1,0 +1,101 @@
+#ifndef __ROTATIONAL_DYNAMIC_GRASS_SPATIAL_VECTOR_HLSL__
+#define __ROTATIONAL_DYNAMIC_GRASS_SPATIAL_VECTOR_HLSL__
+
+
+void SpatialMatMul(in float3x3 mat1[2][2], in float3x3 mat2[2][2], out float3x3 matOut[2][2])
+{
+    matOut[0][0] = mat1[0][0] * mat2[0][0] + mat1[0][1] * mat2[1][0];
+    matOut[1][0] = mat1[1][0] * mat2[0][0] + mat1[1][1] * mat2[1][0];
+    
+    matOut[0][1] = mat1[0][0] * mat2[0][1] + mat1[0][1] * mat2[1][1];
+    matOut[1][1] = mat1[1][0] * mat2[0][1] + mat1[1][1] * mat2[1][1];
+}
+
+
+void SpatialMatVectorMul(in float3x3 mat[2][2], in float3 inVec[2], out float3 outVec[2])
+{
+    outVec[0] = mul(mat[0][0], inVec[0]) + mul(mat[0][1], inVec[1]);
+    outVec[1] = mul(mat[1][0], inVec[0]) + mul(mat[1][1], inVec[1]);
+}
+
+
+float3x3 getLeftCrossMat(in float3 vec)
+{
+    return float3x3(
+        0, -vec.z, vec.y,
+        vec.z, 0, -vec.x,
+        -vec.y, vec.x, 0
+    );
+}
+
+
+void getSpatialVelocityTransformaton(
+    in float3 trans,
+    in float3 rotation,
+    out float3x3 result[2][2]
+)
+{
+    float angle = length(rotation);
+    
+    float3x3 rotationMat = angle < ANGLE_THRESHOLD ? float3x3(
+        1, 0, 0,
+        0, 1, 0,
+        0, 0, 1
+    ) : QuatToMatrix(QuatFromAxisAngle(rotation / angle, angle));
+    
+    result[0][1] = 0;
+    result[0][0] = rotationMat;
+    result[1][1] = rotationMat;
+    result[1][0] = -rotationMat * getLeftCrossMat(trans);
+
+}
+
+
+void getSpatialForceTransformaton(
+    in float3 trans,
+    in float3 rotation,
+    out float3x3 result[2][2]
+)
+{
+    float angle = length(rotation);
+    
+    float3x3 rotationMat = angle < ANGLE_THRESHOLD ? float3x3(
+        1, 0, 0,
+        0, 1, 0,
+        0, 0, 1
+    ) : QuatToMatrix(QuatFromAxisAngle(rotation / angle, angle));
+    
+    result[1][0] = 0;
+    result[0][0] = rotationMat;
+    result[1][1] = rotationMat;
+    result[0][1] = -rotationMat * getLeftCrossMat(trans);
+}
+
+
+void spatioalVelocityCross(in float3 vec1[2], in float3 vec2[2], out float3 outVec[2])
+{
+    outVec[0] = cross(vec1[0], vec2[0]);
+    outVec[1] = cross(vec1[0], vec2[1]) + cross(vec1[1], vec2[0]);
+
+}
+ 
+
+void spatialForceCross(in float3 vec1[2], in float3 vec2[2], out float3 outVec[2])
+{
+    outVec[0] = cross(vec1[0], vec2[0]) + cross(vec1[1], vec2[1]);
+    outVec[1] = cross(vec1[0], vec2[1]);
+
+}
+
+
+float3x3 OuterProduct(float3 a, float3 b)
+{
+    return float3x3(
+        a.x * b,
+        a.y * b,
+        a.z * b
+    );
+}
+ 
+
+#endif // __ROTATIONAL_DYNAMIC_GRASS_SPATIAL_VECTOR_HLSL__

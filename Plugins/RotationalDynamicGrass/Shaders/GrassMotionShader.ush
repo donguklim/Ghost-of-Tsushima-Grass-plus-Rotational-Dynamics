@@ -776,7 +776,7 @@ void GrassUpdate(
         dampingCoff,
         QuatRotateVector(worldToBar2FrameQuat, wind),
         QuatRotateVector(worldToBar2FrameQuat, angularVelocity.xyz),
-        QuatRotateVector(worldToBar2FrameQuat, localBar1),
+        QuatRotateVector(worldToBar2FrameQuat, p1),
         angularVelocity.w,
         float3(bar2Length, 0, 0)
     );

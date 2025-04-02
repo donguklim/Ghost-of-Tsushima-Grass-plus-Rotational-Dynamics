@@ -465,11 +465,11 @@ float3 GetBar2Torque(
     float3 windForce,
     float3 bar1AngularVelocity,
     float3 bar1,
-    float bar2AngularVelocity,
+    float3 bar2AngularVelocity,
     float3 bar2
 )
 {
-    return GetPivotBarTorque(dampingCoeff, windForce, bar2, float3(0, 1, 0) * bar2AngularVelocity)
+    return GetPivotBarTorque(dampingCoeff, windForce, bar2,  bar2AngularVelocity)
         - dampingCoeff * length(bar2) * (cross(bar2, cross(bar1AngularVelocity, bar1)) / 2.0f + cross(bar2, cross(bar1AngularVelocity, bar2)) / 3.0f);
 
 }
@@ -779,7 +779,7 @@ void GrassUpdate(
             wind,
             angularVelocity.xyz,
             p1,
-            angularVelocity.w,
+            angularVelocity.w * bar2RotationalAxis,
             bar2
         )
     );

@@ -451,7 +451,7 @@ Advanced multi-body dynamics algorithms are required.
 The commonly used efficient algorithm is the Articulated Body Algorithm from the book Rigid Body Dynamics Algorithms by Roy Featherstone.
 
 
-### Payback Moment Method
+### Payback Moment Algorithm
 ---
 **NOTE**
 

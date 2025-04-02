@@ -874,9 +874,13 @@ void GrassUpdate(
     ) / bar1FinalInertia;
 
     float p1Acc = (
-        bar2GeneralizedTorque - mul(
-            bar2BaseInertiaTensor, 
-            mul(bar1ToBar2VelTransformation[0][0], p0Acc) + bar2VelocityProductAcc[0])[1] - bar2BiasForce[0][1]
+        bar2GeneralizedTorque
+        - dot(
+            bar2VelocityProductAcc[0] + mul(bar1ToBar2VelTransformation[0][0], p0Acc), 
+            bar2BaseInertiaTensor[1]
+        ) 
+        - bar2BiasForce[0][1]
+
     ) / bar2BaseInertiaTensor[1][1];
     
     p0Acc = QuatRotateVector(FQuat(-worldToBar1FrameQuat.xyz, worldToBar1FrameQuat.w), p0Acc);
@@ -896,6 +900,13 @@ void GrassUpdate(
     minP1AngleDelta = minP1AngleDelta > 0 ? 0 : minP1AngleDelta;
     
     
+    if (dispDelta.w < minP1AngleDelta || maxP1AngleDelta < dispDelta.w)
+    {
+        angularVelocity.w = 0;
+        dispDelta.w = clamp(dispDelta.w, minP1AngleDelta, maxP1AngleDelta);
+    }
+    
+    
     if (p0DispAngle < 2 * PI_VALUE)
     {
         limitAngleDispScale(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
@@ -905,11 +916,6 @@ void GrassUpdate(
         getAngleDispScaleDecreasingDelta(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }
 
-    if (dispDelta.w < minP1AngleDelta || maxP1AngleDelta < dispDelta.w)
-    {
-        angularVelocity.w = 0;
-        dispDelta.w = clamp(dispDelta.w, minP1AngleDelta, maxP1AngleDelta);
-    }
     
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {

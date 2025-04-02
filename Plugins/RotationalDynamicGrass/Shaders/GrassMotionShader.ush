@@ -454,12 +454,10 @@ float3 GetPivotBarTorque(
     float3 angularVelocity
 )
 {
-    float barLength = length(bar);
-    float3 barCrossWind = cross(bar, windForce);
-    float windMag = length(windForce);
-   
-    return (windMag > WIND_MAGNITUDE_THRESHOLD ? length(barCrossWind) * barCrossWind / windMag : 0.0f) / 2.0f
-        - dampingCoff / 3.0f * barLength  * cross(bar, cross(angularVelocity, bar));
+    return length(bar) * (
+            cross(bar, windForce) / 2.0f
+        - dampingCoff / 3.0f * cross(bar, cross(angularVelocity, bar))
+    );
 }
 
 float3 GetBar2Torque(
@@ -471,9 +469,8 @@ float3 GetBar2Torque(
     float3 bar2
 )
 {
-    float bar2Length = length(bar2);
     return GetPivotBarTorque(dampingCoeff, windForce, bar2, float3(0, 1, 0) * bar2AngularVelocity)
-        - dampingCoeff * bar2Length * (cross(bar2, cross(bar1AngularVelocity, bar1)) / 2.0f + cross(bar2, cross(bar1AngularVelocity, bar2)) / 3.0f);
+        - dampingCoeff * length(bar2) * (cross(bar2, cross(bar1AngularVelocity, bar1)) / 2.0f + cross(bar2, cross(bar1AngularVelocity, bar2)) / 3.0f);
 
 }
 
@@ -725,11 +722,14 @@ void GrassUpdate(
     
     spatialForceCross(bar1Velocity, bar1Momentum, bar1BiasForce);
     
-    float3 bar1ExternalTorque = GetPivotBarTorque(
-        dampingCoff,
-        QuatRotateVector(worldToBar1FrameQuat, wind),
-        localBar1,
-        bar1Velocity[0]
+    float3 bar1ExternalTorque = QuatRotateVector(
+        worldToBar1FrameQuat,
+        GetPivotBarTorque(
+            dampingCoff,
+            wind,
+            p1,
+            angularVelocity.xyz
+        )
     );
     
     bar1BiasForce[1] -= bar1ExternalTorque;
@@ -771,18 +771,21 @@ void GrassUpdate(
         QuatFromAxisAngle(-(bar2StaticAngle + angularDisp.w), float3(0, 1, 0)), 
         worldToBar1FrameQuat
     );
-
-    float3 bar2ExternalTorque = GetBar2Torque(
-        dampingCoff,
-        QuatRotateVector(worldToBar2FrameQuat, wind),
-        QuatRotateVector(worldToBar2FrameQuat, angularVelocity.xyz),
-        QuatRotateVector(worldToBar2FrameQuat, p1),
-        angularVelocity.w,
-        float3(bar2Length, 0, 0)
+    
+    float3 bar2ExternalTorque = QuatRotateVector(
+        worldToBar2FrameQuat,
+        GetBar2Torque(
+            dampingCoff,
+            wind,
+            angularVelocity.xyz,
+            p1,
+            angularVelocity.w,
+            bar2
+        )
     );
     
     bar2BiasForce[1] -= bar2ExternalTorque; 
-    float bar2GeneralizedTorque = dot(bar2ExternalTorque, float3(0, 1, 0)) - p1Stiffness * angularDisp.w;
+    float bar2GeneralizedTorque = bar2ExternalTorque[1] - p1Stiffness * angularDisp.w;
    
     float3x3 bar2InertiaTensorOnBar1[2][2] = {
         { zeroMat, zeroMat },
@@ -827,6 +830,7 @@ void GrassUpdate(
     
     SpatialMatVectorMul(bar2ToBar1ForceTransformation, bar1BiasForceFromBar2, bar1BiasForceFromBar2);
     bar1BiasForce[0] += bar1BiasForceFromBar2[0];
+    // bar1BiasForce[1] is not used, so not getting the result
     // bar1BiasForce[1] += bar1BiasForceFromBar2[1];
 
     

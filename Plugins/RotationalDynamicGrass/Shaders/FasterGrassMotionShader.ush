@@ -17,6 +17,7 @@ float3 GetPaybackPivotBarTorque(
         - stiffness * angularDisp;
 }
 
+
 float3 GetSeizedBar2TorqueOnP0(
     float dampingCoeff,
     float3 windForce,
@@ -41,6 +42,7 @@ float3 GetSeizedBar2TorqueOnP0(
 
 }
 
+
 float GetMomentOfInertia(float segmentDensity, float3 bar1, float3 p2)
 {
     float3 bar2 = p2 - bar1;
@@ -63,6 +65,7 @@ float GetMomentOfInertia(float segmentDensity, float3 bar1, float3 p2)
     return bar1MomentOfIntertia + bar2MomentOfIntertia;
     
 }
+
 
 void GrassUpdatePayBack(
     float dampingCoff,
@@ -139,7 +142,7 @@ void GrassUpdatePayBack(
 
     // moment from the intertia force due to centeripetal force == cross(0.5 * bar2, p1CentripetalInertiaForce) 
     // and moment from wind force, air friction force and restoration moment.
-    float3 p1RawMoment = cross(0.5 * bar2, p1CentripetalInertiaForce) + GetPivotBarTorque(
+    float3 p1RawMoment = cross(0.5 * bar2, p1CentripetalInertiaForce) + GetPaybackPivotBarTorque(
         dampingCoff,
         p1Stiffness,
         wind,

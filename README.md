@@ -1,17 +1,4 @@
-# UE5 Implementation of Rotational Dynamics Grass 
-
----
-**NOTE**
-
-I have found out that there is a way to accurately calculate the grass motion.
-
-The grass motion should be based on multi-bodyod dynamics.
-
-I should use Articulated Body algorithm, which is application of Recursive Newton-Euler Algorithm.
-
-I am going to get rid of my `payback` method and substitute it with ABA as soon as I finish studying multi-bodyod dynamics, RNEA and ABA.
-
----
+# UE5 Implementation of Multi-Body Dynamics Grass 
 
 
 [![Watch the video](https://img.youtube.com/vi/IbZkUX3rt54/hqdefault.jpg)](https://www.youtube.com/watch?v=IbZkUX3rt54)
@@ -20,7 +7,7 @@ This video had been made before I fixed a flaw in my calculation. For the fixed 
 
 ## Introduction
 
-This is an implementation of the Ghost of Tsushima grass + rotational physics dynamics based motion of Bezier curve grass.
+This is an implementation of the Ghost of Tsushima grass + multi-body dynamics based motion of Bezier curve grass.
 
 The implementation of the GOT grass is based on the [GDC presentation](https://www.youtube.com/watch?v=Ibe1JBF5i5Y) of Sucker Punch Studio.
 The presenter from Sucker Punch Studio did not explain how they calculated the grass motion, so I have created my own rotational physics based dynamics motion.

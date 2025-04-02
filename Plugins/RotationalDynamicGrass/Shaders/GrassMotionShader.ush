@@ -3,6 +3,7 @@
 
 #include "Common/Constants.ush"
 #include "Common/BezierCurve.ush"
+#include "Common/SpatialVector.ush"
 
 
 #define COLLISION_COEFFICENT_TRHESHOLD 0.01
@@ -421,95 +422,33 @@ void getAngleDispScaleDecreasingDelta(in float3 angularDisp, inout float3 angula
 }
 
 
-float3 GetBar2TorqueOnP0(
+float3 GetPivotBarTorque(
+    float dampingCoff,
+    float3 windForce,
+    float3 bar,
+    float3 angularVelocity
+)
+{
+    return length(bar) * (
+            cross(bar, windForce) / 2.0f
+        - dampingCoff / 3.0f * cross(bar, cross(angularVelocity, bar))
+    );
+}
+
+float3 GetBar2Torque(
     float dampingCoeff,
     float3 windForce,
     float3 bar1AngularVelocity,
     float3 bar1,
-    float bar2AngularVelocity,
-    float3 bar2RotationalAxis,
+    float3 bar2AngularVelocity,
     float3 bar2
 )
 {
-    float bar2Length = length(bar2);
-    float3 axisCrossBar2 = cross(bar2RotationalAxis, bar2);
-    float windMag = length(windForce);
-    float3 bar2CrossWind = cross(bar2, windForce);
-        
-    float3 l0ForceTerm = (windMag > WIND_MAGNITUDE_THRESHOLD ? length(bar2CrossWind) / (windMag * bar2Length) : 0.0f) * windForce 
-        - dampingCoeff * cross(bar1AngularVelocity, bar1);
-    float3 l1ForceTerm = -dampingCoeff * (bar2AngularVelocity * axisCrossBar2 + cross(bar1AngularVelocity, bar2));
-    float3 l0Term = cross(bar1, l0ForceTerm);
-    float3 l1Term = cross(bar2, l0ForceTerm) + cross(bar1, l1ForceTerm);
-    float3 l2Term = cross(bar2, l1ForceTerm);
-        
-    return bar2Length * (l0Term + l1Term / 2.0f + l2Term / 3.0f);
+    return GetPivotBarTorque(dampingCoeff, windForce, bar2,  bar2AngularVelocity)
+        - dampingCoeff * length(bar2) * (cross(bar2, cross(bar1AngularVelocity, bar1)) / 2.0f + cross(bar2, cross(bar1AngularVelocity, bar2)) / 3.0f);
 
 }
-float3 GetPivotBarTorque(
-    float dampingCoff,
-    float stiffness,
-    float3 windForce,
-    float3 bar,
-    float3 angularVelocity,
-    float3 angularDisp
-)
-{
-    float barLength = length(bar);
-    float3 barCrossWind = cross(bar, windForce);
-    float windMag = length(windForce);
-   
-    return (windMag > WIND_MAGNITUDE_THRESHOLD ? length(barCrossWind) * barCrossWind / windMag : 0.0f)
-        - dampingCoff / 3.0f * barLength  * cross(bar, cross(angularVelocity, bar))
-        - stiffness * angularDisp;
-}
-
-float3 GetBar1PaybackForceFromBar2(
-    in float dampingCoff,
-    in float stiffness,
-    in float3 windForce,
-    in float3 bar2,
-    in float3 bar2RotationalAxis,
-    in float angualrVelocity,
-    in float angularDisplacement
-)
-{
-    
-    float barLength = length(bar2);
-    
-    float windMag = length(windForce);
-    float3 barCrossWind = cross(bar2, windForce);
-
-    return cross(bar2RotationalAxis, bar2) * (
-            stiffness * angularDisplacement / barLength / barLength
-            + dampingCoff * angualrVelocity * barLength * 5.0f / 16.0f
-        )
-        - (windMag > WIND_MAGNITUDE_THRESHOLD ? length(barCrossWind) / windMag : 0.0f) * windForce / 4.0f;
-}
-    
-    
-float GetMomentOfInertia(float segmentDensity, float3 bar1, float3 p2)
-{
-    float3 bar2 = p2 - bar1;
-    float bar2Length = length(bar2);
-    float bar1Length = length(bar1);
-    // bar2 center distance from pivot (0, 0, 0)
-    float bar2CenterDistance = length(bar2 / 2 + bar1);
-        
-    float bar2Mass = segmentDensity * bar2Length;
-    float bar1Mass = segmentDensity * bar1Length;
-    
-    // Moment of Inertia caused by bar 2
-    // = Moment of Inertia of bar2 at its center of mass + (bar 2 center of mass distance from the pivot)^2
-    //
-    // Moment of Inertia of bar 2 at its center of mass = bar2_mass * bar2_length * bar2_length / 12.0
-    float bar2MomentOfIntertia = bar2Mass * (bar2Length * bar2Length / 12.0 + bar2CenterDistance * bar2CenterDistance);
-        
-    float bar1MomentOfIntertia = (bar1Mass) / 3.0 * bar1Length * bar1Length;
-        
-    return bar1MomentOfIntertia + bar2MomentOfIntertia;
-    
-}
+ 
 
 float Get2DAngle(float2 vec)
 {
@@ -531,7 +470,11 @@ float Get2DAngle(float2 vec)
     return angle;
 }
 
- 
+/*
+Using articulated body algorithm from FeatherStone's book
+*/
+
+
 void GrassUpdate(
     float dampingCoff,
     in float massDensity,
@@ -547,8 +490,11 @@ void GrassUpdate(
     inout float4 angularDisp
 )
 {
+    
     float2 p1p2XZ = float2(1, 0) - p1Position;
+    float bar1Staticangle = Get2DAngle(p1Position);
     float bar2StaticAngle = Get2DAngle(p1p2XZ) - Get2DAngle(p1Position);
+
     float segmentMassDensity = scale.y * massDensity;
     segmentMassDensity = segmentMassDensity < 0.01f ? 1.0f : segmentMassDensity;
     
@@ -564,92 +510,226 @@ void GrassUpdate(
     float3 p1 = float3(0, 0, 0);
     float3 p2 = float3(0, 0, 0);
     
-
     GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis);
     
+        
     float3 bar1Dir = normalize(p1);
-             
-    // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
-    
-    float momentOfIntertia = GetMomentOfInertia(segmentMassDensity, p1, p2);
-    
     float3 bar2 = p2 - p1;
-    // P0 moment from restoration force, wind force and air friction force
-    float3 p0Moment = (
-        GetPivotBarTorque(
-            dampingCoff,
-            stiffness,
-            wind,
-            p1,
-            angularVelocity.xyz,
-            angularDisp.xyz
-        ) + GetBar2TorqueOnP0(
-            dampingCoff,
-            wind,
-            angularVelocity.xyz,
-            p1,
-            angularVelocity.w,
-            bar2RotationalAxis,
-            bar2
-        )
-    );
-
-
+    float3 bar2Dir = normalize(bar2);
+    
     float bar1Length = length(p1);
     float bar2Length = length(bar2);
         
-    float bar1Mass = segmentMassDensity * bar1Length;
-    float bar2Mass = segmentMassDensity * bar2Length;
-        
-    
-    // (angular velocity) x (angular velocity x p1) is the centirpetal acceleration made at p1(not angular accleration, just plain acceleration)
-    float3 p1CentripetalInertiaForce = -bar2Mass * cross(angularVelocity.xyz, cross(angularVelocity.xyz, p1));
+    float bar1Mass = segmentMassDensity * bar1Length * scale.y;
+    float bar2Mass = segmentMassDensity * bar2Length * scale.y;
 
-    // moment from the intertia force due to centeripetal force == cross(0.5 * bar2, p1CentripetalInertiaForce) 
-    // and moment from wind force, air friction force and restoration moment.
-    float3 p1RawMoment = cross(0.5 * bar2, p1CentripetalInertiaForce) + GetPivotBarTorque(
-        dampingCoff,
-        p1Stiffness,
-        wind,
-        bar2,
-        angularVelocity.w * bar2RotationalAxis,
-        angularDisp.w * bar2RotationalAxis
+    
+    float bar1InertiaVal = bar1Mass * ( bar1Length * bar1Length) / 3.0f;
+    float3x3 bar1BaseInertiaTensor = float3x3(
+        0, 0.0f, 0.0f,
+        0.0f, bar1InertiaVal, 0.0f,
+        0.0f, 0.0f, bar1InertiaVal
     );
+    
+    float bar2InertiaVal = bar2Mass * (bar2Length * bar2Length) / 3.0f;
+    float3x3 bar2BaseInertiaTensor = float3x3(
+            0, 0.0f, 0.0f,
+            0.0f, bar2InertiaVal, 0.0f,
+            0.0f, 0.0f, bar2InertiaVal
+    );
+    
+    float p0DispAngle = length(angularDisp.xyz);
+    FQuat p0DispReverseQuat = p0DispAngle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1.0f) : QuatFromAxisAngle(angularDisp.xyz/p0DispAngle, -p0DispAngle);
+    FQuat worldToBar1FrameQuat = QuatMultiply(
+        QuatFromAxisAngle(-bar1Staticangle, float3(0, 1, 0)), 
+        QuatMultiply(
+            FQuat(-initialOrientation.xyz, initialOrientation.w), 
+            p0DispReverseQuat
+        )
         
-    // p1's pivot is limited to make only rotation about `bar2RotationalAxis`, so the true moment is calcualted by projection.
-    float p1Moment = dot(bar2RotationalAxis, p1RawMoment);
+    );
+
+    float3 localBar1 = float3(bar1Length, 0, 0);
+ 
+    float3 bar1Velocity[2];
+    float3 bar1BiasForce[2];
+    float3 bar1Momentum[2];
     
-    // the force should be paid back from bar1 to withstand the moment of bar2
-    float3 paybackForce = GetBar1PaybackForceFromBar2(
-        dampingCoff,
-        p1Stiffness,
-        wind,
-        bar2,
-        bar2RotationalAxis,
-        angularVelocity.w,
-        angularDisp.w
-    ); // + 0.5 * p1CentripetalInertiaForce;
+    bar1Velocity[0] = QuatRotateVector(worldToBar1FrameQuat, angularVelocity.xyz);
+    bar1Velocity[1] = 0;
+
+    bar1Momentum[0] = mul(bar1BaseInertiaTensor, bar1Velocity[0]);
+    bar1Momentum[1] = 0;
     
-    //(0.5 * p1CentripetalInertiaForce) is ignored because it has same direction as -bar1, contributing zero torque on P0.
+    spatialForceCross(bar1Velocity, bar1Momentum, bar1BiasForce);
+    
+    float3 bar1ExternalTorque = QuatRotateVector(
+        worldToBar1FrameQuat,
+        GetPivotBarTorque(
+            dampingCoff,
+            wind,
+            p1,
+            angularVelocity.xyz
+        )
+    );
+    
+    bar1BiasForce[1] -= bar1ExternalTorque;
+    float3 generalizedBar1Torque = bar1ExternalTorque - stiffness * QuatRotateVector(worldToBar1FrameQuat, angularDisp.xyz);
+    
+    float3x3 zeroMat = float3x3(
+        0, 0, 0,
+        0, 0, 0,
+        0, 0, 0
+    );
+
+    float3x3 bar1ToBar2VelTransformation[2][2] = {
+        { zeroMat, zeroMat },
+        { zeroMat, zeroMat }
+    };
+    getSpatialVelocityTransformaton(localBar1, float3(0, -(bar2StaticAngle + angularDisp.w), 0), bar1ToBar2VelTransformation);
     
     
-    p0Moment += dot(cross(p1, paybackForce), bar2RotationalAxis) * bar2RotationalAxis;
+    float3 bar2Velocity[2];
+    float3 bar2BiasForce[2];
+    float3 bar2Momentum[2];
+    float3 bar2VelocityProductAcc[2];
+
+    float3 bar2LocalVelocity[2];
+    bar2LocalVelocity[0] = float3(0, angularVelocity.w, 0);
+    bar2LocalVelocity[1] = 0;
+    SpatialMatVectorMul(bar1ToBar2VelTransformation, bar1Velocity, bar2Velocity);
+    bar2Velocity[0] += bar2LocalVelocity[0];
     
-    float torqueTerm = 0.5 * bar2Mass * bar1Length * bar1Length / momentOfIntertia;
-    float p0TorqueDotAxis = dot(p0Moment, bar2RotationalAxis) / (1.0f + torqueTerm);
+    spatioalVelocityCross(bar2Velocity, bar2LocalVelocity, bar2VelocityProductAcc);
     
-    float3 p0Torque = p0Moment - torqueTerm * p0TorqueDotAxis * bar2RotationalAxis;
+    bar2Momentum[0] = mul(bar2BaseInertiaTensor, bar2Velocity[0]);
+    bar2Momentum[1] = bar2Mass * bar2Velocity[1];
     
-    float3 p0Acc = p0Torque / momentOfIntertia;
-        
-    // The total torque to P1 required to make P1 seized is -p1BendingTorque.
-    // Now payback the torque to P1
+    spatialForceCross(bar2Velocity, bar2Momentum, bar2BiasForce);
     
-    float p1Torque = p1Moment - 0.5 * bar2Mass * p0TorqueDotAxis / momentOfIntertia * dot(p1, bar2);
     
-    float p1Acc = p1Torque * 3.0f / (bar2Mass * bar2Length * bar2Length);
+    FQuat worldToBar2FrameQuat = QuatMultiply(
+        QuatFromAxisAngle(-(bar2StaticAngle + angularDisp.w), float3(0, 1, 0)), 
+        worldToBar1FrameQuat
+    );
     
-           
+    float3 bar2ExternalTorque = QuatRotateVector(
+        worldToBar2FrameQuat,
+        GetBar2Torque(
+            dampingCoff,
+            wind,
+            angularVelocity.xyz,
+            p1,
+            angularVelocity.w * bar2RotationalAxis,
+            bar2
+        )
+    );
+    
+    bar2BiasForce[1] -= bar2ExternalTorque; 
+    float bar2GeneralizedTorque = bar2ExternalTorque[1] - p1Stiffness * angularDisp.w;
+   
+    float3x3 bar2InertiaTensorOnBar1[2][2] = {
+        { zeroMat, zeroMat },
+        { zeroMat, zeroMat }
+    };
+    bar2InertiaTensorOnBar1[0][0] = bar2BaseInertiaTensor;
+    bar2InertiaTensorOnBar1[1][1] = float3x3(
+        bar2Mass, 0, 0,
+        0, bar2Mass, 0,
+        0, 0, bar2Mass
+    );
+   
+    
+    float3 bar2InertiaYColum[2];
+    bar2InertiaYColum[0] = float3(bar2InertiaTensorOnBar1[0][0][1][0], bar2InertiaTensorOnBar1[0][0][1][1], bar2InertiaTensorOnBar1[0][0][1][2]);
+    bar2InertiaYColum[1] = float3(bar2InertiaTensorOnBar1[1][0][1][0], bar2InertiaTensorOnBar1[1][0][1][1], bar2InertiaTensorOnBar1[1][0][1][2]);
+    
+    
+    float weightVal = (bar2GeneralizedTorque - bar2BiasForce[0][1]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    
+    float3 bar1BiasForceFromBar2[2];
+    bar1BiasForceFromBar2[0] = bar2BiasForce[0] + bar2InertiaYColum[0] * weightVal;
+    bar1BiasForceFromBar2[1] = bar2BiasForce[1] + bar2InertiaYColum[1] * weightVal;
+    
+    bar2InertiaTensorOnBar1[0][0] -= OuterProduct(bar2InertiaYColum[0], bar2InertiaYColum[0]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    bar2InertiaTensorOnBar1[0][1] -= OuterProduct(bar2InertiaYColum[0], bar2InertiaYColum[1]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    
+    bar2InertiaTensorOnBar1[1][0] -= OuterProduct(bar2InertiaYColum[1], bar2InertiaYColum[0]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    bar2InertiaTensorOnBar1[1][1] -= OuterProduct(bar2InertiaYColum[1], bar2InertiaYColum[1]) / bar2InertiaTensorOnBar1[0][0][1][1];
+    
+    float3 tempSpatialVec[2];
+    SpatialMatVectorMul(bar2InertiaTensorOnBar1, bar2VelocityProductAcc, tempSpatialVec);
+    bar1BiasForceFromBar2[0] += tempSpatialVec[0];
+    bar1BiasForceFromBar2[1] += tempSpatialVec[1];
+    
+    float3x3 bar2ToBar1ForceTransformation[2][2] =
+    {
+        { zeroMat, zeroMat },
+        { zeroMat, zeroMat }
+    };
+    getSpatialForceTransformaton(-localBar1, float3(0, (bar2StaticAngle + angularDisp.w), 0), bar2ToBar1ForceTransformation);
+    
+    SpatialMatVectorMul(bar2ToBar1ForceTransformation, bar1BiasForceFromBar2, bar1BiasForceFromBar2);
+    bar1BiasForce[0] += bar1BiasForceFromBar2[0];
+    // bar1BiasForce[1] is not used, so not getting the result
+    // bar1BiasForce[1] += bar1BiasForceFromBar2[1];
+
+    
+    SpatialMatMul(bar2InertiaTensorOnBar1, bar1ToBar2VelTransformation, bar2InertiaTensorOnBar1);
+    SpatialMatMul(bar2ToBar1ForceTransformation, bar2InertiaTensorOnBar1, bar2InertiaTensorOnBar1);
+
+    /*
+    float3x3 bar1InertiaTensor[2][2];
+    bar1InertiaTensor[0][0] = bar1BaseInertiaTensor;
+    
+    bar1InertiaTensor[1][1] = float3x3(
+        bar1Mass, 0, 0,
+        0, bar1Mass, 0,
+        0, 0, bar1Mass
+    );
+    
+    bar1InertiaTensor[1][1] = 0;
+    
+    bar1InertiaTensor[0][1] = 0;
+    bar1InertiaTensor[1][0] = 0;
+    
+    bar1InertiaTensor[0][0] += bar2InertiaTensorOnBar1[0][0];
+    bar1InertiaTensor[1][0] += bar2InertiaTensorOnBar1[1][0];
+    bar1InertiaTensor[0][1] += bar2InertiaTensorOnBar1[0][1];
+    bar1InertiaTensor[1][1] += bar2InertiaTensorOnBar1[1][1];
+    */
+    
+    // bar1BaseInertiaTensor + bar2InertiaTensorOnBar1[0][0] is the intertia on bar1
+    // it is a diagonal matrix
+    float3 bar1FinalInertia = float3(
+        bar1BaseInertiaTensor[0][0] + bar2InertiaTensorOnBar1[0][0][0][0],
+        bar1BaseInertiaTensor[1][1] + bar2InertiaTensorOnBar1[0][0][1][1],
+        bar1BaseInertiaTensor[2][2] + bar2InertiaTensorOnBar1[0][0][2][2]
+    );
+    
+    bar1FinalInertia = bar1FinalInertia < 0.01 ? 1.0f : bar1FinalInertia;
+    
+    
+    //float3 gravityForce = mul(bar2InertiaTensorOnBar1[0][1], QuatRotateVector(worldToBar1FrameQuat, float3(0.0, 0.0, -9.81)));
+    
+    float3 p0Acc = (
+        generalizedBar1Torque
+        - bar1BiasForce[0]
+        //+ gravityForce
+    ) / bar1FinalInertia;
+
+    float p1Acc = (
+        bar2GeneralizedTorque
+        - dot(
+            bar2VelocityProductAcc[0] + mul(bar1ToBar2VelTransformation[0][0], p0Acc), 
+            bar2BaseInertiaTensor[1]
+        ) 
+        - bar2BiasForce[0][1]
+
+    ) / bar2BaseInertiaTensor[1][1];
+    
+    p0Acc = QuatRotateVector(FQuat(-worldToBar1FrameQuat.xyz, worldToBar1FrameQuat.w), p0Acc);
+   
     float4 velocityDelta = float4(p0Acc, p1Acc) * timeDelta;
     
     angularVelocity += velocityDelta;
@@ -665,7 +745,14 @@ void GrassUpdate(
     minP1AngleDelta = minP1AngleDelta > 0 ? 0 : minP1AngleDelta;
     
     
-    if (length(angularDisp.xyz) < 2 * PI_VALUE)
+    if (dispDelta.w < minP1AngleDelta || maxP1AngleDelta < dispDelta.w)
+    {
+        angularVelocity.w = 0;
+        dispDelta.w = clamp(dispDelta.w, minP1AngleDelta, maxP1AngleDelta);
+    }
+    
+    
+    if (p0DispAngle < 2 * PI_VALUE)
     {
         limitAngleDispScale(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }
@@ -674,11 +761,6 @@ void GrassUpdate(
         getAngleDispScaleDecreasingDelta(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }
 
-    if (dispDelta.w < minP1AngleDelta || maxP1AngleDelta < dispDelta.w)
-    {
-        angularVelocity.w = 0;
-        dispDelta.w = clamp(dispDelta.w, minP1AngleDelta, maxP1AngleDelta);
-    }
     
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {

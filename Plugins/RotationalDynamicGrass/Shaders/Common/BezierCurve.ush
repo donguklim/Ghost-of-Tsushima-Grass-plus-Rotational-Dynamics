@@ -36,7 +36,15 @@ void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float3 side
 }
 
 
-void GetRotatedBezierPoints(in float3 inputP1, in float3 inputP2, in float3 inputSideDir, in float4 angularDisp, out float3 p1, out float3 p2, out float3 sideDir)
+void GetRotatedBezierPoints(
+    in float3 inputP1, 
+    in float3 inputP2, 
+    in float3 inputSideDir, 
+    in float4 angularDisp, 
+    out float3 p1, 
+    out float3 p2, 
+    out float3 sideDir
+)
 {
     sideDir = inputSideDir;
     

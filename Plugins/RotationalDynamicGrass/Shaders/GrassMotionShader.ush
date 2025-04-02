@@ -714,8 +714,6 @@ void GrassUpdate(
     
     float3 bar1Dir = normalize(p1);
     
-    float radius = 0.05f * scale.y;
-    
     float3 bar2 = p2 - p1;
     float3 bar2Dir = normalize(bar2);
     
@@ -726,16 +724,16 @@ void GrassUpdate(
     float bar2Mass = segmentMassDensity * bar2Length * scale.y;
 
     
-    float bar1InertiaVal = bar1Mass * (3.0f * radius * radius + 4.0f * bar1Length * bar1Length) / 12.0f;
+    float bar1InertiaVal = bar1Mass * ( bar1Length * bar1Length) / 3.0f;
     float3x3 bar1BaseInertiaTensor = float3x3(
-        bar1Mass * radius * radius / 2.0f, 0.0f, 0.0f,
+        0, 0.0f, 0.0f,
         0.0f, bar1InertiaVal, 0.0f,
         0.0f, 0.0f, bar1InertiaVal
     );
     
-    float bar2InertiaVal = bar2Mass * (3.0f * radius * radius * 3.0f + 4.0f * bar2Length * bar1Length) / 12.0f;
+    float bar2InertiaVal = bar2Mass * (bar2Length * bar1Length) / 3.0f;
     float3x3 bar2BaseInertiaTensor = float3x3(
-            bar2Mass * radius * radius / 2.0f, 0.0f, 0.0f,
+            0, 0.0f, 0.0f,
             0.0f, bar2InertiaVal, 0.0f,
             0.0f, 0.0f, bar2InertiaVal
     );
@@ -881,19 +879,20 @@ void GrassUpdate(
     bar1InertiaTensor[1][1] += bar2InertiaTensorOnBar1[1][1];
     */
     
-    float3x3 inverseInertia = 1.0 / (bar1BaseInertiaTensor + bar2InertiaTensorOnBar1[0][0]);
-    
-    float3 p0Acc = mul(
-        PseudoInverseInertia(bar1BaseInertiaTensor + bar2InertiaTensorOnBar1[0][0]),
-        generalizedBar1Torque
-        - mul(bar2InertiaTensorOnBar1[0][1], QuatRotateVector(bar1ReverseQuat, float3(0, 0, 0)))
-        - bar1BiasForce[0]
+    // bar1BaseInertiaTensor + bar2InertiaTensorOnBar1[0][0] is the intertia on bar1
+    // it is a diagonal matrix
+    float3 bar1FinalInertia = float3(
+        bar1BaseInertiaTensor[0][0] + bar2InertiaTensorOnBar1[0][0][0][0],
+        bar1BaseInertiaTensor[1][1] + bar2InertiaTensorOnBar1[0][0][1][1],
+        bar1BaseInertiaTensor[2][2] + bar2InertiaTensorOnBar1[0][0][2][2]
     );
     
-    p0Acc = 
+    bar1FinalInertia = bar1FinalInertia < 0.01 ? 1.0f : bar1FinalInertia;
+    
+    float3 p0Acc = (
         generalizedBar1Torque
-        - mul(bar2InertiaTensorOnBar1[0][1], QuatRotateVector(bar1ReverseQuat, float3(0, 0, 0)))
-        - bar1BiasForce[0];
+        - bar1BiasForce[0]
+    ) / bar1FinalInertia;
 
     float p1Acc = (
         bar2GeneralizedTorque - mul(bar2BaseInertiaTensor, p0Acc + bar2VelocityProductAcc[0])[1] - bar2BiasForce[0][1]

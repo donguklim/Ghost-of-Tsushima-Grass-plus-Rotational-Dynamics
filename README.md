@@ -3,7 +3,18 @@
 
 [![Watch the video](https://img.youtube.com/vi/5h7HZT5iuCI/hqdefault.jpg)](https://youtu.be/5h7HZT5iuCI)
 
-This video had been made before I fixed a flaw in my calculation. For the fixed version, watch the video at [Motion Results](#motion-results)
+***Updated vesion*** - Used ABA
+
+
+[![Watch the video](https://img.youtube.com/vi/IbZkUX3rt54/hqdefault.jpg)](https://www.youtube.com/watch?v=IbZkUX3rt54)
+
+***Old vesion*** - Using my own algorithm)
+
+
+The first video is using Articulated Body Algorithm(ABA), which is an effcient algorithm for simulating multi body dynamics.
+
+Second video had been made with my physically inaccurate algorithm before I learn about ABA
+
 
 ## Introduction
 

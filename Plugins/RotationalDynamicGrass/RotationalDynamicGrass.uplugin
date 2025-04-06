@@ -33,6 +33,10 @@
     {
       "Name": "PCGNiagaraInterop",
       "Enabled": true
+    },
+    {
+      "Name": "PCGExtendedToolkit",
+      "Enabled": true
     }
   ]
 }

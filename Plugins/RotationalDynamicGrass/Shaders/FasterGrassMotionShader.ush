@@ -78,6 +78,8 @@ void GrassUpdatePayBack(
     in float3 scale,
     in float2 p1Position,
     float3 groundNormal,
+    float3 legsBottomCenter,
+    float legsCollisionRadius,
     inout float4 angularVelocity,
     inout float4 angularDisp
 )
@@ -103,12 +105,40 @@ void GrassUpdatePayBack(
     GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis);
     
     float3 bar1Dir = normalize(p1);
+    float bar1Length = length(p1);
+    float playerCollisionThheshold = 0.0f;
+    bool isPlayerColliding = false;
+    float3 playerCollisionNormal = 0;
+    
+    float3 bar2 = p2 - p1;
+
+    applyPlayerCollision(
+        bar1Dir,
+        bar1Length,
+        bar2RotationalAxis,
+        groundNormal,
+        legsBottomCenter,
+        legsCollisionRadius,
+        playerCollisionThheshold,
+        isPlayerColliding,
+        playerCollisionNormal,
+        angularDisp.xyz,
+        angularVelocity.xyz
+    );
+    
+    if (isPlayerColliding)
+    {
+        GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis);
+        
+        bar1Dir = normalize(p1);
+        bar2 = p2 - p1;
+    }
              
     // p0 angular acceleration that would occur when p1 pivot is seized(when p0p1 and p1p2 dd not bend at p1 and are stationary)
     
     float momentOfIntertia = GetMomentOfInertia(segmentMassDensity, p1, p2);
     
-    float3 bar2 = p2 - p1;
+    
     // P0 moment from restoration force, wind force and air friction force
     float3 p0Moment = (
         GetPaybackPivotBarTorque(
@@ -129,8 +159,7 @@ void GrassUpdatePayBack(
         )
     );
 
-
-    float bar1Length = length(p1);
+    float bar1LengthSquare = bar1Length * bar1Length;
     float bar2Length = length(bar2);
         
     float bar1Mass = segmentMassDensity * bar1Length;
@@ -199,13 +228,26 @@ void GrassUpdatePayBack(
         dispDelta.w = clamp(dispDelta.w, minP1AngleDelta, maxP1AngleDelta);
     }
     
+    float baseToCenterLength = length(legsBottomCenter);
+    if (baseToCenterLength < legsCollisionRadius)
+    {
+        if (isPlayerColliding)
+        {
+            getMaximumNonCollidingDelta(bar1Dir, playerCollisionNormal, dispDelta.xyz, angularVelocity.xyz);
+        }
+        else
+        {
+            applyCollision(bar1Dir, playerCollisionNormal, playerCollisionThheshold, dispDelta.xyz, angularVelocity.xyz);
+        }
+    }
+    
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {
-        getMaximumUpwardDelta(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
+        getMaximumNonCollidingDelta(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
     }
     else
     {
-        applyGroundCollision(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
+        applyCollision(bar1Dir, groundNormal, BAR_DOT_GROUND_THRESHOLD, dispDelta.xyz, angularVelocity.xyz);
     }
     
     angularDisp += dispDelta;

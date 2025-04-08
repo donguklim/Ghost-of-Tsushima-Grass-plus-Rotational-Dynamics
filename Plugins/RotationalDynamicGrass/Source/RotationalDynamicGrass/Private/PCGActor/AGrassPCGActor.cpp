@@ -3,9 +3,6 @@
 #include "PCGActor/AGrassPCGActor.h"
 #include "Components/BoxComponent.h"
 #include "PCGComponent.h"
-#include "NiagaraDataChannel.h"
-#include "NiagaraDataChannelPublic.h"
-#include "NiagaraDataChannelAccessor.h"
 
 // Sets default values
 AAGrassPCGActor::AAGrassPCGActor()

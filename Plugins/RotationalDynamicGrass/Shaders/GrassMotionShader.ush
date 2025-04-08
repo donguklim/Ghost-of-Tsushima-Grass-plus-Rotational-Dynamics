@@ -10,7 +10,7 @@
 #define WIND_MAGNITUDE_THRESHOLD 0.01
 
 
-void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angularDispDelta, inout float3 angularVelocity)
+void applyCollision(in float3 barDir, in float3 normal, in float threshold, inout float3 angularDispDelta, inout float3 angularVelocity)
 {
     float deltaAngle = length(angularDispDelta);
     if (deltaAngle < ANGLE_THRESHOLD)
@@ -23,14 +23,14 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
         
     float aVal = dot(axisXBar, normal);
     float bVal = -dot(cross(axis, axisXBar), normal);
-    float cVal = dot(barDir, normal) - bVal - BAR_DOT_GROUND_THRESHOLD;
+    float cVal = dot(barDir, normal) - bVal - threshold;
     
 /*
     dot(ground_norm, new bar direction)
         = a * sin(angle delta) + b * cos(angle delta) - b + dot(current bar direction, normal)
     
-    dot(ground_norm, new bar direction) - BAR_DOT_GROUND_THRESHOLD  =  a * sin(x) + b * cos(x) + c,
-    where c = dot(current bar direction, normal) - b - BAR_DOT_GROUND_THRESHOLD
+    dot(ground_norm, new bar direction) - threshold  =  a * sin(x) + b * cos(x) + c,
+    where c = dot(current bar direction, normal) - b - threshold
     
     f(x) = a * sin(x) + b * cos(x) + c
       
@@ -214,7 +214,7 @@ void applyGroundCollision(in float3 barDir, in float3 normal, inout float3 angul
 
 }
 
-void getMaximumUpwardDelta(float3 barDir, float3 normal, inout float3 angularDispDelta, inout float3 angularVelocity)
+void getMaximumNonCollidingDelta(float3 barDir, float3 normal, inout float3 angularDispDelta, inout float3 angularVelocity)
 {
     float deltaAngle = length(angularDispDelta);
     if (deltaAngle < ANGLE_THRESHOLD)
@@ -475,6 +475,103 @@ Using articulated body algorithm from FeatherStone's book
 */
 
 
+void applyPlayerCollision(
+    in float3 bar1Dir,
+    in float bar1Length,
+    in float3 bar2RotationalAxis,
+    in float3 landNormal,
+    in float3 legsBottomCenter,
+    in float legsCollisionRadius,
+    out float threshold,
+    out bool isColliding,
+    out float3 collisionNormal,
+    inout float3 angularDisp, 
+    inout float3 angularVelocity
+)
+{
+    float baseToCenterLength = length(legsBottomCenter);
+    float3 rotationalAxis;
+    float dispAngle = 0.0f;
+    isColliding = false;
+    threshold = 0.0f;
+    collisionNormal = float3(0, 0, 1);
+    
+    
+    if (baseToCenterLength - bar1Length > legsCollisionRadius)
+    {
+        return;
+    }
+    
+    
+    if (baseToCenterLength < 0.01)
+    {
+        isColliding = true;
+        threshold = 1.0f;
+        
+        if (abs(dot(bar1Dir, landNormal)) < 0.98)
+        {
+            rotationalAxis = cross(landNormal, bar1Dir);
+            rotationalAxis = rotationalAxis / length(rotationalAxis);
+        }
+        else
+        {
+            rotationalAxis = bar2RotationalAxis;
+        }
+        
+        dispAngle = PI_VALUE / 2.0 - acos(dot(bar1Dir, landNormal));
+        angularVelocity = 0;
+        angularDisp += rotationalAxis * dispAngle;
+        
+        collisionNormal = QuatRotateVector(
+             QuatFromAxisAngle(rotationalAxis, dispAngle),
+             bar1Dir
+        );
+        
+        return;
+        
+    }
+    
+    float baseToCenterLengthSquare = baseToCenterLength * baseToCenterLength;
+    float radiusSquare = legsCollisionRadius * legsCollisionRadius;
+    float bar1LengthSquare = bar1Length * bar1Length;
+    
+    if (baseToCenterLength < legsCollisionRadius)
+    {
+        threshold = 1.0 - 2.0f * (min(0.5, baseToCenterLength / legsCollisionRadius) - 0.5);
+        
+         angularVelocity = 0;
+    }
+    
+    else if (baseToCenterLengthSquare <= radiusSquare + bar1Length * bar1Length)
+    {
+        threshold = -sqrt(baseToCenterLengthSquare - radiusSquare) / baseToCenterLength;
+    }
+    else
+    {
+        threshold = (baseToCenterLengthSquare + bar1LengthSquare - legsCollisionRadius * legsCollisionRadius) / (bar1Length * baseToCenterLength);
+    }
+    
+        
+    collisionNormal = -legsBottomCenter / baseToCenterLength;
+    
+    isColliding = dot(bar1Dir, collisionNormal) < threshold;
+    
+    if(!isColliding)
+        return;
+    
+    
+    rotationalAxis = cross(bar1Dir, collisionNormal);
+    rotationalAxis = rotationalAxis / length(rotationalAxis);
+        
+    dispAngle = acos(dot(bar1Dir, collisionNormal));
+    angularVelocity = 0;
+    angularDisp += rotationalAxis * dispAngle;
+        
+    return;
+    
+}
+
+
 void GrassUpdate(
     float dampingCoff,
     in float massDensity,
@@ -486,6 +583,8 @@ void GrassUpdate(
     in float3 scale,
     in float2 p1Position,
     float3 groundNormal,
+    float3 legsBottomCenter,
+    float legsCollisionRadius,
     inout float4 angularVelocity,
     inout float4 angularDisp
 )
@@ -518,13 +617,40 @@ void GrassUpdate(
     float3 bar2Dir = normalize(bar2);
     
     float bar1Length = length(p1);
+    float bar1LengthSquare = bar1Length * bar1Length;
     float bar2Length = length(bar2);
+    float playerCollisionThheshold = 0.0f;
+    bool isPlayerColliding = false;
+    float3 playerCollisionNormal = 0;
+
+    applyPlayerCollision(
+        bar1Dir, 
+        bar1Length, 
+        bar2RotationalAxis, 
+        groundNormal, 
+        legsBottomCenter, 
+        legsCollisionRadius, 
+        playerCollisionThheshold, 
+        isPlayerColliding, 
+        playerCollisionNormal,
+        angularDisp.xyz, 
+        angularVelocity.xyz
+    );
+    
+    if (isPlayerColliding)
+    {
+        GetRotatedBezierPoints(staticP1, staticP2, bar2RotationalAxis, angularDisp, p1, p2, bar2RotationalAxis);
+        
+        bar1Dir = normalize(p1);
+        bar2 = p2 - p1;
+        bar2Dir = normalize(bar2);
+    }
         
     float bar1Mass = segmentMassDensity * bar1Length * scale.y;
     float bar2Mass = segmentMassDensity * bar2Length * scale.y;
 
     
-    float bar1InertiaVal = bar1Mass * ( bar1Length * bar1Length) / 3.0f;
+    float bar1InertiaVal = bar1Mass * (bar1LengthSquare) / 3.0f;
     float3x3 bar1BaseInertiaTensor = float3x3(
         0, 0.0f, 0.0f,
         0.0f, bar1InertiaVal, 0.0f,
@@ -541,7 +667,7 @@ void GrassUpdate(
     float p0DispAngle = length(angularDisp.xyz);
     FQuat p0DispReverseQuat = p0DispAngle < ANGLE_THRESHOLD ? FQuat(0, 0, 0, 1.0f) : QuatFromAxisAngle(angularDisp.xyz/p0DispAngle, -p0DispAngle);
     FQuat worldToBar1FrameQuat = QuatMultiply(
-        QuatFromAxisAngle(-bar1Staticangle, float3(0, 1, 0)), 
+        QuatFromAxisAngle(float3(0, 1, 0), -bar1Staticangle),
         QuatMultiply(
             FQuat(-initialOrientation.xyz, initialOrientation.w), 
             p0DispReverseQuat
@@ -609,7 +735,7 @@ void GrassUpdate(
     
     
     FQuat worldToBar2FrameQuat = QuatMultiply(
-        QuatFromAxisAngle(-(bar2StaticAngle + angularDisp.w), float3(0, 1, 0)), 
+        QuatFromAxisAngle(float3(0, 1, 0), -(bar2StaticAngle + angularDisp.w)),
         worldToBar1FrameQuat
     );
     
@@ -760,15 +886,30 @@ void GrassUpdate(
     {
         getAngleDispScaleDecreasingDelta(angularDisp.xyz, dispDelta.xyz, angularVelocity.xyz);
     }
+    
+    float baseToCenterLength = length(legsBottomCenter);
+
+    if (baseToCenterLength - bar1Length < legsCollisionRadius)
+    {   
+        if (isPlayerColliding)
+        {
+            getMaximumNonCollidingDelta(bar1Dir, playerCollisionNormal, dispDelta.xyz, angularVelocity.xyz);
+        }
+        else
+        {
+            applyCollision(bar1Dir, playerCollisionNormal, playerCollisionThheshold, dispDelta.xyz, angularVelocity.xyz);
+        }
+    }
+
 
     
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {
-        getMaximumUpwardDelta(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
+        getMaximumNonCollidingDelta(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
     }
     else
     {
-        applyGroundCollision(bar1Dir, groundNormal, dispDelta.xyz, angularVelocity.xyz);
+        applyCollision(bar1Dir, groundNormal, BAR_DOT_GROUND_THRESHOLD, dispDelta.xyz, angularVelocity.xyz);
     }
     
     angularDisp += dispDelta;
@@ -868,11 +1009,11 @@ float4 GetApproximateEquilibriumAngularDisplacement(
     
     if (dot(bar1Dir, groundNormal) < BAR_DOT_GROUND_THRESHOLD)
     {
-        getMaximumUpwardDelta(bar1Dir, groundNormal, angularDisp.xyz, zero);
+        getMaximumNonCollidingDelta(bar1Dir, groundNormal, angularDisp.xyz, zero);
     }
     else
     {
-        applyGroundCollision(bar1Dir, groundNormal, angularDisp.xyz, zero);
+        applyCollision(bar1Dir, groundNormal, BAR_DOT_GROUND_THRESHOLD, angularDisp.xyz, zero);
     }
     
     

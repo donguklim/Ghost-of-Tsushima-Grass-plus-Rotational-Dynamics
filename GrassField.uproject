@@ -13,29 +13,33 @@
 			]
 		}
 	],
-	"Plugins": [
-		{
-			"Name": "ModelingToolsEditorMode",
-			"Enabled": true,
-			"TargetAllowList": [
-				"Editor"
-			]
-		},
-		{
-			"Name": "PCG",
-			"Enabled": true
-		},
-		{
-			"Name": "PCGNiagaraInterop",
-			"Enabled": true
-		},
-		{
-			"Name": "GrassShaders",
-			"Enabled": false
-		},
-		{
-			"Name": "PCGExtendedToolkit",
-			"Enabled": true
-		}
-	]
+  "Plugins": [
+    {
+      "Name": "ModelingToolsEditorMode",
+      "Enabled": true,
+      "TargetAllowList": [
+        "Editor"
+      ]
+    },
+    {
+      "Name": "Niagara",
+      "Enabled": true
+    },
+    {
+      "Name": "PCG",
+      "Enabled": true
+    },
+    {
+      "Name": "PCGNiagaraInterop",
+      "Enabled": true
+    },
+    {
+      "Name": "GrassShaders",
+      "Enabled": false
+    },
+    {
+      "Name": "PCGExtendedToolkit",
+      "Enabled": true
+    }
+  ]
 }

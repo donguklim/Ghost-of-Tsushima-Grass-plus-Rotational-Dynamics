@@ -13,6 +13,10 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 
+class UNiagaraParameterCollection;
+class UNiagaraParameterCollectionInstance;
+
+
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 UCLASS(config=Game)
@@ -44,11 +48,22 @@ class AGrassFieldCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = NiagaraGrass, meta = (AllowPrivateAccess = "true"))
+    UNiagaraParameterCollection* GrassMotionParameterCollection;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = NiagaraGrass, meta = (AllowPrivateAccess = "true"))
+    float CollisionRadius = 50.0f;
+
+protected:
+    FVector LastPosition;
+
+
 public:
 	AGrassFieldCharacter();
 	
 
 protected:
+    UNiagaraParameterCollectionInstance* NPCInstance;
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -62,6 +77,9 @@ protected:
 	virtual void NotifyControllerChanged() override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+    virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
 
 public:
 	/** Returns CameraBoom subobject **/

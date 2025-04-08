@@ -10,6 +10,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraParameterCollection.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -52,6 +54,44 @@ AGrassFieldCharacter::AGrassFieldCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+
+    //ParameterCollection = LoadObject<UNiagaraParameterCollection>(nullptr, TEXT("/RotationalDynamicGrass/Grass/Niagara/NPC/NPC_Grass_Motion.NPC_Grass_Motion"));
+    if (GrassMotionParameterCollection != nullptr)
+        NPCInstance = UNiagaraFunctionLibrary::GetNiagaraParameterCollection(GetWorld(), GrassMotionParameterCollection);
+
+}
+
+// Called when the game starts or when spawned
+void AGrassFieldCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+
+    if (NPCInstance == nullptr && GrassMotionParameterCollection != nullptr) {
+        NPCInstance = UNiagaraFunctionLibrary::GetNiagaraParameterCollection(GetWorld(), GrassMotionParameterCollection);
+    }
+    FVector WorldPosition = GetCapsuleComponent()->GetComponentLocation();
+
+    // Set vector
+    NPCInstance->SetColorParameter(FString("PlayerPos"), FLinearColor(WorldPosition.X, WorldPosition.Y, WorldPosition.Z, CollisionRadius));
+
+}
+
+void AGrassFieldCharacter::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (NPCInstance != nullptr)
+    {
+        FVector position = GetCapsuleComponent()->GetComponentLocation();
+
+        if (!position.Equals(LastPosition, 0.01f))
+        {
+            NPCInstance->SetColorParameter(FString("PlayerPos"), FLinearColor(position.X, position.Y, position.Z, CollisionRadius));
+            LastPosition = position;
+            //UE_LOG(LogTemplateCharacter, Error, TEXT("'%f' player x pos."), WorldPosition.X);     
+        }
+
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -112,6 +152,7 @@ void AGrassFieldCharacter::Move(const FInputActionValue& Value)
 		// add movement 
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
+
 	}
 }
 
